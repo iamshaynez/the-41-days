@@ -50,13 +50,23 @@ before(async () => {
       }
       if (payload.response_format?.type === 'json_object') {
         const userMsg = payload.messages?.at(-1)?.content || '';
+        if (/今晚.+去/.test(userMsg)) {
+          // 裁判桩：黄昏指派——从世界简报抓第一个角色 id，地点按关键词
+          const wm = sys.match(/队伍：[^（(]*[（(]([a-z]+)/);
+          const who = wm?.[1] || 'anton';
+          const loc = /医棚/.test(userMsg) ? 'hospital' : /宅区/.test(userMsg) ? 'villas' : 'market';
+          return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ intents: [{ type: 'dusk_assign', scavenger: who, location: loc, gear: [], others: {} }], clarify: null, say: null }) } }] }));
+        }
         if (userMsg.includes('龙')) {
           // 裁判桩：狂语 → echo（世界接住这句话，不执行任何动作）
           return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ intents: [], clarify: null, say: null, echo: '没有人应你的话。风把这句话吹散了，渡口的水纹了一路。' }) } }] }));
         }
+        const wm2 = sys.match(/队伍：[^（(]*[（(]([a-z]+)/);
         const intents = userMsg.trim().startsWith('选')
           ? [{ type: 'event_choice', option: 'g0' }] // 桩：事件选择直通第一项
-          : [{ type: 'act', actor: 'bron', action: 'eat' }];
+          : userMsg.trim().startsWith('状态')
+            ? [{ type: 'meta', query: 'status' }] // 桩：状态查询（不动状态，不触发宏观收卷）
+            : [{ type: 'act', actor: wm2?.[1] || 'bron', action: 'eat', target: 'raw' }]; // 桩：吃生食（阵容自适应）
         return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ intents, clarify: null, say: null }) } }] }));
       }
       res.end(JSON.stringify({ choices: [{ message: { content: '【桩叙事】' } }] }));
@@ -161,6 +171,17 @@ describe('C 层全链（编剧桩）', () => {
     const r3 = await call([]);
     assert.equal(r3.budget, true, '手动两次后应触预算');
     assert.deepEqual(r3.options, []);
+  });
+
+  test('宏观收卷：白天自由输入办成事即收卷；黄昏打字指派整夜走完', async () => {
+    // 白天：一句自由输入 → 执行 + 自动收卷入黄昏
+    const r1 = await api('POST', '/api/runs', { prologue: false });
+    const s1 = await input(r1.id, '让石大吃点东西');
+    assert.equal(s1.phase, 'dusk', `自由输入应收卷入黄昏（实际 ${s1.phase}）`);
+    // 黄昏：打字指派 → 按老规矩带方针，整夜走完到第 2 天
+    const s2 = await input(r1.id, '今晚阿走去南市');
+    assert.equal(s2.day, 2, `整夜应走完（实际 第${s2.day}天 ${s2.phase}）`);
+    assert.ok(!s2.nightView, '夜访已了结');
   });
 
   test('防火墙：提案含正史名人 → 永不进场', async () => {
