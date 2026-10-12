@@ -356,7 +356,7 @@ const REJECT_TXT = {
   BAD_OPTION: '没有这个选项', UNAVAILABLE: '条件不够', IN_PROLOGUE: '序章里只能选', BAD_SHAPE: '这话没听懂',
   BAD_TYPE: '这事做不了', EMPTY: '空的', TOO_MANY: '太多了', NOTHING: '没什么可翻的了', NO_TARGET: '没有这样的人',
   NO_CHAR: '这个人不在', BAD_TARGET: '没有这个地方', NO_ITEM: '东西不够', NO_NEED: '现在不需要',
-  DONE_TODAY: '今天已经做过了', NEED_TRAIT: '他不会这个', NEED_REPAIR: '得先修好它', NO_LOC: '不知道这个地方', MAX: '已经修到顶了'
+  DONE_TODAY: '今天已经做过了', NEED_TRAIT: '他不会这个', NEED_REPAIR: '得先修好它', NO_LOC: '不知道这个地方', MAX: '已经修到顶了', NOT_NIGHT: '现在不是夜里', NIGHT_DONE: '这一夜已经过去了'
 };
 
 function handleSse(block) {
