@@ -54,6 +54,20 @@ describe('弧选择（ge.json 数据驱动）', () => {
     s.geArcsFired = { late_paper: 36 };
     assert.notEqual(currentArc(PACK, s)?.id, 'late_paper', '唯一黄昏弧已烧，不再指派');
   });
+
+  test('直读兜底：GE 生成卡上的「选N」也能解析（parser 查 run 级卡册）', async () => {
+    const { parseDirect } = await import('../../packages/core/src/parser.js');
+    const s = runAt(DAY);
+    s.firedOnce = { a: 1, b: 1, c: 1, d: 1 };
+    const d = createGeDirector({ pack: PACK, prompts: PROMPTS, getProvider: () => arcStub(s) });
+    await d.onTurn('r4', s);
+    await new Promise((r) => setTimeout(r, 20));
+    s.phase = 'dusk';
+    await d.onTurn('r4', s);
+    const r = parseDirect(s, PACK, '选1');
+    assert.deepEqual(r.intents, [{ type: 'event_choice', option: 'g0' }]);
+    d.drop('r4');
+  });
 });
 
 describe('黄昏驻场注入与路过', () => {

@@ -56,9 +56,9 @@ export function parseDirect(state, pack, input) {
   // 元指令
   if (/^(状态|库存|帮助|查看)/.test(text)) return { intents: [{ type: 'meta', query: 'status' }] };
 
-  // 事件选项：选A/选1/A/1/选项share
+  // 事件选项：选A/选1/A/1/选项share（内容包卡 + run 级 GE 生成卡）
   if (state.activeEvent) {
-    const card = pack.cardMap[state.activeEvent.cardId];
+    const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId];
     const m = text.match(/^选?([a-zA-Z0-9]+)/);
     if (m) {
       const k = m[1];
