@@ -14,7 +14,7 @@
 
 # 军规
 1. **意图先行**：每个选项是一组可执行意图（JSON），皮肤只是措辞。意图类型只能用：
-   act / dusk_assign / night / trade_op / direction / policy / auto_day / auto_night。
+   act / dusk_assign / night / night_directive / trade_op / direction / policy / auto_day / auto_night。
    白天（今日卡）出的是**方略**：2~4 个意图、覆盖至少两个人——谁做什么、谁跟谁说话、
    顺便立什么规矩或种什么念头（act/direction/policy 混编）。不必覆盖每个人：
    剩下的生计管家会自动补完，方略执行完这一天就收卷入黄昏。全队休整的方略可以只有一两个意图。

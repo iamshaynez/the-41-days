@@ -121,6 +121,8 @@ export function renderDirect(state, facts, pack) {
         lines.push(txt); break;
       }
       case 'night_fork': lines.push(f.text || '前面有个岔子，等你拿主意。'); break;
+      case 'night_directive_set': lines.push(`今夜的方针定了：${f.text}（${{ cautious: '谨慎', normal: '照常', bold: '放手' }[f.stance] || '照常'}）。接下来的一夜，他自己走。`); break;
+      case 'night_choice': lines.push(`按方针，他选了：${f.label}。`); break;
       case 'night_ignore': lines.push(`没去惊动${f.npc}，各走各的。`); break;
       // —— v3 念头与话语 ——
       case 'direction_set': lines.push(`这句话落进了${f.subject ? name(f.subject) : '这个家'}心里：「${f.text}」。`); break;

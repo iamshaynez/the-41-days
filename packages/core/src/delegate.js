@@ -9,7 +9,7 @@ const has = (s, id, n = 1) => (s.inventory[id] || 0) >= n;
 const delegated = (i) => ({ ...i, delegated: true });
 
 /** 谋士选项的意图类型白名单：玩家的"方案"只有这些；meta/whisper/event_choice/advance 不是方案 */
-export const OPTION_INTENT_TYPES = new Set(['act', 'dusk_assign', 'night', 'trade_op', 'direction', 'policy', 'auto_day', 'auto_night']);
+export const OPTION_INTENT_TYPES = new Set(['act', 'dusk_assign', 'night', 'night_directive', 'trade_op', 'direction', 'policy', 'auto_day', 'auto_night']);
 
 /** 意图可行性（只读检查，不碰状态）：谋士生成的选项必须点得动——
  *  渲染出来的选项不允许点了落空。粗门：人在不在、阶段对不对、货有没有；
@@ -108,6 +108,7 @@ export function feasibleIntent(state, pack, intent) {
     case 'policy': return typeof intent.key === 'string' && ['feeding', 'rationing', 'nightApproach'].includes(intent.key);
     case 'auto_day': return s.phase === 'day';
     case 'auto_night': return s.phase === 'night' && !!s.night && !s.night.home;
+    case 'night_directive': return s.phase === 'night' && !!s.night && !s.night.home;
     default: return false;
   }
 }

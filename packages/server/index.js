@@ -154,8 +154,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   function enrich(state) {
     const view = { ...state };
     view.itemNames = Object.fromEntries(pack.items.map((i) => [i.id, i.name]));
-    // 事件卡视图（黄昏命运卡除外——它并进黄昏方案卡，不另开一张急件）
-    if (state.activeEvent && !state.activeEvent.duskFate) {
+    // 事件卡视图（黄昏命运卡除外——它并进黄昏方案卡；夜访未定方针时也让位给方针卡）
+    if (state.activeEvent && !state.activeEvent.duskFate
+      && !(state.night && !state.night.home && !state.night.directive && !state.night.micro)) {
       const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId]; // C 层生成卡走 run 级卡册
       if (card) {
         const names = state.chars.map((c) => c.name).join('、');
@@ -180,8 +181,16 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         containers: (room.containers || []).map((c) => ({ id: c.id, name: c.name, locked: c.type === 'locked' && !st.searched[c.id + ':open'], searched: !!st.searched[c.id] })),
         npcs: (loc.npcs || []).map((n) => ({ id: n.id, name: n.name, stance: n.stance, state: st.npcState[n.id] || 'unknown' }))
       };
-      // 岔路停问（决断点）：管家在此刻把方向盘交还玩家。视图由状态现算，不入账。
-      if (!state.activeEvent) {
+      // 夜间双模（宏观方针 / 微观岔路）：
+      // 未选方针且未进微操 → 方针卡（一次决策整夜自走，开局撞上的夜事件也归方针自动应答）；
+      // 微操 → 岔路停问照旧
+      if (!state.night.directive && !state.night.micro) {
+        view.nightView.directives = [
+          { stance: 'cautious', label: '谨慎走：不出声，见人就绕', hint: '少拿少惹，平安到家' },
+          { stance: 'normal', label: '照常走一遭：看情况拿，看情况避', hint: '见了人就说话，不对付就绕' },
+          { stance: 'bold', label: '放手干：值钱的都拿，挡路的敢动手', hint: '收获大，动静也大' }
+        ];
+      } else if (!state.activeEvent) {
         const step = planNightStep(state, pack, {});
         if (step?.stop && step.stop.kind !== 'event') view.nightView.fork = { kind: step.stop.kind, text: step.stop.text, options: step.stop.options };
       }

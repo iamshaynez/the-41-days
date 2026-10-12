@@ -80,7 +80,14 @@ function apply(s, ev) {
     case 'HIDDEN_FOUND': s.house.hiddenFound[d.cont] = true; break;
     case 'HOUSE_OPENED': s.house.opened[d.room] = true; break;
     case 'NIGHT_PATCH': {
-      if (s.night && !s.night.home) Object.assign(s.night, { room: d.room, slots: d.slots, noise: d.noise, pack: [...d.pack], packSlots: d.packSlots, observed: { ...d.observed }, unlocked: { ...d.unlocked }, cleared: { ...d.cleared }, sawed: { ...d.sawed }, lowSlotsAck: !!d.lowSlotsAck });
+      if (s.night && !s.night.home) {
+        const patch = {};
+        for (const k of ['room', 'slots', 'noise', 'packSlots', 'lowSlotsAck']) if (d[k] !== undefined) patch[k] = d[k];
+        for (const k of ['pack', 'observed', 'unlocked', 'cleared', 'sawed']) if (d[k] !== undefined) patch[k] = clone(d[k]);
+        if (d.directive !== undefined) patch.directive = clone(d.directive);
+        if (d.micro !== undefined) patch.micro = d.micro;
+        Object.assign(s.night, patch);
+      }
       break;
     }
     case 'EVENT_FIRED': {
