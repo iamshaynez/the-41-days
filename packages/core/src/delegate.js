@@ -463,12 +463,17 @@ export function suggests(state, pack) {
   if (s.over) return out;
   if (s.phase === 'prologue') return out;
   if (s.phase === 'day') {
-    if (!s.activeEvent) out.push({ label: '让他们自己张罗这一天', text: '照常过吧' });
+    // 宏观节奏（一次选择走完今天）：白天建议全部收卷——单效诉求（省粮/听更）也并入当天方略
+    const close = { type: 'auto_day' };
+    if (!s.activeEvent) out.push({ label: '让他们自己张罗这一天', intents: [close] });
     const foodTotal = ['meal', 'canned', 'raw', 'meat'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
-    if (foodTotal <= 3 && foodTotal > 0) out.push({ label: '省着吃', text: '以后省着吃' });
-    if (policyOf(s).rationing && foodTotal > 3) out.push({ label: '恢复正常吃饭', text: '正常吃饭，别饿着' });
-    if (s.facilities.radio) out.push({ label: '听听广播', text: '听广播' });
-    if (s.day <= 2) out.push({ label: '我能做什么？', text: '帮助' });
+    if (foodTotal <= 3 && foodTotal > 0) out.push({ label: '省着吃，今天交给他们', intents: [{ type: 'policy', key: 'rationing', value: true }, close] });
+    if (policyOf(s).rationing && foodTotal > 3) out.push({ label: '恢复正常吃饭，今天交给他们', intents: [{ type: 'policy', key: 'rationing', value: false }, close] });
+    if (s.facilities.radio) {
+      const hearer = aliveChars(s).find((c) => c.ap > 0 && !c.bedRest);
+      if (hearer) out.push({ label: '听听更鼓，其余交给他们', intents: [{ type: 'act', actor: hearer.id, action: 'listen_radio' }, close] });
+    }
+    if (s.day <= 2) out.push({ label: '我能做什么？', text: '帮助' }); // 求助不收卷
   } else if (s.phase === 'dusk') {
     out.push({ label: '我自己安排今晚', text: '' }); // 空 text = 聚焦输入框
   } else if (s.phase === 'night' && s.night && !s.night.home) {

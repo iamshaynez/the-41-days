@@ -110,7 +110,7 @@ describe('序章 → 首日衔接（新玩家的头两分钟）', () => {
     }
     assert.equal(s.phase, 'day');
     const sg = suggests(s, pack);
-    assert.ok(sg.some((x) => x.text === '照常过吧'), '落地首日即有自动日常入口');
+    assert.ok(sg.some((x) => x.intents?.at(-1)?.type === 'auto_day'), '落地首日即有自动日常入口（收卷式）');
     assert.ok(sg.some((x) => x.label.includes('我能做什么')), '首日有教学入口');
   });
 });

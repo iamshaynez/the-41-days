@@ -310,7 +310,7 @@ describe('游戏主流程（LLM 模式 + SSE，按用户隔离）', () => {
     const r = await api('POST', '/api/runs', { mode: 'direct', seed: 42, roster: ['bron', 'katya', 'marta'], prologue: false }, player.token);
     const rid = r.id;
     // 决策卡/建议由服务端现算：白天有"自己张罗"入口
-    assert.ok(r.state.suggests.some((x) => x.text === '照常过吧'), '首日建议栏应含自动日常');
+    assert.ok(r.state.suggests.some((x) => x.intents?.at(-1)?.type === 'auto_day'), '首日建议栏应含自动日常（收卷式）');
     // 决策卡直传结构化意图（不走文本解析，同一 SSE 管线）
     const postIntents = async (intents) => {
       const res = await fetch(`${base}/api/runs/${rid}/input`, {
