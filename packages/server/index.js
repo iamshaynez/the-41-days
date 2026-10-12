@@ -483,7 +483,26 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           ink.push({ day: state.day, role: 'narrator', text: echo });
         }
 
-        const result = resolveInput(state, pack, intents);
+        let result = resolveInput(state, pack, intents);
+        // 宏观收卷（全通道统一节奏）：LLM 局的自由输入也一次走完——
+        // 白天打字办成了事即自动收卷入黄昏；黄昏打字指派后按现行规矩带方针走完整夜。
+        // 直读模式不收（测试/微操通道）；clarify/echo/狂语/求助不动状态也不收
+        if (!Array.isArray(body.intents) && run.mode === 'llm') {
+          const ok = (t) => intents.some((i) => i.type === t && !result.rejects?.some((r) => r.intent === i));
+          const alreadyClosing = intents.some((i) => i.type === 'auto_day' || i.type === 'advance');
+          const merge = (r2) => {
+            result.events.push(...r2.events); result.facts.push(...r2.facts); result.rejects.push(...r2.rejects);
+            result.state = r2.state;
+          };
+          if (result.state.phase === 'day' && !result.state.activeEvent && !result.state.over
+            && !alreadyClosing && ['act', 'policy', 'direction', 'trade_op'].some(ok)) {
+            merge(resolveInput(result.state, pack, [{ type: 'auto_day' }])); // 打字办成事：今天就此收卷
+          } else if (result.state.phase === 'night' && result.state.night && !result.state.night.home
+            && !result.state.night.directive && !result.state.night.micro && ok('dusk_assign')) {
+            const pol = policyOf(result.state).nightApproach || 'normal';
+            merge(resolveInput(result.state, pack, [{ type: 'night_directive', stance: pol, text: '今晚按老规矩走' }])); // 打字指派：整夜随之走完
+          }
+        }
         db.appendEvents(id, result.events);
         // 文档发现即入档（幂等；弃局不丢线索）——记到会话用户名下
         for (const ev of result.events) {
