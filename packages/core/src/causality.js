@@ -153,7 +153,19 @@ export function recordCausal(ctx, verb, o = {}) {
     bumpPair(actor, entry.target, Math.max(0.2, valenceOf(ctx.pack, ctx.pack.charMap[entry.target], entry)) * mag);
   }
 
-  ctx.emit('CAUSAL', { entry, charUpd, pairUpd });
+  // —— 暗面扳机（人物血肉计划 PR1）：见证自己 shadow.trigger 的动词 → 暗账翻一页
+  //    只记数不改心情/伦理——暗面 v1 是叙事层，供堂屋选场与列传取材
+  const shadowUpd = {};
+  for (const w of entry.witnesses) {
+    const trg = ctx.pack.charMap[w]?.persona?.shadow?.trigger?.verbs;
+    if (trg?.includes(verb)) {
+      cz.shadowTouched = cz.shadowTouched || {};
+      cz.shadowTouched[w] = (cz.shadowTouched[w] || 0) + 1;
+      shadowUpd[w] = cz.shadowTouched[w];
+    }
+  }
+
+  ctx.emit('CAUSAL', { entry, charUpd, pairUpd, shadowUpd });
 
   // —— 坚持即机制（P-03）：抗议事件 ——
   for (const w of entry.witnesses) {

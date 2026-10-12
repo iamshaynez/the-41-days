@@ -5,3 +5,4 @@ data/
 out/
 .video_agent/
 .env
+.zcode/
