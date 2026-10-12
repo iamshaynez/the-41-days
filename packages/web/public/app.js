@@ -2,6 +2,7 @@
 // 界面语言 v3「一页书」：主屏只放一页缓缓落墨的书——选择与批注嵌在正文里；
 // 人与家底各浓缩成一行（hover/点按翻详情）；地图操作退场，夜访回到叙事与岔路。
 import { injectIcons, svgUse } from './icons.js';
+import { splitSentences, SentenceBuffer } from './typist.js';
 import { sfx } from './sfx.js';
 injectIcons();
 
@@ -224,35 +225,12 @@ const rich = (() => {
     .replace(/\*\*(.+?)\*\*/g, '<b class="ink-em">$1</b>')
     .replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<i class="em-kai">$1</i>');
 })();
-function splitSentences(text) {
-  const raw = String(text).match(/[^。！？；…]+[。！？；]?|…+/g) || [];
-  const out = [];
-  for (let s of raw) {
-    if (!s.trim()) continue;
-    // 超长句在逗号处再切，保持浮现颗粒
-    while (s.length > 80) {
-      let cut = -1;
-      for (let i = 60; i < s.length; i++) if ('，、'.includes(s[i])) { cut = i + 1; break; }
-      if (cut < 0) cut = 80;
-      out.push(s.slice(0, cut)); s = s.slice(cut);
-    }
-    out.push(s);
-  }
-  // 太碎的碎片并入下一句
-  const merged = [];
-  for (const s of out) { if (merged.length && s.length < 3) merged[merged.length - 1] += s; else merged.push(s); }
-  return merged;
-}
 class Typist {
   /** hooks.makePara：自定义段落容器（默认正文叙事流）；hooks.mark=false 关闭名词标注 */
-  constructor(hooks = {}) { this.para = null; this.queue = []; this.timer = null; this.hooks = hooks; }
-  /** 入队：文本按行切开，行间插换段标记（0），尾部空行自然收段 */
+  constructor(hooks = {}) { this.para = null; this.queue = []; this.timer = null; this.hooks = hooks; this.sbuf = new SentenceBuffer(); }
+  /** 入队（流式安全）：跨增量缓冲，只释放完整句——边界落在「字」与「。」之间时不丢标点 */
   feed(text) {
-    const lines = String(text).split('\n');
-    lines.forEach((line, i) => {
-      if (i > 0) this.queue.push(0);
-      if (line) this.queue.push(...splitSentences(line));
-    });
+    for (const item of this.sbuf.feed(text)) this.queue.push(item);
     this.pump();
   }
   ensurePara() {
@@ -283,6 +261,7 @@ class Typist {
     scrollFlow();
   }
   flush() {
+    for (const item of this.sbuf.flush()) this.queue.push(item); // 轮次结束：未完句也要落纸
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
     while (this.queue.length) {
       const op = this.queue.shift();
@@ -877,7 +856,7 @@ function syncAsks(s) {
       for (const p of String(v.text).split('\n').filter(Boolean)) body.appendChild(el('p', '', esc(p)));
       node.appendChild(body);
       const opts = el('div', 'ask-opts');
-      v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendInput('选' + (i + 1), o.label))));
+      v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendIntents([{ type: 'event_choice', option: o.key }], o.label))));
       node.appendChild(opts);
       node.appendChild(freeOptRow(s, 'event', '说什么都行——但门口的事，总得拿个主意'));
     });
@@ -895,7 +874,7 @@ function syncAsks(s) {
         fate.appendChild(el('p', 'fate-title', esc(s.duskView.fate.title)));
         for (const p of String(s.duskView.fate.text).split('\n').filter(Boolean)) fate.appendChild(el('p', '', esc(p)));
         const fopts = el('div', 'ask-opts');
-        s.duskView.fate.options.forEach((o, i) => fopts.appendChild(optBtn(o.label, '◆', () => sendInput('选' + (i + 1), o.label))));
+        s.duskView.fate.options.forEach((o) => fopts.appendChild(optBtn(o.label, '◆', () => sendIntents([{ type: 'event_choice', option: o.key }], o.label))));
         fate.appendChild(fopts);
         fate.appendChild(el('p', 'ask-hint', '不答也行——出了门，这件事就过去了。'));
         node.appendChild(fate);
@@ -979,7 +958,7 @@ function renderPrologue(s) {
   v.options.forEach((o, i) => {
     const b = el('button', 'opt', `<span class="key">${i + 1}</span><span>${esc(o.label)}</span>`);
     b.type = 'button';
-    b.addEventListener('click', () => sendInput('选' + (i + 1), o.label));
+    b.addEventListener('click', () => sendIntents([{ type: 'event_choice', option: o.key }], o.label));
     opts.appendChild(b);
   });
   box.appendChild(opts);
