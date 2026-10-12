@@ -8,7 +8,7 @@ const PACK = loadPack();
 const proposal = (day) => ({
   title: `半块麦饼·第${day}日`, theme: PACK.ge.themeWheel[day % PACK.ge.themeWheel.length],
   anchors: [`第${day}天`, '天气:clear'],
-  text: '对门的老者把半块麦饼放在门槛上，没留话。饼是热的，说明他家里今天有火。',
+  text: '对门的老者把半块麦饼放在门槛上，没留话。文简捡起来时饼还是热的，说明他家里今天有火。',
   options: [{ label: '收进来', mood_all: 1 }, { label: '放回去' }]
 });
 

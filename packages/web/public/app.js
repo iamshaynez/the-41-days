@@ -45,7 +45,6 @@ function switchView(v) {
 }
 function syncChrome() {
   const inPlay = state.view === 'play' && !$('game').hidden;
-  $('inputbar').hidden = !inPlay;
   $('mode-badge').hidden = !inPlay;
   updateWatch(state.s);
 }
@@ -142,7 +141,6 @@ function enterGame(mode, s) {
   $('mode-badge').className = 'badge' + (mode === 'llm' ? ' llm' : '');
   syncChrome();
   applyState(s);
-  if (window.innerWidth > 760) $('input').focus();
 }
 
 /** 续局：前文落过库，书页能翻回去；没有前文的旧局，用一段前情提要接上 */
@@ -319,7 +317,7 @@ async function sendIntents(intents, label) {
 async function send(payload, displayText) {
   if (state.busy || !state.runId) return;
   state.busy = true;
-  $('btn-send').disabled = true; $('inputbar').classList.add('busy');
+  setCardsEnabled(false);
   hideCharPop();
   typist.flush(); // 新落笔前，把上一段一口气写完
   const line = el('p', 'player-line fresh', esc(displayText));
@@ -347,9 +345,18 @@ async function send(payload, displayText) {
     narrateRaw('（连接中断——刷新页面可从断点恢复）', { cls: 'sys' });
   }
   typist.endTurn();
-  state.busy = false; $('btn-send').disabled = false; $('inputbar').classList.remove('busy');
-  if (window.innerWidth > 760) $('input').focus();
+  state.busy = false;
+  setCardsEnabled(true);
 }
+/** 内核拒绝原因 → 玩家语言（错误码不亮给玩家） */
+const REJECT_TXT = {
+  NEED_FACILITY: '还缺家什', NO_AP: '行动力不够了', NO_FOOD: '没有能吃的', NO_FUEL: '没有柴了',
+  NO_MATERIAL: '材料不够', NO_TOOL: '没有趁手的工具', BAD_PHASE: '现在不是做这个的时候',
+  NOT_DUSK: '得等天黑', HOME_NIGHT: '今晚在家里', NO_MERCHANT: '摊子不在', NO_EVENT: '没有待决的事',
+  BAD_OPTION: '没有这个选项', UNAVAILABLE: '条件不够', IN_PROLOGUE: '序章里只能选', BAD_SHAPE: '这话没听懂',
+  BAD_TYPE: '这事做不了', EMPTY: '空的', TOO_MANY: '太多了'
+};
+
 function handleSse(block) {
   const ev = block.match(/^event: (.+)$/m)?.[1];
   const dataRaw = block.match(/^data: (.+)$/m)?.[1];
@@ -357,12 +364,11 @@ function handleSse(block) {
   if (ev === 'narration-delta') streamNarrate(data.d || '');
   if (ev === 'memoir-delta') streamMemoir(data.d || '');
   if (ev === 'clarify') narrateRaw('……' + data.text, { cls: 'clarify' });
+  if (ev === 'echo') narrateRaw(data.text, { cls: 'clarify' }); // 世界接住狂语的一笔（零状态变化）
   if (ev === 'state-patch') applyState(data.state);
-  if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => r.reason).join('、') + '）', { cls: 'sys' }); }
+  if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' }); }
   if (ev === 'error') narrateRaw('（出错：' + esc(data.error) + '）', { cls: 'sys' });
 }
-$('btn-send').addEventListener('click', () => { const v = $('input').value; $('input').value = ''; sendInput(v); });
-$('input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const v = $('input').value; $('input').value = ''; sendInput(v); } });
 
 // ——— 叙事流：书页的排印 ———
 function makePara(cls = '') {
@@ -455,7 +461,6 @@ function applyState(s) {
   renderHomeline(s);
   renderPrologue(s); // 序章闪回拍排进正文流
   syncAsks(s);       // 世界停问的卡，嵌在正文流里
-  renderChips(s);
   if (state.popFor) fillCharPop(state.popFor); // 浮卡开着时随状态刷新
   if (s.over && s.ending && !s.endingRendered) { renderEnding(s); s.endingRendered = true; }
 }
@@ -717,6 +722,7 @@ function settleAsk(rec) {
   if (!rec?.el) return;
   rec.el.classList.add('settled');
   rec.el.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+  rec.el.querySelectorAll('.opt-free input').forEach((i) => { i.disabled = true; });
 }
 /** 同步一类停问卡：视图没了→合上；签名变了→合上旧的、在书尾开新的一页 */
 function syncAsk(key, present, sig, build) {
@@ -741,26 +747,118 @@ function syncAsk(key, present, sig, build) {
 function askHead(kicker, title, icon) {
   return `<div class="ask-head"><span class="kicker">${esc(kicker)}</span>${icon ? svgUse(icon, 'card-ic') : ''}<b class="ask-title">${esc(title)}</b></div>`;
 }
+/** 忙碌态：未合上的卡里所有按钮与输入行一起停摆；预算耗尽的刷新按钮保持停摆 */
+function setCardsEnabled(on) {
+  document.querySelectorAll('.ask:not(.settled) button, .prologue button, .opt-free input')
+    .forEach((x) => { if (!x.dataset.done) x.disabled = !on; });
+}
+
 function optBtn(label, key, onClick, hint = '') {
   const b = el('button', 'opt', `<span class="key">${esc(key)}</span><span>${esc(label)}${hint ? `<span class="plan-hint">${esc(hint)}</span>` : ''}</span>`);
   b.type = 'button';
   b.addEventListener('click', () => { onClick(); });
   return b;
 }
+/** 刷新命运（统一交互面）：让谋士再想几个——只换自谋类卡的选项，世界的问题不重掷 */
+function refreshRow(cardKey, optsEl) {
+  if (state.mode !== 'llm') return null;
+  const row = el('div', 'opt-refresh-row');
+  const b = el('button', 'opt-refresh', '<span class="candle" aria-hidden="true"></span><span class="txt">⟳ 再想想</span>');
+  b.type = 'button';
+  const txt = () => b.querySelector('.txt');
+  let used = 0;
+  const seen = new Set([...optsEl.querySelectorAll('.opt')].map((x) => x.dataset.label).filter(Boolean));
+  b.addEventListener('click', async () => {
+    if (state.busy || used >= 2) return;
+    b.disabled = true; b.classList.add('thinking'); txt().textContent = '谋士在想…';
+    try {
+      const res = await fetch(`/api/runs/${state.runId}/options`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ card: cardKey, exclude: [...seen].slice(0, 8) })
+      });
+      const r = await res.json();
+      let added = 0;
+      for (const o of r.options || []) {
+        if (seen.has(o.label)) continue;
+        seen.add(o.label);
+        const ob = optBtn(o.label, '◇', () => sendIntents(o.intents, o.label), o.hint || '');
+        ob.classList.add('opt-llm');
+        ob.dataset.label = o.label;
+        optsEl.appendChild(ob);
+        added++;
+      }
+      b.classList.remove('thinking');
+      if (r.reason) b.title = r.reason;
+      if (added) used++; // 只有真出了选项才计入两次上限
+      if (used >= 2) { b.dataset.done = '1'; txt().textContent = '就这些了'; }
+      else { txt().textContent = added ? '⟳ 再想想' : '谋士没词了'; b.disabled = false; }
+    } catch {
+      b.classList.remove('thinking');
+      txt().textContent = '（没接上）'; b.disabled = false;
+    }
+  });
+  row.appendChild(b);
+  return row;
+}
+
+/** 末位自由输入行（命运导演 P0b）：与选项同宗的第四种可能——自己拿主意。
+ *  示例由内核按状态现算（freeExamples），随天数轮换；点「落笔」= 与选项同一条输入管线。 */
+function freeOptRow(s, kind, note = '') {
+  const row = el('div', 'opt-free');
+  const examples = s?.freeExamples?.[kind] || [];
+  const ex = examples.length ? examples[(s.day + examples.length) % examples.length] : '';
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.maxLength = 60;
+  inp.placeholder = note || ex || '想说什么都行——世界会接住';
+  inp.enterKeyHint = 'send';
+  inp.setAttribute('aria-label', '自己拿主意');
+  const btn = el('button', 'free-send', '✎ 落笔');
+  btn.type = 'button';
+  const go = () => {
+    const v = inp.value.trim();
+    if (!v || state.busy) return;
+    inp.value = '';
+    sendInput(v);
+  };
+  btn.addEventListener('click', go);
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  if (ex && !note) inp.title = `比如：「${ex}」`;
+  row.append(inp, btn);
+  return row;
+}
 function syncAsks(s) {
   const inPrologue = s.phase === 'prologue';
-  // 晨报：火烧眉毛的事（门口有事先应门，晨报让位）
-  syncAsk('care', !!(!inPrologue && s.careView && !s.eventView && !s.over),
-    s.careView ? s.careView.title + s.careView.problems.map((p) => p.text).join('|') : '', (node) => {
-      node.innerHTML = askHead('晨报', s.careView.title, 'warn');
-      const body = el('div', 'ask-body');
-      for (const p of s.careView.problems.slice(0, 4)) {
-        body.appendChild(el('p', 'care-line' + (p.sev >= 3 ? ' bad' : p.sev >= 2 ? ' mid' : ''), esc(p.text)));
+  // 今日卡（统一交互面）：白天常驻——晨报 + 念头 + 情境选项 + 刷新命运 + 输入行。
+  // 有急件时让位（门口的事优先）；夜访/黄昏各由自己的卡接管。
+  syncAsk('day', !!(!inPrologue && s.phase === 'day' && !s.eventView && !s.over),
+    [s.day, s.phase, (s.careView?.problems || []).map((p) => p.text).join('|'),
+      (s.suggests || []).map((x) => x.label).join('|'), (s.directions || []).map((d) => d.text).join('|')].join('§'), (node) => {
+      node.innerHTML = askHead('今天', s.careView?.title || '这一天怎么过', 'sun');
+      if (s.careView?.problems?.length) {
+        const body = el('div', 'ask-body');
+        for (const p of s.careView.problems.slice(0, 4)) {
+          body.appendChild(el('p', 'care-line' + (p.sev >= 3 ? ' bad' : p.sev >= 2 ? ' mid' : ''), esc(p.text)));
+        }
+        node.appendChild(body);
       }
-      node.appendChild(body);
+      if (s.directions?.length) {
+        const dir = el('div', 'ask-body dir-box');
+        dir.appendChild(el('p', 'm-kicker', '种下的念头'));
+        for (const d of s.directions) dir.appendChild(el('p', 'care-line', `「${esc(d.text)}」——${esc(d.name)}记着呢（第${d.day}天种下）`));
+        node.appendChild(dir);
+      }
       const opts = el('div', 'ask-opts');
-      opts.appendChild(optBtn('知道了——今天让他们自己张罗', '▸', () => sendIntents([{ type: 'auto_day' }], '照常过吧')));
+      for (const sg of (s.suggests || []).filter((x) => !x.focus)) {
+        const ob = optBtn(sg.label, '·', () => (sg.intents ? sendIntents(sg.intents, sg.label) : sendInput(sg.text, sg.label)));
+        ob.dataset.label = sg.label;
+        opts.appendChild(ob);
+      }
+      if (!opts.children.length) opts.appendChild(optBtn('让他们自己张罗这一天', '▸', () => sendIntents([{ type: 'auto_day' }], '照常过吧')));
       node.appendChild(opts);
+      const rr = refreshRow('day', opts);
+      if (rr) node.appendChild(rr);
+      node.appendChild(freeOptRow(s, 'day'));
     });
   // 急件：门口的事（电报体 + 叩门章）
   syncAsk('event', !!(!inPrologue && s.eventView && !s.over),
@@ -776,17 +874,30 @@ function syncAsks(s) {
       const opts = el('div', 'ask-opts');
       v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendInput('选' + (i + 1), o.label))));
       node.appendChild(opts);
+      node.appendChild(freeOptRow(s, 'event', '说什么都行——但门口的事，总得拿个主意'));
     });
-  // 黄昏：今晚怎么安排（每晚必答）
+  // 黄昏：今晚怎么安排（每晚必答）；命运卡并屏（方案照常，命运追加，出门即路过）
   syncAsk('dusk', !!(s.duskView && !s.over),
-    s.duskView ? s.duskView.plans.map((p) => p.label).join('|') : '', (node) => {
+    s.duskView ? s.duskView.plans.map((p) => p.label).join('|') + (s.duskView.fate ? s.duskView.fate.title : '') : '', (node) => {
       node.innerHTML = askHead('黄昏', '今晚怎么安排', 'moon');
       const opts = el('div', 'ask-opts');
       for (const p of s.duskView.plans) {
         opts.appendChild(optBtn(p.label, { a: '甲', b: '乙', stay: '守' }[p.key] || '·', () => sendIntents([p.intent], p.label), p.hint || ''));
       }
       node.appendChild(opts);
-      node.appendChild(el('p', 'ask-hint', '或者自己开口：「今晚帕维尔去医院，带把刀」'));
+      if (s.duskView.fate) {
+        const fate = el('div', 'fate-box');
+        fate.appendChild(el('p', 'fate-title', esc(s.duskView.fate.title)));
+        for (const p of String(s.duskView.fate.text).split('\n').filter(Boolean)) fate.appendChild(el('p', '', esc(p)));
+        const fopts = el('div', 'ask-opts');
+        s.duskView.fate.options.forEach((o, i) => fopts.appendChild(optBtn(o.label, '◆', () => sendInput('选' + (i + 1), o.label))));
+        fate.appendChild(fopts);
+        fate.appendChild(el('p', 'ask-hint', '不答也行——出了门，这件事就过去了。'));
+        node.appendChild(fate);
+      }
+      const rr = refreshRow('dusk', opts);
+      if (rr) node.appendChild(rr);
+      node.appendChild(freeOptRow(s, 'dusk'));
     });
   // 夜访：岔路停问（地图退场——路在叙事里，停问在书页里）
   syncAsk('night', !!(s.nightView && !s.over),
@@ -822,30 +933,11 @@ function syncAsks(s) {
       } else if (!s.activeEvent) {
         opts.appendChild(optBtn('继续摸黑前进', '▸', () => sendIntents([{ type: 'auto_night' }], '继续')));
         opts.appendChild(optBtn('今晚到此为止', '←', () => sendIntents([{ type: 'night', action: 'retreat' }], '撤退')));
-        node.appendChild(el('p', 'ask-hint', '也可以具体说：「先观察」「去后仓库」「和他说话」'));
       }
       node.appendChild(opts);
-    });
-  // 价目：摊子摆到书页里（一键成交仍在；讨价还价用嘴）
-  syncAsk('trade', !!(s.tradeView && s.tradeView.stock.length && !s.over),
-    s.tradeView ? s.tradeView.merchant + s.tradeView.stock.map((x) => x.item + x.buy).join(',') + (s.tradeView.deals || []).map((d) => d.label).join(',') : '', (node) => {
-      const tv = s.tradeView;
-      node.innerHTML = askHead('价目', tv.merchant === 'franko' ? '鲁舟的摊子' : '医棚药工', 'scale');
-      const id2cn = Object.fromEntries(Object.entries(ITEM_META).map(([id, [n]]) => [id, n]));
-      const cn = (id) => id2cn[String(id).replace(/×\d+$/, '')] || id;
-      const list = el('div', 'leaders');
-      for (const sku of tv.stock) {
-        const ic = id2cn[sku.item] ? sku.item : null;
-        list.appendChild(el('div', 'lead-row',
-          `${ic ? svgUse(ic, 'lead-ic') : ''}<span class="name">${esc(cn(sku.item))}</span><span class="dots-line"></span><span class="qty">值${sku.buy}</span>`));
-      }
-      node.appendChild(list);
-      if (tv.deals?.length) {
-        const opts = el('div', 'ask-opts');
-        for (const d of tv.deals) opts.appendChild(optBtn(d.label, '换', () => sendIntents([{ type: 'trade_op', give: d.give, get: d.get }], d.label)));
-        node.appendChild(opts);
-      }
-      node.appendChild(el('p', 'ask-hint', '也可以自己开价：「用2木板换1生食」'));
+      const rr = refreshRow('night', opts);
+      if (rr) node.appendChild(rr);
+      node.appendChild(freeOptRow(s, 'night'));
     });
 }
 
@@ -879,34 +971,6 @@ function renderPrologue(s) {
   scrollFlow(true);
 }
 
-/** 情境建议纸片（v2：服务端按状态现算） */
-function renderChips(s) {
-  const chips = $('chips');
-  chips.innerHTML = '';
-  if (s.over) {
-    const b = el('button', 'chip', '翻开新的一页');
-    b.type = 'button';
-    b.addEventListener('click', () => openMenu());
-    chips.appendChild(b);
-    return;
-  }
-  for (const sg of s.suggests || []) {
-    const b = el('button', 'chip', sg.label);
-    b.type = 'button';
-    b.addEventListener('click', () => {
-      if (sg.intents) sendIntents(sg.intents, sg.label);
-      else if (sg.text) sendInput(sg.text);
-      else if (sg.focus) {
-        // 纯引导纸片：把对应的停问卡翻到眼前
-        const key = { 'trade-card': 'trade', 'event-card': 'event', 'night-card': 'night', 'dusk-card': 'dusk' }[sg.focus] || sg.focus;
-        const card = state.asks[key]?.el || document.getElementById('ask-' + key);
-        if (card) { card.scrollIntoView({ behavior: wantRM() ? 'auto' : 'smooth', block: 'nearest' }); card.classList.add('flash'); setTimeout(() => card.classList.remove('flash'), 1200); }
-      }
-      else { $('input').focus(); } // "我自己安排"——聚焦输入框
-    });
-    chips.appendChild(b);
-  }
-}
 
 /** 局终：长卷结算（回忆录 → 局的日线 → 三件事 → 人的账 → 后日谈） */
 function renderEnding(s) {
@@ -991,9 +1055,11 @@ function openSheet(id) {
 function closeSheets() {
   for (const x of ['menu', 'homebook']) $(x).hidden = true;
   document.body.classList.remove('overlay-open');
-  if (state.view === 'play' && !$('game').hidden && window.innerWidth > 760) $('input').focus();
 }
 $('overlay-backdrop').addEventListener('click', closeSheets);
+// 档案馆/管理的显式返回（菜单里的「对局」仍在，但入口要一眼看得见）
+$('back-from-archive').addEventListener('click', () => switchView('play'));
+$('back-from-admin').addEventListener('click', () => switchView('play'));
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (document.body.classList.contains('overlay-open')) closeSheets();
@@ -1285,24 +1351,6 @@ function nounIntel(entry) {
     else if (!e.target.closest('#noun-card')) hide();
   });
 })();
-
-// 动态 placeholder（UI 设计 §6）：随阶段与情境换台词
-setInterval(() => {
-  const input = $('input');
-  if (state.busy) { input.placeholder = '风从窗缝里进来……'; return; }
-  if (!state.s || $('game').hidden) return;
-  const s = state.s;
-  if (s.over) { input.placeholder = '这一局已经写完——菜单里是下一本。'; return; }
-  if (s.day === 45 && s.phase === 'night') {  // 交割夜专场：当夜的全部引导只剩这一句
-    input.placeholder = '今夜，你守在哪里？'; return;
-  }
-  const ph = {
-    day: s.eventView ? '门在响——开，还是不开？' : '想交代什么就直说；不说，他们自己张罗。',
-    dusk: '天黑了。点一个方案，或者自己安排。',
-    night: s.nightView ? '黑暗里，你的下一步——（「继续」让他们自己摸黑前进）' : '夜还长。'
-  }[s.phase];
-  if (ph && input.placeholder !== ph) input.placeholder = ph;
-}, 1200);
 
 // ——— 档案馆 ———
 async function loadArchive() {

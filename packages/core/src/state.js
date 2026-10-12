@@ -91,6 +91,10 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     causality: { entries: [], pairArcs: {}, charArcs: {} },
     seals: [],
     policy: { ...DEFAULT_POLICY },
+    // 念头（v3 命运导演）：玩家种下的方向性意图——登记经 FLAG 回放，显形走自主回声/锚池/叙事
+    directions: {},
+    // 素材环：玩家未被接住的话（离谱输入兜底）——世界听得见，两天后可能长出回应卡
+    whispers: [],
     musicLastDay: -99, shovelReturnDay: 0, assistTonight: false, heatedTonight: false,
     rainCollected: 0, weatherForecast: null,
     report: [], over: false, ending: null,

@@ -12,11 +12,13 @@ import { hashPassword, verifyPassword, validateUsername, validatePassword, sessi
 import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect } from './narrate.js';
-import { loadPack, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, policyOf, validateIntentShape } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
-import { referee, narrator, memoirist } from '../llm/index.js';
+import { referee, narrator, memoirist, optionsmith } from '../llm/index.js';
+import { anchorPool } from '../core/src/ge.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from './echoes.js';
 import { createGeDirector } from './ge.js';
+import { validateOptions, cardBrief } from './options.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = join(here, '..', 'web', 'public');
@@ -52,16 +54,14 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   const RATE = cfg.inputRatePerMin;
   const buckets = new Map(); // ip -> {n, windowStart}
   const promptsCache = loadPrompts();
+  const optionRefresh = new Map(); // runId:card:day -> 已刷新次数（内存即可）
 
   function loadPrompts() {
     const ents = Object.fromEntries(db.contentEntities('prompt'));
-    return {
-      referee: ents.referee?.text || '',
-      narrator: ents.narrator?.text || '',
-      actor: ents.actor?.text || '',
-      memoirist: ents.memoirist?.text || '',
-      playwright: ents.playwright?.text || ''
-    };
+    // 老库缺条目（如新加的 optionsmith）时兜底读内容包原文件——提示词永远不允许是空的
+    const fromDisk = (n) => { try { return loadPrompt(n, PACK_DIR); } catch { return ''; } };
+    const pick = (n) => ents[n]?.text || fromDisk(n);
+    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith') };
   }
 
   // —— C 层导演（GE：LLM 在配才在场；离线即关，游戏完整可玩） ——
@@ -79,8 +79,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     for (const r of routes) {
       const p = r.provider_id ? db.providerRaw(r.provider_id) : null;
       const f = r.fallback_provider_id ? db.providerRaw(r.fallback_provider_id) : null;
-      if (p && p.enabled) providers[r.purpose] = makeProvider({ baseUrl: p.base_url, model: p.model, apiKey: decryptKey(p.api_key_enc), ...(JSON.parse(p.params_json || '{}')) });
-      if (f && f.enabled) providers[r.purpose + ':fallback'] = makeProvider({ baseUrl: f.base_url, model: f.model, apiKey: decryptKey(f.api_key_enc), ...(JSON.parse(f.params_json || '{}')) });
+      // adapter 必须随行传入——漏了它，anthropic-compat 会被静默当成 openai 兼容
+      //（打到 /chat/completions 上，GLM 网关用 HTTP200 包 404，整层无声降级成直读）
+      if (p && p.enabled) providers[r.purpose] = makeProvider({ adapter: p.adapter, baseUrl: p.base_url, model: p.model, apiKey: decryptKey(p.api_key_enc), ...(JSON.parse(p.params_json || '{}')) });
+      if (f && f.enabled) providers[r.purpose + ':fallback'] = makeProvider({ adapter: f.adapter, baseUrl: f.base_url, model: f.model, apiKey: decryptKey(f.api_key_enc), ...(JSON.parse(f.params_json || '{}')) });
     }
     if (!Object.keys(providers).length) return null;
     const gw = { providers };
@@ -150,8 +152,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   function enrich(state) {
     const view = { ...state };
     view.itemNames = Object.fromEntries(pack.items.map((i) => [i.id, i.name]));
-    // 事件卡视图
-    if (state.activeEvent) {
+    // 事件卡视图（黄昏命运卡除外——它并进黄昏方案卡，不另开一张急件）
+    if (state.activeEvent && !state.activeEvent.duskFate) {
       const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId]; // C 层生成卡走 run 级卡册
       if (card) {
         const names = state.chars.map((c) => c.name).join('、');
@@ -162,8 +164,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         };
       }
     }
-    // 交易视图（v2：附一键成交建议；讨价还价仍可自由文本）
-    if (state.franko) view.tradeView = { merchant: state.franko.merchant, stock: state.franko.stock.filter((s) => s.n > 0), deals: tradeDeals(state, pack) };
+    // 交易已沉入水下（统一交互面）：管家在商人到访时自理（planDay），不再有价目卡；
+    // 想干预的玩家用自由文本开价（trade_op）或种念头——世界简报仍报商人行踪。
     // 夜间场景视图
     if (state.night && !state.night.home) {
       const loc = pack.locMap[state.night.locId];
@@ -182,9 +184,17 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (step?.stop && step.stop.kind !== 'event') view.nightView.fork = { kind: step.stop.kind, text: step.stop.text, options: step.stop.options };
       }
     }
-    // 黄昏决策卡（每晚必答）：2~3 个完整方案，点一个或自己说
-    if (state.phase === 'dusk' && !state.activeEvent && !state.over) {
+    // 黄昏决策卡（每晚必答）：2~3 个完整方案，点一个或自己说。
+    // 黄昏命运卡（duskFate）与方案卡同屏：方案照常，命运作为追加问题；出门即路过。
+    if (state.phase === 'dusk' && !state.over && (!state.activeEvent || state.activeEvent.duskFate)) {
       view.duskView = planDusk(state, pack);
+      if (state.activeEvent?.duskFate) {
+        const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId];
+        if (card) view.duskView.fate = {
+          title: card.title, text: card.text || '',
+          options: (card.options || []).map((o) => ({ key: o.key, label: o.label }))
+        };
+      }
     }
     // 晨报问题前置（白天）：火烧眉毛的事 + 主建议入口
     if (state.phase === 'day' && !state.over) {
@@ -194,6 +204,12 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     // 情境建议（替代静态 chips）：玩家可能想说的话，由状态现算
     view.suggests = suggests(state, pack);
     view.policy = policyOf(state);
+    // v3 命运导演：活着的念头（晨报区展示）+ 自由输入语境示例（停问卡末位输入行）
+    view.directions = Object.values(state.directions || {}).filter((d) => d.alive).map((d) => ({
+      id: d.id, text: d.text, day: d.day,
+      name: d.subject ? (state.chars.find((c) => c.id === d.subject)?.name || d.subject) : '这个家'
+    }));
+    view.freeExamples = freeExamples(state, pack);
     // 人物视图（人话状态；desc 供名词情报卡引用——只转述内核已知，不现编）
     view.charView = state.chars.map((c) => ({
       id: c.id, name: c.name, role: c.role, alive: c.alive, desc: c.desc || '',
@@ -414,7 +430,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (display.trim()) ink.push({ day: state.day, role: 'player', text: display });
 
         // 意图解析：决策卡直传结构化意图（v2）→ LLM 裁判 → 直读兜底（同一 schema，同一 resolve 管线）
-        let intents = [], clarify = null, say = null, degraded = false;
+        let intents = [], clarify = null, say = null, echo = null, degraded = false;
         const gw = run.mode === 'llm' ? buildGateway(id) : null;
         if (Array.isArray(body.intents) && body.intents.length) {
           intents = body.intents.filter(validateIntentShape).slice(0, 20);
@@ -424,12 +440,18 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           }
         } else if (gw) {
           const r = await gw.parse(input, state);
-          if (r.ok && !r.degraded) { intents = r.intents; clarify = r.clarify; say = r.say; }
+          if (r.ok && !r.degraded) { intents = r.intents; clarify = r.clarify; say = r.say; echo = r.echo || null; }
           else degraded = true;
-          if (degraded || !intents.length) { const fb = parseDirect(state, pack, input); intents = intents.concat(fb.intents); clarify = clarify || fb.clarify || null; }
+          // 直读兜底只在降级或真的一无所获时跑——echo 是合法的完整回应，不许被 clarify 抢走
+          if (degraded || (!intents.length && !clarify && !echo)) { const fb = parseDirect(state, pack, input); intents = intents.concat(fb.intents); clarify = clarify || fb.clarify || null; }
         } else {
           const fb = parseDirect(state, pack, input);
           intents = fb.intents; clarify = fb.clarify || null;
+        }
+        // 未被接住的话（v3）：echo 演出世界如何接住它，素材环收存原文——
+        // 两天后命运导演可能长出一张回应卡（离谱输入的兜底不是拒绝，是消化）
+        if (!intents.length && !clarify && input.trim()) {
+          intents = [{ type: 'whisper', text: input.slice(0, 60) }];
         }
 
         res.writeHead(200, {
@@ -444,6 +466,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           db.appendNarration(id, ink);
           send('done', { state: enrich(state), events: [] });
           return res.end();
+        }
+        if (echo) { // 世界的回应先落一笔（作为叙事入前文），再走素材收存
+          send('echo', { text: echo });
+          ink.push({ day: state.day, role: 'narrator', text: echo });
         }
 
         const result = resolveInput(state, pack, intents);
@@ -490,6 +516,43 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         send('state-patch', { state: enrich(result.state) });
         send('done', { rejects: result.rejects, degraded, say });
         return res.end();
+      }
+
+      // 谋士选项（统一交互面）：刷新命运——纯视图数据，点了才走输入管线
+      if (req.method === 'POST' && /^\/api\/runs\/[^/]+\/options$/.test(path)) {
+        const id = path.split('/')[3];
+        const ctx = loadOwnRun(id);
+        if (!ctx) return;
+        const { run } = ctx;
+        if (run.status !== 'active' || run.state.over) return json(res, 400, { error: 'run ended' });
+        const body = await readBody(req);
+        const card = ['day', 'dusk', 'night'].includes(body.card) ? body.card : null;
+        if (!card) return json(res, 400, { error: 'card 不对' });
+        if (rateLimited(req.socket.remoteAddress || '?')) return json(res, 200, { options: [], reason: '太快了，喘口气' });
+        if (run.mode !== 'llm') return json(res, 200, { options: [], reason: '这一局是直读模式（添加 LLM 供应商后新开的局才有谋士）' });
+        const gw = buildGateway(id);
+        if (!gw?.providers?.referee && !gw?.providers?.narrator) return json(res, 200, { options: [], reason: '没有可用的 LLM 路由（管理页配置后自动接入）' });
+        // 刷新预算：同一卡面至多两次「成功出选项」的刷新（失败/被滤不扣玩家次数）
+        const bkey = id + ':' + card + ':' + run.state.day;
+        if ((optionRefresh.get(bkey) || 0) >= 2) return json(res, 200, { options: [], budget: true });
+        try {
+          const st = run.state;
+          const brief = {
+            card: cardBrief(st, pack, card),
+            exclude: Array.isArray(body.exclude) ? body.exclude.slice(0, 8).map(String) : [],
+            anchors: anchorPool(pack, st).slice(0, 24),
+            worldBrief: worldBrief(st, pack)
+          };
+          const provider = gw.providers.referee || gw.providers.narrator;
+          const raw = await optionsmith({ provider, prompts: promptsCache }, brief);
+          const options = validateOptions(pack, st, raw);
+          const reason = options.length ? '' : (raw ? '谋士出的选项都没过验证（id 对照/可行性/禁词）' : '谋士的输出没法解析成 JSON');
+          if (options.length) optionRefresh.set(bkey, (optionRefresh.get(bkey) || 0) + 1);
+          return json(res, 200, { options, reason });
+        } catch (e) {
+          log.warn('optionsmith 失败', { runId: id, error: String(e?.message || e) });
+          return json(res, 200, { options: [], reason: `调用失败：${String(e?.message || e).slice(0, 120)}` });
+        }
       }
 
       // 计划确认（直读模式 v1 走同一条 input 通道）

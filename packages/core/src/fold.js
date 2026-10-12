@@ -87,6 +87,7 @@ function apply(s, ev) {
       const ae = { cardId: d.cardId };
       if (d.night) ae.night = true;
       if (d.actorId) ae.actorId = d.actorId;
+      if (d.duskFate) ae.duskFate = true;
       s.activeEvent = ae;
       break;
     }

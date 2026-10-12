@@ -2,6 +2,11 @@
 // 铁律：LLM 输出仅作建议；结构校验失败走修复链，再失败回退直读模式（技术架构 §7.2/7.3）。
 import { makeProvider } from './providers.js';
 
+// GLM-5.x 思维链档位（官方报错原文：该模型始终思考，请使用 low、high 或 max）。
+// low 实测：完整谋士提示词 6s 出结果（默认档 70~195s）。真 Anthropic 端点不认此档
+// 会 400——适配器降参重试兜底，各回各家。
+const THINKING_LOW = { type: 'low' };
+
 /** 从模型输出里抠 JSON（容忍 ```json 包裹与前后闲话） */
 export function extractJson(text) {
   if (!text) return null;
@@ -33,12 +38,12 @@ export async function referee({ provider, prompts, worldBrief, dayActions, duskA
       ? input
       : `上一次你的输出无法解析（${lastErr}）。请严格只输出一个 JSON 对象：{"intents":[...],"clarify":null,"say":null}。玩家输入：${input}`;
     try {
-      const r = await provider.call({ system, user, json: true, temperature: 0.1, maxTokens: 1024 });
+      const r = await provider.call({ system, user, json: true, temperature: 0.1, maxTokens: 4000, thinking: THINKING_LOW });
       const parsed = extractJson(r.text);
       if (!parsed || typeof parsed !== 'object') throw new Error('输出不是 JSON 对象');
       const intents = Array.isArray(parsed.intents) ? parsed.intents.filter(validIntent) : [];
-      if (!intents.length && !parsed.clarify && !parsed.say) throw new Error('intents 为空且无 clarify/say');
-      return { ok: true, intents, clarify: parsed.clarify || null, say: parsed.say || null, raw: r.text, usage: r.usage };
+      if (!intents.length && !parsed.clarify && !parsed.say && !parsed.echo) throw new Error('intents 为空且无 clarify/say/echo');
+      return { ok: true, intents, clarify: parsed.clarify || null, say: parsed.say || null, echo: parsed.echo || null, raw: r.text, usage: r.usage };
     } catch (e) {
       lastErr = String(e.message || e);
     }
@@ -54,14 +59,14 @@ export async function referee({ provider, prompts, worldBrief, dayActions, duskA
 /** 叙事者：facts → 散文（流式回调可选）。离线时由调用方走直读模板。 */
 export async function narrator({ provider, prompts, worldBrief }, facts, onDelta) {
   const system = prompts.narrator.replace('{{world}}', worldBrief).replace('{{facts}}', JSON.stringify(facts, null, 1));
-  const r = await provider.call({ system, user: '请渲染。', temperature: 0.85, maxTokens: 1200, stream: !!onDelta, onDelta });
+  const r = await provider.call({ system, user: '请渲染。', temperature: 0.85, maxTokens: 4000, stream: !!onDelta, onDelta, thinking: THINKING_LOW });
   return { text: r.text, usage: r.usage };
 }
 
 /** 回忆录作者：结局 storyline → 文学复盘（EPI-02；N-02 校验由调用方 memoirLint 执行） */
 export async function memoirist({ provider, prompts }, storyline, onDelta) {
   const system = prompts.memoirist.replace('{{story}}', JSON.stringify(storyline, null, 1));
-  const r = await provider.call({ system, user: '请撰写。', temperature: 0.8, maxTokens: 1600, stream: !!onDelta, onDelta });
+  const r = await provider.call({ system, user: '请撰写。', temperature: 0.8, maxTokens: 5000, stream: !!onDelta, onDelta, thinking: THINKING_LOW });
   return { text: r.text, usage: r.usage };
 }
 
@@ -78,13 +83,30 @@ export async function actor({ provider, prompts }, { npcName, npcCard, priceBand
 }
 
 /** 网关：按用途路由 + 主备降级（§7.2）。providers: {referee, narrator, actor}（已构造的 provider 或 null） */
-/** 编剧（内核 §8.8 GE-01）：提案一个 C 层微事件，JSON 走白名单校验（核心在 core/ge.js） */
+/** 编剧（内核 §8.8 GE-01）：提案一个 C 层微事件，JSON 走白名单校验（核心在 core/ge.js）。
+ *  v3 命运导演：brief.arc 可携带命运弧（皮肤自由、包络住数据）；文学性四约束见提示词。 */
 export async function playwright({ provider, prompts }, brief) {
+  const arcTxt = brief.arc
+    ? `\n# 本卡所属命运弧（写这张卡，不写别的）\n${brief.arc.brief}\n输出 JSON 增加 "arc": "${brief.arc.id}"；允许落的旗标键：${(brief.arc.flags || []).join('、')}（选项可用 "flag": {"键": true}）`
+    : '';
   const system = prompts.playwright
     .replace('{{theme}}', brief.theme || '')
+    .replace('{{arc}}', arcTxt)
     .replace('{{anchors}}', (brief.anchors || []).join('、'))
     .replace('{{world}}', brief.worldBrief || '');
-  const r = await provider.call({ system, user: '提案一个微事件。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 900 });
+  const r = await provider.call({ system, user: '提案一个微事件。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 6000, thinking: THINKING_LOW });
+  return extractJson(r.text);
+}
+
+/** 谋士（统一交互面）：为停问卡补情境选项——皮肤自由，意图载荷由内核逐项验证。
+ *  输出经服务端 validateOptions 过滤（形状/可行性/禁词），点不动的不会渲染。 */
+export async function optionsmith({ provider, prompts }, brief) {
+  const system = prompts.optionsmith
+    .replace('{{card}}', brief.card || '')
+    .replace('{{exclude}}', (brief.exclude || []).join('；') || '（无）')
+    .replace('{{anchors}}', (brief.anchors || []).join('、'))
+    .replace('{{world}}', brief.worldBrief || '');
+  const r = await provider.call({ system, user: '给这张卡补 1~3 个新选项。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 5000, thinking: THINKING_LOW });
   return extractJson(r.text);
 }
 
