@@ -765,12 +765,21 @@ function insertGoldOptions(optsEl, options, onClick, beforeEl) {
   }
 }
 
-/** 选项同拍落纸：红色先在暗处备好，谋士一回来（或超时/失败）红金一起上纸 */
-function revealOptions(mount, optsEl, goldPromise, { onClick, beforeEl } = {}) {
-  goldPromise.catch(() => []).then((gold) => {
-    if (!mount.isConnected) return; // 卡已重建
-    if (gold && gold.length) insertGoldOptions(optsEl, gold, onClick, beforeEl);
-    mount.replaceWith(optsEl);
+/** 整卷同拍落纸：等墨期间整张卡（含输入行）隐去，只留落墨动画——
+ *  等待期不可见也不可输入，杜绝误操作；谋士落定（或失败/超时）整卷一次上纸 */
+function revealCardVeiled(node, optsEl, cardKey, s, { onClick, beforeEl } = {}) {
+  if (state.mode !== 'llm') return; // 直读无谋士，立即出卷
+  const gold = fetchAutoOptions(cardKey, optsEl, s);
+  const veil = el('div', 'card-veil', '<span class="ink-dots"><i></i><i></i><i></i></span>史官正在落墨……');
+  node.classList.add('veiled');
+  node.appendChild(veil);
+  gold.catch(() => []).then((opts) => {
+    if (!node.isConnected) return; // 卡已重建：随旧卡一并消失
+    if (opts && opts.length) insertGoldOptions(optsEl, opts, onClick, beforeEl);
+    veil.remove();
+    node.classList.remove('veiled');
+    node.classList.add('unveil'); // 一次成卷的淡入
+    setTimeout(() => node.classList.remove('unveil'), 800);
   });
 }
 
@@ -868,13 +877,12 @@ function syncAsks(s) {
         opts.appendChild(ob);
       }
       if (!opts.children.length) opts.appendChild(optBtn('让他们自己张罗这一天', '▸', () => sendIntents([{ type: 'auto_day' }], '照常过吧')));
-      const mount = el('div', 'opt-pending', '墨正在研……');
-      node.appendChild(mount);
-      revealOptions(mount, opts, fetchAutoOptions('day', opts, s));
+      node.appendChild(opts);
       node.appendChild(el('p', 'ask-hint', '点任何一个选项都会收卷今天——方略一次走完这一天。'));
       const rr = refreshRow('day', opts);
       if (rr) node.appendChild(rr);
       node.appendChild(freeOptRow(s, 'day'));
+      revealCardVeiled(node, opts, 'day', s); // 整卷等墨：选项+输入行一起上纸
     });
   // 急件：门口的事（电报体 + 叩门章）
   syncAsk('event', !!(!inPrologue && s.eventView && !s.over),
@@ -939,9 +947,7 @@ function syncAsks(s) {
         }
         sendIntents(intents, o.label);
       };
-      const mount = el('div', 'opt-pending', '墨正在研……');
-      node.appendChild(mount);
-      revealOptions(mount, opts, fetchAutoOptions('dusk', opts, s), { onClick: goldClick });
+      node.appendChild(opts);
       if (s.duskView.fate) {
         const fate = el('div', 'fate-box');
         fate.appendChild(el('p', 'fate-title', esc(s.duskView.fate.title)));
@@ -955,6 +961,7 @@ function syncAsks(s) {
       const rr = refreshRow('dusk', opts, goldClick);
       if (rr) node.appendChild(rr);
       node.appendChild(freeOptRow(s, 'dusk'));
+      revealCardVeiled(node, opts, 'dusk', s, { onClick: goldClick }); // 整卷等墨：方案+挡位+输入行一起上纸
     });
   // 夜访：岔路停问（地图退场——路在叙事里，停问在书页里）
   syncAsk('night', !!(s.nightView && !s.over),
@@ -996,7 +1003,7 @@ function syncAsks(s) {
         const micro = optBtn('今夜我自己一步步走', '·', () => sendIntents([{ type: 'auto_night' }], '自己走'));
         micro.dataset.label = micro.textContent;
         opts.appendChild(micro);
-        nightReveal = { beforeEl: micro }; // 整块选项同拍落纸（含「自己走」），谋士方案插在它前面
+        nightReveal = { beforeEl: micro }; // 谋士方针插在「自己走」前
       } else if (nv.fork) {
         node.appendChild(el('p', 'fork-text', esc(nv.fork.text || '怎么办？')));
         for (const o of nv.fork.options) opts.appendChild(optBtn(o.label, '◆', () => sendIntents(o.intents, o.label)));
@@ -1004,16 +1011,11 @@ function syncAsks(s) {
         opts.appendChild(optBtn('继续摸黑前进', '▸', () => sendIntents([{ type: 'auto_night' }], '继续')));
         opts.appendChild(optBtn('今晚到此为止', '←', () => sendIntents([{ type: 'night', action: 'retreat' }], '撤退')));
       }
-      if (nightReveal) {
-        const mount = el('div', 'opt-pending', '墨正在研……');
-        node.appendChild(mount);
-        revealOptions(mount, opts, fetchAutoOptions('night', opts, s), nightReveal);
-      } else {
-        node.appendChild(opts);
-      }
+      node.appendChild(opts);
       const rr = refreshRow('night', opts);
       if (rr) node.appendChild(rr);
       node.appendChild(freeOptRow(s, 'night'));
+      if (nightReveal) revealCardVeiled(node, opts, 'night', s, nightReveal); // 整卷等墨（岔路/继续分支不等）
     });
 }
 
