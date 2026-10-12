@@ -130,6 +130,14 @@ function apply(s, ev) {
       break;
     }
     case 'SEAL_UNLOCKED': { if (!s.seals) s.seals = []; if (!s.seals.includes(d.id)) s.seals.push(d.id); break; }
+    case 'PRELUDE_BEAT': s.prelude = { i: d.i }; break;
+    case 'MAINLINE_STEP': {
+      if (!s.mainline) s.mainline = [];
+      s.mainline.push({ day: d.day, stepId: d.stepId ?? null, pens: d.pens || [], mirrors: d.mirrors || [] });
+      if (!s.mainlinePens) s.mainlinePens = [];
+      for (const p of d.pens || []) if (!s.mainlinePens.includes(p)) s.mainlinePens.push(p);
+      break;
+    }
     case 'NOISE': if (s.night && !s.night.home) s.night.noise = d.to; break;
     default: break; // 叙事/骰子/演出类事件不参与折叠
   }

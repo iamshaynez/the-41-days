@@ -12,9 +12,9 @@ import { hashPassword, verifyPassword, validateUsername, validatePassword, sessi
 import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect } from './narrate.js';
-import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
-import { referee, narrator, memoirist, optionsmith } from '../llm/index.js';
+import { referee, narrator, memoirist, optionsmith, annalist } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
 import { applySceneEffects } from '../core/index.js';
 import { anchorPool } from '../core/src/ge.js';
@@ -63,7 +63,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     // 老库缺条目（如新加的 optionsmith）时兜底读内容包原文件——提示词永远不允许是空的
     const fromDisk = (n) => { try { return loadPrompt(n, PACK_DIR); } catch { return ''; } };
     const pick = (n) => ents[n]?.text || fromDisk(n);
-    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith'), stage: pick('stage') };
+    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith'), stage: pick('stage'), annalist: pick('annalist') };
   }
 
   // —— C 层导演（GE：LLM 在配才在场；离线即关，游戏完整可玩） ——
@@ -134,6 +134,24 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     archiveOutcome(db, userId, runId, st);
   }
 
+  // —— 史官校验（叙事双轴 §4.5 的四关；文风圣经 §4.2 禁词的 server 侧副本） ——
+  const ANNALS_STYLE_BAN = /突然|渐渐|慢慢|悄悄|立刻|马上|终于|已经|正在|十分|非常|特别|居然|竟然|其实|简直|几乎|越来越/;
+  async function renderAnnals(gw, { step, pens, digest, prev }) {
+    try {
+      const names = [...(pack.historia?.persons || []), ...(pack.historia?.places || [])].slice(0, 64).join('、');
+      const out = await annalist({ provider: gw.providers.narrator || gw.providers.referee, prompts: promptsCache },
+        { anchor: step.anchor, surface: step.surface, undertow: step.undertow, pens, digest, prev, names });
+      const t = (out.text || '').trim();
+      const plain = stripMarkers(t);
+      if (plain.length < 12 || plain.length > 160) return null;
+      if (ANNALS_STYLE_BAN.test(plain)) return null;
+      if (validateTextMarkers(t, pack).length) return null;
+      return t;
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * 终局 finalize（EPI-02）：文学复盘三链路——
    * LLM 回忆录 → N-02 事实校验（memoirLint）→ 失败回退直读模板。之后落库 + 入档。
@@ -151,9 +169,13 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   }
 
   // —— 状态富化（给 UI 的视图） ——
-  function enrich(state) {
+  function enrich(state, annalsByDay = null) {
     const view = { ...state };
     view.itemNames = Object.fromEntries(pack.items.map((i) => [i.id, i.name]));
+    // 叙事双轴三视图（叙事双轴-v0.1）：序章节拍 / 舆图（三态+走向+留痕）/ 史卷（步+闲笔+digest）
+    if (state.phase === 'prologue' && !state.over) view.preludeView = preludeBeatView(pack, state);
+    view.mapView = mapView(state, pack);
+    view.chronicle = buildChronicle(state, pack, annalsByDay);
     // 事件卡视图（黄昏命运卡除外——它并进黄昏方案卡；夜访未定方针时也让位给方针卡）
     if (state.activeEvent && !state.activeEvent.duskFate
       && !(state.night && !state.night.home && !state.night.directive && !state.night.micro)) {
@@ -360,7 +382,11 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const prologue = body.sidestory ? false : body.prologue !== false; // 玩家局默认带序章（围城头九天）；测试/sim 显式关闭
         // —— 跨周目回响装配（长线体验 EC 系）：档案馆里有什么，新局就从什么里长出来 ——
         const echoes = collectEchoes(db, s.userId);
-        const state = createRun(pack, { seed: body.seed || Math.floor(Math.random() * 1e9), difficulty: body.difficulty || 'documentary', roster: body.roster, prologue, echoes, sidestory: sideDef?.id || null });
+        // 首局门（叙事双轴 §2.4 拍板）：账号名下无已收束之局 → 三幕全量不可跳；此后降为单句版。
+        // body.preludeMode 是测试/开发后门，UI 不提供。
+        const hadEnded = db.listRuns(s.userId).some((r) => r.status === 'ended');
+        const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : (hadEnded ? 'short' : 'full');
+        const state = createRun(pack, { seed: body.seed || Math.floor(Math.random() * 1e9), difficulty: body.difficulty || 'documentary', roster: body.roster, prologue, preludeMode, echoes, sidestory: sideDef?.id || null });
         const { events } = beginRun(state, pack, { prologue });
         db.createRun({ id, userId: s.userId, seed: state.seed, packId, difficulty: state.difficulty, mode, state });
         db.appendEvents(id, events);
@@ -410,7 +436,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const ctx = id ? loadOwnRun(id) : null;
         if (!ctx) return;
         const run = ctx.run;
-        return json(res, 200, { id: run.id, mode: run.mode, status: run.status, state: enrich(run.state), ending: run.ending, history: db.narrationOf(run.id) });
+        const history = db.narrationOf(run.id);
+        const annals = {};
+        for (const n of history) if (n.role === 'annals' && n.day != null) annals[n.day] = n.text;
+        return json(res, 200, { id: run.id, mode: run.mode, status: run.status, state: enrich(run.state, annals), ending: run.ending, history });
       }
 
       // 封存对局（玩家主动合上这本书：不进"继续"列表，档案馆收获保留）
@@ -529,6 +558,25 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           db.saveState(id, result.state);
         }
 
+        // 史官（叙事双轴 §4.5）：当日大事步落定 → LLM 渲染史笔；离线/校验不过回落 step.fallback。
+        // 四关：字数 12~160、文风禁词、标记 registry、净文非空——违规即弃，不重试。
+        const annalsByDay = {};
+        for (const ev of result.events) {
+          if (ev.t !== 'MAINLINE_STEP' || !ev.d.stepId) continue;
+          const step = pack.mainline?.steps.find((x) => x.id === ev.d.stepId);
+          if (!step) continue;
+          const pens = (ev.d.pens || []).map((pid) => pack.historia?.figures.find((f) => f.id === pid)?.line).filter(Boolean);
+          const text = gw ? await renderAnnals(gw, {
+            step, pens,
+            digest: dayDigest(result.state, ev.d.day),
+            prev: db.narrationOf(id, 40).filter((x) => x.role === 'annals').slice(-2).map((x) => x.text)
+          }) : null;
+          if (text) {
+            annalsByDay[ev.d.day] = text;
+            db.appendNarration(id, [{ day: ev.d.day, role: 'annals', text }]);
+          }
+        }
+
         // 戏文轨（stage-play）：scene_request 事实交给舞台导演——写一段当场戏文，
         // 可附白名单微效果（心情/声望/念头），越界即整份丢弃；LLM 缺席走直读兜底
         for (const f of result.facts.filter((x) => x.k === 'scene_request')) {
@@ -564,7 +612,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (result.rejects?.length) ink.push({ day: result.state.day, role: 'sys', text: '（有些事做不到：' + result.rejects.map((r) => r.reason).join('、') + '）' });
         db.appendNarration(id, ink);
         db.saveState(id, result.state); // 戏文微效果可能改了状态——以最终态发补丁
-        send('state-patch', { state: enrich(result.state) });
+        send('state-patch', { state: enrich(result.state, annalsByDay) });
         send('done', { rejects: result.rejects, degraded, say });
         return res.end();
       }
