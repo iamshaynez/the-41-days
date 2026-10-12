@@ -839,7 +839,7 @@ function syncAsks(s) {
       }
       if (!opts.children.length) opts.appendChild(optBtn('让他们自己张罗这一天', '▸', () => sendIntents([{ type: 'auto_day' }], '照常过吧')));
       node.appendChild(opts);
-      node.appendChild(el('p', 'ask-hint', '白天可以慢慢安排，一件事一件事来；想收卷，点「让他们自己张罗这一天」即入黄昏——◇ 方略选项自带收卷。'));
+      node.appendChild(el('p', 'ask-hint', '点一个方案，这一夜自己走完——慎不谨慎、动不动手，按上面的路子与运气定。'));
       const rr = refreshRow('day', opts);
       if (rr) node.appendChild(rr);
       node.appendChild(freeOptRow(s, 'day'));
@@ -860,13 +860,44 @@ function syncAsks(s) {
       node.appendChild(opts);
       node.appendChild(freeOptRow(s, 'event', '说什么都行——但门口的事，总得拿个主意'));
     });
-  // 黄昏：今晚怎么安排（每晚必答）；命运卡并屏（方案照常，命运追加，出门即路过）
+  // 黄昏：今晚怎么安排——方案自带夜间方针（点一个方案 = 黄昏+整夜一口气走完）
   syncAsk('dusk', !!(s.duskView && !s.over),
     s.duskView ? s.duskView.plans.map((p) => p.label).join('|') + (s.duskView.fate ? s.duskView.fate.title : '') : '', (node) => {
       node.innerHTML = askHead('黄昏', '今晚怎么安排', 'moon');
+      // 夜方针挡位（默认跟现行规矩；只影响外出方案，在家方案无需方针）
+      const stances = [['cautious', '今夜谨慎'], ['normal', '照常走'], ['bold', '放手干']];
+      const pol = s.policy?.nightApproach || 'normal';
+      const stanceRow = el('div', 'stance-row');
+      let stance = pol;
+      stanceRow.appendChild(el('span', 'stance-label', '夜里的路子'));
+      for (const [key, name] of stances) {
+        const b = el('button', 'stance' + (key === pol ? ' on' : ''), name);
+        b.type = 'button';
+        b.addEventListener('click', () => {
+          stance = key;
+          stanceRow.querySelectorAll('.stance').forEach((x) => x.classList.remove('on'));
+          b.classList.add('on');
+        });
+        stanceRow.appendChild(b);
+      }
+      const micro = el('button', 'stance stance-micro', '自己走');
+      micro.type = 'button';
+      micro.title = '今晚我自己一步步走（岔路逐个问我）';
+      micro.addEventListener('click', () => {
+        stance = 'micro';
+        stanceRow.querySelectorAll('.stance').forEach((x) => x.classList.remove('on'));
+        micro.classList.add('on');
+      });
+      stanceRow.appendChild(micro);
+      node.appendChild(stanceRow);
       const opts = el('div', 'ask-opts');
       for (const p of s.duskView.plans) {
-        opts.appendChild(optBtn(p.label, { a: '甲', b: '乙', stay: '守' }[p.key] || '·', () => sendIntents([p.intent], p.label), p.hint || ''));
+        const go = () => {
+          const intents = [p.intent];
+          if (p.intent.scavenger && stance !== 'micro') intents.push({ type: 'night_directive', stance, text: p.label });
+          sendIntents(intents, p.label);
+        };
+        opts.appendChild(optBtn(p.label, { a: '甲', b: '乙', stay: '守' }[p.key] || '·', go, p.hint || ''));
       }
       node.appendChild(opts);
       if (s.duskView.fate) {
