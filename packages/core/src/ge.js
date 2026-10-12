@@ -104,7 +104,20 @@ export function proposalToCard(pack, state, p) {
   return card;
 }
 
-/** 当局锚池（GE-04 的合法锚源）：天气/日期/队伍状态/近期事迹/已知地点/设施 */
+/** 事迹锚短语表（因果动词 → 玩家语言）：只收有分量的动词，短语避开全部禁词 */
+const DEED_PHRASES = {
+  feed: '喂过饭', deny_food: '克扣过饭食', burn_book: '烧过书',
+  heal: '治过伤', comfort: '安抚过人', help: '帮过人', donate: '分过东西',
+  refuse_help: '拒过援手', steal_civ: '偷过人家', kill_civ: '杀过平民', kill_enemy: '杀过敌卒',
+  spare: '放过人一命', volunteer: '出过力', guard_night: '守过夜', play_music: '奏过乐',
+  trade_evidence: '卖过凭证', witness_death: '送走过人', launch_lighthouse: '点过北津台的火',
+  join_table: '上过那张桌', refuse_table: '拒过那张桌'
+};
+const REP_NAME = { neighbor: '邻里', church: '里社', hospital: '医棚', market: '南市' };
+
+/** 当局锚池（GE-04 的合法锚源）：天气/日期/队伍状态/近期事迹/已知地点/设施
+ *  v3 扩充：这一局的历史也是锚——事迹（因果账）/声望档/时局/真相/念头/玩家话语。
+ *  锚池越厚，生成卡越随进展而不同；锚是编剧唯一合法的素材来源。 */
 export function anchorPool(pack, state) {
   const pool = new Set();
   pool.add(`天气:${state.weather}`);
@@ -118,5 +131,24 @@ export function anchorPool(pack, state) {
   }
   for (const id of state.knownLocs) if (pack.locMap[id]) pool.add(`地点:${pack.locMap[id].name}`);
   for (const [f, v] of Object.entries(state.facilities)) if (v > 0) pool.add(`设施:${f}`);
+  // —— 近期事迹（七天内，至多三条；旧事进回忆录，不进选题）——
+  const deeds = (state.causality?.entries || [])
+    .filter((e) => e.day >= state.day - 7 && DEED_PHRASES[e.verb])
+    .slice(-3);
+  for (const e of deeds) pool.add(`事迹:${DEED_PHRASES[e.verb]}`);
+  // —— 声望到档（邻里/里社/医棚/南市 记得你做过什么）——
+  for (const [k, v] of Object.entries(state.reputation || {})) {
+    if (Math.abs(v) >= 2) pool.add(`声望:${REP_NAME[k] || k}${v > 0 ? '念你们的好' : '记着你们的账'}`);
+  }
+  // —— 时局与真相（措辞避开正史禁词：锚会被编剧引用进正文）——
+  if (state.war?.telegraphed) pool.add('时局:炮声稀了');
+  if ((state.seals || []).length) pool.add(`真相:已显形${state.seals.length}层`);
+  // —— 活着的念头（玩家种下的方向，编剧可以让它发芽）——
+  for (const d of Object.values(state.directions || {}).filter((x) => x.alive).slice(0, 3)) {
+    const nm = d.subject ? (pack.charMap[d.subject]?.name || d.subject) : '这个家';
+    pool.add(`念头:${nm}·${d.text.slice(0, 20)}`);
+  }
+  // —— 玩家未被接住的话（素材不是指令：编剧可长出回应卡，但仍受全部铁律约束）——
+  for (const w of (state.whispers || []).slice(-2)) pool.add(`话语:${w.text.slice(0, 20)}`);
   return [...pool];
 }

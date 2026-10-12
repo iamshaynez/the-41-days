@@ -10,7 +10,7 @@ import { resolveRaid } from './raid.js';
 import { executeTrade } from './trade.js';
 import { chooseEventOption } from './events.js';
 import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents } from './vitals.js';
-import { tickAutonomous } from './causality.js';
+import { tickAutonomous, tickDirections } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
 import { planDay, planNightStep } from './delegate.js';
@@ -27,6 +27,8 @@ export function validateIntentShape(intent) {
     case 'meta': return typeof intent.query === 'string';
     case 'advance': return true;
     case 'policy': return typeof intent.key === 'string';
+    case 'direction': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
+    case 'whisper': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
     case 'auto_day': return true;
     case 'auto_night': return true;
     default: return false;
@@ -153,6 +155,40 @@ function applyOne(ctx, intent) {
       ctx.fact('policy_set', { key: intent.key, value: intent.value });
       return { ok: true };
     }
+    case 'direction': {
+      // 念头（v3 命运导演）：介于命令与规矩之间的第三种动词——种下方向，不立即执行。
+      // 显形由三处延迟消化：晨间回声（causality）、命运导演锚池（ge）、叙事者简报。
+      const text = String(intent.text).trim().slice(0, 60);
+      const subject = intent.subject && s.chars.some((c) => c.id === intent.subject && c.alive) ? intent.subject : null;
+      const alive = Object.values(s.directions || {}).filter((d) => d.alive);
+      const same = alive.find((d) => d.subject === subject && d.text === text);
+      if (same) { // 再说一遍 = 浇水：延缓枯萎，不重种
+        same.lastDay = s.day;
+        ctx.setFlag('directions', structuredClone(s.directions));
+        ctx.fact('direction_watered', { id: same.id, subject, text });
+        return { ok: true };
+      }
+      if (alive.length >= 3) { // 数量上限：念头不是任务清单，最老的让位
+        const oldest = [...alive].sort((a, b) => a.lastDay - b.lastDay)[0];
+        oldest.alive = false;
+        ctx.fact('direction_faded', { id: oldest.id, subject: oldest.subject, text: oldest.text });
+      }
+      const id = `d${s.day}_${Object.keys(s.directions || {}).length + 1}`;
+      s.directions[id] = { id, subject, text, day: s.day, lastDay: s.day, alive: true };
+      ctx.setFlag('directions', structuredClone(s.directions));
+      ctx.fact('direction_set', { id, subject, text });
+      return { ok: true };
+    }
+    case 'whisper': {
+      // 未被接住的话（离谱输入兜底）：进素材环，命运导演可据此长出回应卡——世界什么都听着
+      const text = String(intent.text || '').trim().slice(0, 60);
+      if (!text) return { ok: false, reason: 'EMPTY' };
+      const ring = [...(s.whispers || []), { day: s.day, text }].slice(-3);
+      s.whispers = ring;
+      ctx.setFlag('whispers', structuredClone(ring));
+      ctx.fact('whisper_kept', { text });
+      return { ok: true };
+    }
     case 'trade_op':
       if (s.phase !== 'day' || !s.franko) return { ok: false, reason: 'NO_MERCHANT' };
       return executeTrade(ctx, intent);
@@ -242,6 +278,7 @@ function toDawn(ctx) {
   tickTemperature(ctx);
   tickMood(ctx);
   tickAutonomous(ctx);       // CY-23 因果自主行为（辛夷/文简/薄姑）
+  tickDirections(ctx);       // v3 念头晨间结算（回声/枯萎）
   tickProduction(ctx);
   tickWar(ctx);
   drawMorningEvents(ctx);

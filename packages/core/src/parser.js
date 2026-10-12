@@ -92,6 +92,14 @@ export function parseDirect(state, pack, input) {
   if (/自己喂|我来喂|饭我来管/.test(text)) return { intents: [{ type: 'policy', key: 'feeding', value: 'manual' }] };
   if (/你看着喂|自动喂|喂饭交给你/.test(text)) return { intents: [{ type: 'policy', key: 'feeding', value: 'auto' }] };
 
+  // 念头（v3 命运导演）：教/鼓励/惦记 某人某事——不是动作，是种进心里的方向。
+  // 保守规则：仅限明确的引导动词（"让/叫/带"太容易与命令混淆，留给 LLM 裁判分辨）
+  {
+    const dm = text.match(/^(?:以后|往后|常常|常)?(教|鼓励|提醒|叮嘱|盼着|惦记)(.{0,40})$/);
+    const who = dm ? findChar(state, dm[2]) : null;
+    if (dm && who) return { intents: [{ type: 'direction', subject: who.id, text: text.slice(0, 60) }] };
+  }
+
   // 黄昏指派：今晚A去B带C和D / 今晚谁都不出去 / 今晚B守夜
   if (/今晚|今夜/.test(text) && state.phase === 'dusk') {
     const scav = findChar(state, text.replace(/带.*$/, '').replace(/守夜.*$/, ''));

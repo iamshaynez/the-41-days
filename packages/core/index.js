@@ -20,7 +20,7 @@ export { fold } from './src/fold.js';
 export { parseDirect } from './src/parser.js';
 export { planDay, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, charDigest } from './src/delegate.js';
 export {
-  VERBS, recordCausal, addPrivateNote, eventVerb, tickAutonomous, slumberGuard, denyFoodCount,
+  VERBS, recordCausal, addPrivateNote, eventVerb, tickAutonomous, tickDirections, slumberGuard, denyFoodCount,
   valenceOf, charArc, pairKey, pairStage, bondStage, alienated, stageOf, STAGE_NAMES
 } from './src/causality.js';
 export { buildStoryline, renderMemoirDirect, memoirLint } from './src/storyline.js';
