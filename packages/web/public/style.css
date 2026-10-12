@@ -598,9 +598,8 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 .fate-box { margin-top: 12px; padding: 10px 12px 4px; border-left: 3px double var(--accent); border-top: 1px solid var(--gold-dim); }
 .fate-box .fate-title { font-weight: 700; color: var(--ink); letter-spacing: .06em; margin: 2px 0 6px; }
 .fate-box p { margin: 4px 0; line-height: 1.8; }
-/* 出场自动补选项的等待行（金色选项到达后替换为 ◇/◈ 按钮） */
-.opt-auto-slot .opt-auto-waiting { display: inline-block; font-size: .78em; color: var(--ink-3); letter-spacing: .06em; padding: 6px 2px; }
-.opt-auto-slot:empty { display: none; }
+/* 等墨行：谋士回来之前选项区唯一可见的东西（红金同拍落纸） */
+.opt-pending { font-size: .8em; color: var(--ink-3); letter-spacing: .1em; padding: 10px 8px 6px; animation: fadeUp .4s ease both; }
 
 /* 黄昏夜方针挡位：小字选钮一行（默认跟现行规矩） */
 .stance-row { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; flex-wrap: wrap; }
@@ -661,12 +660,8 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 h1 .view-back { font-size: .38em; vertical-align: middle; margin-left: 14px; letter-spacing: .1em; }
 
 /* ——— 卡脚（统一交互面）：选项 + 刷新命运 + 输入行，都住在停问卡里 ——— */
-/* 谋士出的选项：与保底选项同宗，朱印换成菱形墨点以示来历 */
-.opt.opt-llm .key { border-color: var(--brass); color: var(--brass); box-shadow: inset 0 0 0 1px var(--gold-dim); }
-.opt.opt-llm:hover:not(:disabled) .key { background: var(--brass); color: #1b1610; }
-/* 戏文轨（◈）：说得出口但内核没有的事——舞台导演接戏，斜体示意这是"一拍演出" */
-.opt.opt-stage { font-style: italic; }
-.opt.opt-stage .key { border-style: dashed; }
+/* 选项统一红印——谋士与保底一个模样（用户不需要分辨谁来写的） */
+
 /* 刷新命运：一行小字按钮；等待时点一支烛，不转圈 */
 .opt-refresh-row { margin-top: 8px; }
 .opt-refresh {
