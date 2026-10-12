@@ -43,7 +43,7 @@ async function fetchWithRetry(url, init, timeoutMs) {
 
 export function openaiCompat(cfg) {
   const url = cfg.baseUrl.replace(/\/$/, '') + '/chat/completions';
-  async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens, maxTimeout }) {
+  async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens, maxTimeout, thinking }) {
     const body = {
       model: cfg.model,
       messages: [
@@ -52,16 +52,18 @@ export function openaiCompat(cfg) {
       ],
       temperature: cfg.temperature ?? 0.7,
       max_tokens: maxTokens ?? cfg.maxTokens ?? 2048,
-      ...(json ? { response_format: { type: 'json_object' } } : {})
+      ...(json ? { response_format: { type: 'json_object' } } : {}),
+      ...(thinking ? { thinking } : {}) // GLM 开放平台原生档位：low/high/max（不可关闭）
     };
     if (stream) body.stream = true;
     const timeoutMs = maxTimeout ?? cfg.timeoutMs ?? 120000;
     const headers = { 'content-type': 'application/json', authorization: `Bearer ${cfg.apiKey}` };
     const post = (b) => fetchWithRetry(url, { method: 'POST', headers, body: JSON.stringify(b), signal }, timeoutMs);
     let res = await post(body);
-    if (res.status === 400 && json) {
-      // GLM 等端点对 response_format 无官方承诺：去参重试一次（gb-pmo 同款）
+    if (res.status === 400 && (json || thinking)) {
+      // GLM 等端点对 response_format 无官方承诺、thinking 档位各家不一：去参重试一次（gb-pmo 同款）
       delete body.response_format;
+      delete body.thinking;
       res = await post(body);
     }
     if (!res.ok) throw new Error(`${cfg.model} HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);

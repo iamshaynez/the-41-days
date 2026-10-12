@@ -62,6 +62,7 @@ describe('anthropic 协议全链（GLM 路径）', () => {
     assert.equal(calls[0].payload.max_tokens, 5000, '按调用的 maxTokens 要传到 anthropic body（思维链模型留余量）');
     assert.ok(calls[0].headers['x-api-key'] === 'sk-test');
     assert.ok(calls[0].payload.system.includes('【id 对照'), 'system 应含 id 对照段');
+    assert.deepEqual(calls[0].payload.thinking, { type: 'low' }, '应带 GLM low 档（实测 6s vs 默认 70~195s）');
 
     // 响应侧：围栏 JSON 能抠出来；验证器只放行 id 正确的
     const options = validateOptions(PACK, state, raw);
