@@ -5,22 +5,29 @@ import { validateIntentShape, feasibleIntent } from '../core/index.js';
 
 /**
  * @param {object} raw 谋士输出 {options: [{label, hint?, intents}]}
+ * @param {object} [opts] {card} —— card='day' 时每个选项是闭环方略：
+ *   尾部自动补 auto_day（管家补完日常并进入黄昏），点一个选项即收卷这一天。
  * @returns {Array<{label, hint, intents}>} 过滤后的可渲染选项（至多 3 个）
  */
-export function validateOptions(pack, state, raw) {
+export function validateOptions(pack, state, raw, { card } = {}) {
   const out = [];
   if (!raw || !Array.isArray(raw.options)) return out;
   const banned = pack.ge?.bannedTerms || [];
   for (const o of raw.options) {
     if (typeof o?.label !== 'string' || !o.label.trim() || o.label.length > 24) continue;
     if (banned.some((b) => o.label.includes(b))) continue;
-    const intents = (Array.isArray(o.intents) ? o.intents : [])
-      .filter((it) => validateIntentShape(it) && feasibleIntent(state, pack, it))
-      .slice(0, 3);
-    if (!intents.length) continue;
+    // 收卷意图（auto_day）是白天方略的专属结尾：模型自带的一律收走，
+    // 只有今日卡由我们统一补在最后（黄昏/夜访是世界的提问，不越权收卷）
+    let intents = (Array.isArray(o.intents) ? o.intents : [])
+      .filter((it) => it.type !== 'auto_day')
+      .filter((it) => validateIntentShape(it) && feasibleIntent(state, pack, it));
+    if (!intents.length) continue; // 空壳方略不要：标签再好，没有可执行内容就不出
+    if (card === 'day') intents.push({ type: 'auto_day' });
+    intents = intents.slice(0, 5);
+    const hint = typeof o.hint === 'string' ? o.hint.trim().slice(0, 30) : '';
     out.push({
       label: o.label.trim().slice(0, 24),
-      hint: typeof o.hint === 'string' ? o.hint.trim().slice(0, 30) : '',
+      hint: card === 'day' ? (hint ? `${hint} · 安排完即入黄昏` : '安排完即入黄昏') : hint,
       intents
     });
     if (out.length >= 3) break;
@@ -85,5 +92,5 @@ export function cardBrief(state, pack, card) {
     return `深夜，夜访${loc?.name || ''}，当前房间「${loc?.rooms?.find((r) => r.id === state.night?.room)?.name || ''}」，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}` : ''}。夜间动作：move/observe/search/open/clear/bars/dialogue/attack/retreat。\n\n${ids}`;
   }
   // day：今日卡
-  return `白天，今日怎么过。日常由管家自动张罗（auto_day）；也可以安排具体的人做具体的事（act），或立规矩/种念头（policy/direction）。${menu}\n\n${ids}`;
+  return `白天，今日怎么过。你出的是**今日方略**：2~4 个意图、覆盖至少两个人（act/direction/policy 可混编；direction 种下的念头会在日后显形）。方略之后管家会自动补完日常并进入黄昏——不需要你自己加 auto_day，也不必覆盖每个人。全队休整类方略可以只写一两个意图。${menu}\n\n${ids}`;
 }

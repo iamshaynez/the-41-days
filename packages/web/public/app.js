@@ -834,7 +834,7 @@ function syncAsks(s) {
   // 今日卡（统一交互面）：白天常驻——晨报 + 念头 + 情境选项 + 刷新命运 + 输入行。
   // 有急件时让位（门口的事优先）；夜访/黄昏各由自己的卡接管。
   syncAsk('day', !!(!inPrologue && s.phase === 'day' && !s.eventView && !s.over),
-    [s.day, s.phase, (s.careView?.problems || []).map((p) => p.text).join('|'),
+    [s.day, s.phase, s.rngCursor, (s.careView?.problems || []).map((p) => p.text).join('|'),
       (s.suggests || []).map((x) => x.label).join('|'), (s.directions || []).map((d) => d.text).join('|')].join('§'), (node) => {
       node.innerHTML = askHead('今天', s.careView?.title || '这一天怎么过', 'sun');
       if (s.careView?.problems?.length) {
@@ -858,6 +858,7 @@ function syncAsks(s) {
       }
       if (!opts.children.length) opts.appendChild(optBtn('让他们自己张罗这一天', '▸', () => sendIntents([{ type: 'auto_day' }], '照常过吧')));
       node.appendChild(opts);
+      node.appendChild(el('p', 'ask-hint', '白天可以慢慢安排，一件事一件事来；想收卷，点「让他们自己张罗这一天」即入黄昏——◇ 方略选项自带收卷。'));
       const rr = refreshRow('day', opts);
       if (rr) node.appendChild(rr);
       node.appendChild(freeOptRow(s, 'day'));
