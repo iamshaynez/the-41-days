@@ -564,9 +564,11 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (run.mode !== 'llm') return json(res, 200, { options: [], reason: '这一局是直读模式（添加 LLM 供应商后新开的局才有谋士）' });
         const gw = buildGateway(id);
         if (!gw?.providers?.referee && !gw?.providers?.narrator) return json(res, 200, { options: [], reason: '没有可用的 LLM 路由（管理页配置后自动接入）' });
-        // 刷新预算：同一卡面至多两次「成功出选项」的刷新（失败/被滤不扣玩家次数）
+        // 刷新预算：同一卡面至多两次「成功出选项」的手动刷新（失败/被滤不扣次数）；
+        // 出场自动那次（auto）免费——否则玩家会失去一次「再想想」
         const bkey = id + ':' + card + ':' + run.state.day;
-        if ((optionRefresh.get(bkey) || 0) >= 2) return json(res, 200, { options: [], budget: true });
+        const auto = body.auto === true;
+        if (!auto && (optionRefresh.get(bkey) || 0) >= 2) return json(res, 200, { options: [], budget: true });
         try {
           const st = run.state;
           const brief = {
@@ -579,7 +581,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           const raw = await optionsmith({ provider, prompts: promptsCache }, brief);
           const options = validateOptions(pack, st, raw, { card });
           const reason = options.length ? '' : (raw ? '谋士出的选项都没过验证（id 对照/可行性/禁词）' : '谋士的输出没法解析成 JSON');
-          if (options.length) optionRefresh.set(bkey, (optionRefresh.get(bkey) || 0) + 1);
+          if (options.length && !auto) optionRefresh.set(bkey, (optionRefresh.get(bkey) || 0) + 1);
           return json(res, 200, { options, reason });
         } catch (e) {
           log.warn('optionsmith 失败', { runId: id, error: String(e?.message || e) });

@@ -142,18 +142,24 @@ describe('C 层全链（编剧桩）', () => {
     assert.ok(state.whispers?.some((w) => w.text.includes('龙')), '素材环收存原话');
   });
 
-  test('刷新命运（/options）：可行选项放行，不可行的静默过滤，成功两次后预算封顶', async () => {
+  test('刷新命运（/options）：可行放行/戏文轨/预算只算手动、auto 出场免费', async () => {
     const r = await api('POST', '/api/runs', { prologue: false });
-    const call = (exclude) => api('POST', `/api/runs/${r.id}/options`, { card: 'day', exclude });
+    const call = (exclude, auto) => api('POST', `/api/runs/${r.id}/options`, { card: 'day', exclude, auto });
     const r1 = await call([]);
     assert.ok(r1.options?.length === 3, `一个动作选项 + 两个戏文选项（实际 ${JSON.stringify(r1.options)}）`);
     assert.ok(r1.options[0].intents[0].type === 'act');
     assert.ok(r1.options.filter((o) => o.stage).length === 2, '不可行的都走戏文轨');
     assert.ok(r1.options.every((o) => o.stage || o.intents.at(-1).type === 'auto_day'), '动作选项收卷、戏文不收卷');
-    // 第二次带上排除项，桩会再出一个可行选项（成功两次）
+    // 出场 auto 免费额度：连打多次不占手动预算
+    for (let i = 0; i < 3; i++) {
+      const a = await call([], true);
+      assert.ok(a.options?.length >= 1 && !a.budget, 'auto 不占预算');
+    }
+    // 手动两次成功后封顶
     const r2 = await call([r1.options[0].label]);
+    assert.ok(r2.options?.length >= 1);
     const r3 = await call([]);
-    assert.equal(r3.budget, true, '成功两次后应触预算');
+    assert.equal(r3.budget, true, '手动两次后应触预算');
     assert.deepEqual(r3.options, []);
   });
 
