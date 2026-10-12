@@ -49,15 +49,21 @@ export function validateOptions(pack, state, raw, { card } = {}) {
 
 /** id 对照表：世界简报里人物/地点带 id，但物品只有中文名——
  *  没有这张表，模型写出的意图全过不了可行性门（教训：全被静默过滤）。 */
-export function idTable(state, pack) {
-  const chars = state.chars.filter((c) => c.alive).map((c) => `${c.name}=${c.id}`).join('、');
+export function idTable(state, pack, { night = false } = {}) {
+  const chars = (night
+    ? state.chars.filter((c) => c.alive && c.id === state.night?.charId) // 夜里只有外出者在这条路上
+    : state.chars.filter((c) => c.alive)
+  ).map((c) => `${c.name}=${c.id}`).join('、');
+  const localNpcs = night
+    ? ((pack.locMap[state.night?.locId]?.npcs || []).map((n) => `${n.name}=${n.id}`).join('、') || '无')
+    : null;
   const locs = (state.knownLocs || []).filter((l) => pack.locMap[l]).map((l) => `${pack.locMap[l].name}=${l}`).join('、');
   const items = Object.entries(state.inventory || {}).filter(([, n]) => n > 0).slice(0, 14)
     .map(([id]) => `${pack.itemMap[id]?.name || id}=${id}`).join('、');
   const stock = state.franko
     ? `商人货架（只有这些可买）：${state.franko.stock.filter((x) => x.n > 0).map((x) => `${x.item}×${x.n}`).join('、')}`
     : '';
-  return `【id 对照——意图里只准写等号右边的 id】\n角色：${chars}\n地点：${locs}\n物品：${items}${stock ? `\n${stock}` : ''}`;
+  return `【id 对照——意图里只准写等号右边的 id】\n角色：${chars}${localNpcs ? `\n此地遇到的人：${localNpcs}` : ''}\n地点：${locs}\n物品：${items}${stock ? `\n${stock}` : ''}`;
 }
 
 /** 现在真正能做的事（动态可行域）：由 feasibleIntent 逐动词现算——
@@ -122,7 +128,9 @@ export function cardBrief(state, pack, card) {
   }
   if (card === 'night') {
     const loc = pack.locMap[state.night?.locId];
-    return `深夜，夜访${loc?.name || ''}，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}（有人听见了）` : ''}。夜间动作：move/observe/search/open/clear/bars/dialogue/attack/retreat——target 一律写【夜访可行域】里给出的 id。\n\n【夜访可行域】\n${nightMenu(state, pack)}\n\n${ids}`;
+    const who = state.chars.find((c) => c.id === state.night?.charId && c.alive);
+    const solo = who ? `今晚在外的只有 ${who.name}（${who.id}）一人——其余队友都在家里，不许出现在这一夜的选项里。` : '';
+    return `深夜，夜访${loc?.name || ''}，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}（有人听见了）` : ''}。${solo}夜间动作：move/observe/search/open/clear/bars/dialogue/attack/retreat——target 一律写【夜访可行域】里给出的 id；direction 的对象也只准写外出者或此地遇到的人。\n\n【夜访可行域】\n${nightMenu(state, pack)}\n\n${idTable(state, pack, { night: true })}`;
   }
   // day：今日卡
   return `白天，今日怎么过。你出的是**今日方略**：2~4 个意图、覆盖至少两个人（act/direction/policy 可混编；direction 种下的念头会在日后显形）。方略之后管家会自动补完日常并进入黄昏——不需要你自己加 auto_day，也不必覆盖每个人。全队休整类方略可以只写一两个意图。${menu}\n\n${ids}`;
