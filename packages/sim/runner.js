@@ -106,11 +106,7 @@ function takeTurnDelegate(s, pack) {
     return true;
   };
   while (answerEvent());
-  // 商人在门口时，玩家点一条建议成交（与游戏内一键交易同口径）
-  if (s.phase === 'day' && s.franko) {
-    const deal = tradeDeals(s, pack)[0];
-    if (deal) s = step([{ type: 'trade_op', give: deal.give, get: deal.get }]);
-  }
+  // 商人在门口时的成交已并入 planDay（水下交易：管家每访自取一笔建议单）
   s = step([{ type: 'auto_day' }]);
   if (s.over) return s;
   while (answerEvent());

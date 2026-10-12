@@ -36,7 +36,7 @@ export class Db {
     for (const d of pack.docs) put('doc', d.id, d);
     put('kpi', 'kpis', pack.kpis);
     put('narration', 'narrations', pack.narrations);
-    for (const name of ['referee', 'narrator', 'actor', 'memoirist', 'playwright']) put('prompt', name, { text: loadPrompt(name, packDir) });
+    for (const name of ['referee', 'narrator', 'actor', 'memoirist', 'playwright', 'optionsmith']) put('prompt', name, { text: loadPrompt(name, packDir) });
     return packId;
   }
   currentPackId() { return this.db.prepare('SELECT id FROM content_pack ORDER BY id DESC LIMIT 1').get()?.id; }

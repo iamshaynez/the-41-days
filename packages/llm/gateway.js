@@ -93,6 +93,18 @@ export async function playwright({ provider, prompts }, brief) {
   return extractJson(r.text);
 }
 
+/** 谋士（统一交互面）：为停问卡补情境选项——皮肤自由，意图载荷由内核逐项验证。
+ *  输出经服务端 validateOptions 过滤（形状/可行性/禁词），点不动的不会渲染。 */
+export async function optionsmith({ provider, prompts }, brief) {
+  const system = prompts.optionsmith
+    .replace('{{card}}', brief.card || '')
+    .replace('{{exclude}}', (brief.exclude || []).join('；') || '（无）')
+    .replace('{{anchors}}', (brief.anchors || []).join('、'))
+    .replace('{{world}}', brief.worldBrief || '');
+  const r = await provider.call({ system, user: '给这张卡补 1~3 个新选项。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 600 });
+  return extractJson(r.text);
+}
+
 export function makeGateway({ providers, log = () => {} }) {
   async function call(purpose, fn) {
     const primary = providers[purpose];

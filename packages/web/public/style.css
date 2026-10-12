@@ -645,61 +645,31 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 .noise-line .rip { display: inline-block; animation: ripple 2.2s ease-in-out infinite; }
 @keyframes ripple { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 
-/* ——— 批注条（外框底栏：牍与刀笔，反聊天壳） ——— */
-#inputbar {
-  flex: none; z-index: 45; position: relative;
-  background: var(--paper); background-image: var(--grain);
-  border-top: 1px solid var(--rule-strong);
-  padding: 11px 20px calc(11px + env(safe-area-inset-bottom));
-  transition: background-color .9s, border-color .9s;
+/* ——— 卡脚（统一交互面）：选项 + 刷新命运 + 输入行，都住在停问卡里 ——— */
+/* 谋士出的选项：与保底选项同宗，朱印换成菱形墨点以示来历 */
+.opt.opt-llm .key { border-color: var(--brass); color: var(--brass); box-shadow: inset 0 0 0 1px var(--gold-dim); }
+.opt.opt-llm:hover:not(:disabled) .key { background: var(--brass); color: #1b1610; }
+/* 刷新命运：一行小字按钮；等待时点一支烛，不转圈 */
+.opt-refresh-row { margin-top: 8px; }
+.opt-refresh {
+  font: inherit; font-size: .8em; letter-spacing: .08em; color: var(--ink-3);
+  background: none; border: none; border-bottom: 1px dotted var(--rule-strong);
+  padding: 4px 2px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
 }
-#inputbar::before { content: ''; position: absolute; top: 3px; left: 0; right: 0; border-top: 1px solid var(--rule); opacity: .5; }
-.inputbar-inner { max-width: 880px; margin: 0 auto; }
-#chips { display: flex; flex-wrap: nowrap; gap: 8px; margin-bottom: 7px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-#chips::-webkit-scrollbar { display: none; }
-.chip {  /* 快捷建议 = 小米黄木匾（庄重，不旋转） */
-  flex: none; font: inherit; font-family: var(--font-li); font-size: 12.5px;
-  border: 1.5px solid transparent;
-  background:
-    linear-gradient(180deg, var(--tan-hi), var(--tan-lo)) padding-box,
-    linear-gradient(180deg, #4a3418, #241608) border-box;
-  clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);
-  color: var(--tan-ink);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3);
-  filter: drop-shadow(1px 2px 0 var(--shadow));
-  padding: 5px 15px; cursor: pointer; letter-spacing: .06em;
-  transition: filter .18s;
-  animation: fadeUp .4s ease both;
+.opt-refresh:hover:not(:disabled) { color: var(--accent); border-bottom-color: var(--accent); }
+.opt-refresh:disabled { cursor: default; opacity: .75; }
+.opt-refresh .candle {
+  width: 9px; height: 14px; position: relative; opacity: 0; transition: opacity .4s;
 }
-.chip:hover { filter: drop-shadow(1px 3px 0 var(--shadow)) brightness(1.08); }
-.input-row { display: flex; gap: 12px; align-items: center; position: relative; }
-/* 木牍的编绳：两道绳痕压住牍的左缘 */
-.input-row::before, .input-row::after {
-  content: ''; position: absolute; left: -3px; width: 15px; height: 3px; z-index: 1;
-  background: var(--rule-strong); border-radius: 2px; pointer-events: none;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, .25);
-}
-.input-row::before { top: 27%; }
-.input-row::after { top: 68%; }
-#input {
-  flex: 1; font-size: 15.5px; font-family: var(--font-kai); background: var(--paper-hi);
-  border: 1px solid var(--rule-strong); border-left: 3px solid var(--accent); padding: 11px 16px;
-}
-body[data-fontsize='l'] #input { font-size: 17px; }
-body[data-fontsize='s'] #input { font-size: 14.5px; }
-#btn-send { flex: none; padding: 9px 20px; }
-/* 等待 LLM：一支烛光，而不是转圈（UI 设计 §6） */
-#candle { flex: none; width: 14px; height: 22px; position: relative; opacity: 0; transition: opacity .5s; }
-#candle::before { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 3px; height: 10px; background: var(--paper-lo); }
-#candle::after {
-  content: ''; position: absolute; bottom: 8px; left: 50%; width: 7px; height: 11px;
+.opt-refresh.thinking .candle { opacity: 1; }
+.opt-refresh .candle::after {
+  content: ''; position: absolute; bottom: 1px; left: 50%; width: 6px; height: 9px;
   transform: translateX(-50%);
   background: radial-gradient(circle at 50% 78%, var(--candle, #e7b567), #c96f2c 72%, transparent 76%);
   border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
-  filter: drop-shadow(0 0 6px rgba(231, 181, 103, .9));
+  filter: drop-shadow(0 0 5px rgba(231, 181, 103, .9));
   animation: flicker .7s ease-in-out infinite alternate;
 }
-#inputbar.busy #candle { opacity: 1; }
 
 /* ——— 覆盖层：选单与细目抽屉（桌面居中一页纸；移动端贴底抽屉） ——— */
 #overlay-backdrop {
@@ -1220,10 +1190,6 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
   body[data-fontsize='m'] #narration { font-size: 16px; }
   #setup { margin: 10px auto; padding: 26px 22px; }
   #setup::before { font-size: 130px; top: -16px; }
-  #inputbar { padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); }
-  .input-row { gap: 7px; }
-  #input { font-size: 15px; padding: 9px 11px; }
-  #btn-send { padding: 9px 13px; letter-spacing: .1em; }
   .doc-wall { grid-template-columns: 1fr; }
   .annal-cols { grid-template-columns: 1fr; }
   #view-archive .panel.paper, #view-admin .panel.paper { padding: 20px 20px 24px; }

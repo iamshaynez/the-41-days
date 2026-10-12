@@ -38,6 +38,16 @@ before(async () => {
         const p = { ...PROPOSAL, text: `${who}开门槛时，对门的老者把半块麦饼塞进他手里，没留话。饼是热的，说明他家里今天有火。`, anchors: pool.slice(0, 2) };
         return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(p) } }] }));
       }
+      if (sys.includes('谋士')) {
+        // 谋士桩：从世界简报里抓一个真实角色 id，出一个可行选项 + 两个必被滤掉的
+        const wm = sys.match(/队伍：[^（(]*[（(]([a-z]+)/);
+        const who = wm?.[1] || 'anton';
+        return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ options: [
+          { label: `让${who === 'anton' ? '文简' : '他'}把糙米分了`, hint: '一顿安稳饭', intents: [{ type: 'act', actor: who, action: 'eat', target: 'raw' }] },
+          { label: '让不存在的人做事', intents: [{ type: 'act', actor: 'nobody', action: 'eat', target: 'raw' }] },
+          { label: '越权的选项', intents: [{ type: 'meta', query: 'status' }] }
+        ] }) } }] }));
+      }
       if (payload.response_format?.type === 'json_object') {
         const userMsg = payload.messages?.at(-1)?.content || '';
         if (userMsg.includes('龙')) {
@@ -130,6 +140,18 @@ describe('C 层全链（编剧桩）', () => {
       if (ev === 'state-patch') state = JSON.parse(data).state;
     }
     assert.ok(state.whispers?.some((w) => w.text.includes('龙')), '素材环收存原话');
+  });
+
+  test('刷新命运（/options）：可行选项放行，不可行的静默过滤，预算两次', async () => {
+    const r = await api('POST', '/api/runs', { prologue: false });
+    const call = () => api('POST', `/api/runs/${r.id}/options`, { card: 'day', exclude: [] });
+    const r1 = await call();
+    assert.ok(r1.options?.length === 1, `应只剩可行选项（实际 ${JSON.stringify(r1.options)}）`);
+    assert.ok(r1.options[0].intents[0].type === 'act');
+    await call(); // 第二次仍在预算内
+    const r3 = await call();
+    assert.equal(r3.budget, true, '第三次应触预算');
+    assert.deepEqual(r3.options, []);
   });
 
   test('防火墙：提案含正史名人 → 永不进场', async () => {

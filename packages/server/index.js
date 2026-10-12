@@ -12,11 +12,13 @@ import { hashPassword, verifyPassword, validateUsername, validatePassword, sessi
 import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect } from './narrate.js';
-import { loadPack, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, freeExamples, policyOf, validateIntentShape } from '../core/index.js';
+import { loadPack, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
-import { referee, narrator, memoirist } from '../llm/index.js';
+import { referee, narrator, memoirist, optionsmith } from '../llm/index.js';
+import { anchorPool } from '../core/src/ge.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from './echoes.js';
 import { createGeDirector } from './ge.js';
+import { validateOptions, cardBrief } from './options.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = join(here, '..', 'web', 'public');
@@ -52,6 +54,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   const RATE = cfg.inputRatePerMin;
   const buckets = new Map(); // ip -> {n, windowStart}
   const promptsCache = loadPrompts();
+  const optionRefresh = new Map(); // runId:card:day -> 已刷新次数（内存即可）
 
   function loadPrompts() {
     const ents = Object.fromEntries(db.contentEntities('prompt'));
@@ -60,7 +63,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       narrator: ents.narrator?.text || '',
       actor: ents.actor?.text || '',
       memoirist: ents.memoirist?.text || '',
-      playwright: ents.playwright?.text || ''
+      playwright: ents.playwright?.text || '',
+      optionsmith: ents.optionsmith?.text || ''
     };
   }
 
@@ -162,8 +166,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         };
       }
     }
-    // 交易视图（v2：附一键成交建议；讨价还价仍可自由文本）
-    if (state.franko) view.tradeView = { merchant: state.franko.merchant, stock: state.franko.stock.filter((s) => s.n > 0), deals: tradeDeals(state, pack) };
+    // 交易已沉入水下（统一交互面）：管家在商人到访时自理（planDay），不再有价目卡；
+    // 想干预的玩家用自由文本开价（trade_op）或种念头——世界简报仍报商人行踪。
     // 夜间场景视图
     if (state.night && !state.night.home) {
       const loc = pack.locMap[state.night.locId];
@@ -514,6 +518,40 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         send('state-patch', { state: enrich(result.state) });
         send('done', { rejects: result.rejects, degraded, say });
         return res.end();
+      }
+
+      // 谋士选项（统一交互面）：刷新命运——纯视图数据，点了才走输入管线
+      if (req.method === 'POST' && /^\/api\/runs\/[^/]+\/options$/.test(path)) {
+        const id = path.split('/')[3];
+        const ctx = loadOwnRun(id);
+        if (!ctx) return;
+        const { run } = ctx;
+        if (run.status !== 'active' || run.state.over) return json(res, 400, { error: 'run ended' });
+        const body = await readBody(req);
+        const card = ['day', 'dusk', 'night'].includes(body.card) ? body.card : null;
+        if (!card) return json(res, 400, { error: 'card 不对' });
+        if (run.mode !== 'llm' || rateLimited(req.socket.remoteAddress || '?')) return json(res, 200, { options: [] });
+        const gw = buildGateway(id);
+        if (!gw?.providers?.referee && !gw?.providers?.narrator) return json(res, 200, { options: [] });
+        // 刷新预算：同一卡面至多两次（防刷屏，不省成本）
+        const bkey = id + ':' + card + ':' + run.state.day;
+        optionRefresh.set(bkey, (optionRefresh.get(bkey) || 0) + 1);
+        if (optionRefresh.get(bkey) > 2) return json(res, 200, { options: [], budget: true });
+        try {
+          const st = run.state;
+          const brief = {
+            card: cardBrief(st, pack, card),
+            exclude: Array.isArray(body.exclude) ? body.exclude.slice(0, 8).map(String) : [],
+            anchors: anchorPool(pack, st).slice(0, 24),
+            worldBrief: worldBrief(st, pack)
+          };
+          const provider = gw.providers.referee || gw.providers.narrator;
+          const raw = await optionsmith({ provider, prompts: promptsCache }, brief);
+          return json(res, 200, { options: validateOptions(pack, st, raw) });
+        } catch (e) {
+          log.warn('optionsmith 失败', { runId: id, error: String(e?.message || e) });
+          return json(res, 200, { options: [] });
+        }
       }
 
       // 计划确认（直读模式 v1 走同一条 input 通道）
