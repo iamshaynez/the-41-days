@@ -146,8 +146,10 @@ describe('C 层全链（编剧桩）', () => {
     const r = await api('POST', '/api/runs', { prologue: false });
     const call = (exclude) => api('POST', `/api/runs/${r.id}/options`, { card: 'day', exclude });
     const r1 = await call([]);
-    assert.ok(r1.options?.length === 1, `应只剩可行选项（实际 ${JSON.stringify(r1.options)}）`);
+    assert.ok(r1.options?.length === 3, `一个动作选项 + 两个戏文选项（实际 ${JSON.stringify(r1.options)}）`);
     assert.ok(r1.options[0].intents[0].type === 'act');
+    assert.ok(r1.options.filter((o) => o.stage).length === 2, '不可行的都走戏文轨');
+    assert.ok(r1.options.every((o) => o.stage || o.intents.at(-1).type === 'auto_day'), '动作选项收卷、戏文不收卷');
     // 第二次带上排除项，桩会再出一个可行选项（成功两次）
     const r2 = await call([r1.options[0].label]);
     const r3 = await call([]);

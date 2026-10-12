@@ -2,7 +2,7 @@
 // 点一个 ◇ 方略 = 这一天安排完并进入黄昏——不再一个一个选。
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadPack, createRun, beginRun } from '../../packages/core/index.js';
+import { loadPack, createRun, beginRun, fold } from '../../packages/core/index.js';
 import { validateOptions } from '../../packages/server/options.js';
 
 const PACK = loadPack();
@@ -26,16 +26,18 @@ const RAW = {
 };
 
 describe('今日方略（card=day 闭环）', () => {
-  test('白天选项尾部自动补 auto_day 收卷；模型自带的收走重排到最后', () => {
+  test('白天选项尾部自动补 auto_day 收卷；全不可行的走戏文轨不再被滤', () => {
     const out = validateOptions(PACK, dayState(), RAW, { card: 'day' });
-    assert.equal(out.length, 2, '第三个全不可行被滤');
-    for (const o of out) {
+    assert.equal(out.length, 3, '两个动作选项 + 一个戏文选项');
+    for (const o of out.filter((x) => !x.stage)) {
       assert.equal(o.intents.at(-1).type, 'auto_day', `${o.label} 应以收卷结尾`);
       assert.equal(o.intents.filter((i) => i.type === 'auto_day').length, 1, '收卷不重复');
       assert.ok(o.hint.includes('入黄昏'), `hint 应交代收卷：${o.hint}`);
     }
     // 第二个：模型自带 auto_day 被收走重排，search_home 仍在最前
     assert.equal(out[1].intents[0].action, 'search_home');
+    // 第三个：全不可行 → 戏文轨（scene 意图，不收卷）
+    assert.ok(out[2].stage && out[2].intents[0].type === 'scene', '空壳动作的标签走戏文');
   });
 
   test('黄昏/夜间选项不收卷（世界的问题不越权）', () => {
@@ -89,5 +91,58 @@ describe('夜访可行域（夜间选项没词的根因修复）', () => {
     assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'build', target: 'bed' }), '满级不可建');
     state.facilities.bed = 2;
     assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'build', target: 'bed' }));
+  });
+});
+
+import { normalizeIntent, applySceneEffects } from '../../packages/core/index.js';
+
+describe('宽进严出：意图归一化', () => {
+  test('中文角色/地点/物品翻成 id，已是 id 的不动', () => {
+    const { state } = newRun({ seed: 71, roster: ['anton', 'marta', 'bron'] });
+    state.phase = 'dusk';
+    const it = normalizeIntent(state, PACK, { type: 'dusk_assign', scavenger: '文简', location: '南市', gear: ['铁撬'], others: { 辛夷: 'sleep' } });
+    assert.equal(it.scavenger, 'anton');
+    assert.equal(it.location, 'market');
+    assert.deepEqual(it.gear, ['crowbar']);
+    assert.deepEqual(it.others, { marta: 'sleep' });
+    const it2 = normalizeIntent(state, PACK, { type: 'dusk_assign', scavenger: 'anton', location: 'market', gear: [], others: {} });
+    assert.equal(it2.scavenger, 'anton');
+  });
+});
+
+describe('戏文轨（scene 意图 + 微效果）', () => {
+  test('scene 意图：零机械变化、落 fact、fold 一致', () => {
+    const { state, events } = newRun({ seed: 72, roster: ['anton', 'marta', 'bron'] });
+    const r = resolveInput(state, PACK, [{ type: 'scene', text: '给文简留半盏灯' }]);
+    assert.ok(r.facts.some((f) => f.k === 'scene_request' && f.text === '给文简留半盏灯'));
+    const rebuilt = fold([...events, ...r.events]);
+    assert.equal(rebuilt.day, r.state.day, '零机械变化，回放一致');
+  });
+
+  test('微效果白名单：合法落地，越带整份拒', () => {
+    const { state } = newRun({ seed: 73, roster: ['anton', 'marta', 'bron'] });
+    const ok = applySceneEffects(state, PACK, { mood_char: { name: '文简', n: -1 }, seed: { subject: null, text: '把灯留在窗台上' } });
+    assert.ok(ok.ok, JSON.stringify(ok.reasons));
+    assert.equal(state.chars.find((c) => c.id === 'anton').moodPts, 1); // 2 - 1
+    assert.ok(Object.values(state.directions)[0]?.text.includes('灯'));
+    const bad = applySceneEffects(state, PACK, { mood_all: 3 });
+    assert.ok(!bad.ok);
+    const bad2 = applySceneEffects(state, PACK, { reputation: { key: 'emperor', n: 1 } });
+    assert.ok(!bad2.ok);
+  });
+
+  test('validateOptions 戏文逃生门：全不可行的选项不再被滤，标 stage', async () => {
+    const { validateOptions } = await import('../../packages/server/options.js');
+    const { state } = newRun({ seed: 74, roster: ['anton', 'marta', 'bron'] });
+    const out = validateOptions(PACK, state, { options: [
+      { label: '在门楣上刻一道痕', hint: '给数日子的人', intents: [] },
+      { label: '让文简守夜', intents: [{ type: 'act', actor: 'anton', action: 'guard' }] }
+    ] }, { card: 'day' });
+    const stage = out.find((o) => o.stage);
+    assert.ok(stage, '空意图选项应走戏文轨');
+    assert.deepEqual(stage.intents, [{ type: 'scene', text: '在门楣上刻一道痕——给数日子的人' }]);
+    assert.ok(!stage.hint.includes('入黄昏'), '戏文不收卷');
+    const act = out.find((o) => !o.stage);
+    assert.ok(act.intents.at(-1).type === 'auto_day', '动作选项照常收卷');
   });
 });

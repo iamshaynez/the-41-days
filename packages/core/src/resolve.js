@@ -29,6 +29,7 @@ export function validateIntentShape(intent) {
     case 'policy': return typeof intent.key === 'string';
     case 'direction': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
     case 'whisper': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
+    case 'scene': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 80;
     case 'auto_day': return true;
     case 'auto_night': return true;
     default: return false;
@@ -185,6 +186,14 @@ function applyOne(ctx, intent) {
       s.directions[id] = { id, subject, text, day: s.day, lastDay: s.day, alive: true };
       ctx.setFlag('directions', structuredClone(s.directions));
       ctx.fact('direction_set', { id, subject, text });
+      return { ok: true };
+    }
+    case 'scene': {
+      // 戏文轨（stage-play）：说得出口但内核没有的事——先落一拍请求，
+      // 零机械变化；舞台导演（LLM）随后接戏：写一段当场戏文 + 白名单微效果
+      const text = String(intent.text || '').trim().slice(0, 80);
+      if (!text) return { ok: false, reason: 'EMPTY' };
+      ctx.fact('scene_request', { text });
       return { ok: true };
     }
     case 'whisper': {
