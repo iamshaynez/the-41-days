@@ -28,6 +28,12 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
   const sj = readJson(dir, 'seals.json');
   let ge = null;
   try { ge = readJson(dir, 'ge.json'); } catch { /* C 层守卫可选 */ }
+  // 叙事双轴（叙事双轴-v0.1）：序章三幕 / 舆图 / 主线日步 / 历史轴（全部可选，缺包退老行为）
+  let prelude = null, map = null, mainline = null, historia = null;
+  try { prelude = readJson(dir, 'prelude.json'); } catch { /* 无序章文本包 */ }
+  try { map = readJson(dir, 'map.json'); } catch { /* 无舆图 */ }
+  try { mainline = readJson(dir, 'mainline.json'); } catch { /* 无大事轴 */ }
+  try { historia = readJson(dir, 'historia.json'); } catch { /* 无历史轴 */ }
   // 别传（可选文件）：旁传角色与旁传卡并入包（side 标记，主线不可见）
   let side = { sideChars: [], stories: [], cards: [] };
   try {
@@ -72,6 +78,37 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
   }
   for (const f of rj.facilities) for (const k of Object.keys(f.cost)) needItem(k, `设施 ${f.id}`);
   for (const c of characters) if (!c.ethics) errs.push(`角色 ${c.id} 缺伦理向量`);
+  // 叙事双轴引用校验（叙事双轴-v0.1 §9：标不出即不存在）
+  if (prelude) {
+    for (const cid of Object.keys(prelude.prequels || {})) if (!charMap[cid]) errs.push(`前传引用未知角色 ${cid}`);
+    for (const v of prelude.confluence?.variants || []) for (const cid of v.requiresChar || []) if (!charMap[cid]) errs.push(`合流变体引用未知角色 ${cid}`);
+    for (const cid of [...(prelude.cardsAct2 || []), ...(prelude.cardsAct3 || [])]) {
+      if (!ej.cards.some((c) => c.id === cid && c.kind === 'prologue')) errs.push(`序章节拍引用非序章卡 ${cid}`);
+    }
+  }
+  if (mainline) {
+    const actIds = new Set((mainline.acts || []).map((a) => a.id));
+    for (const st of mainline.steps || []) {
+      if (st.day === undefined && !st.dayWindow) errs.push(`主线步 ${st.id} 缺 day/dayWindow`);
+      if (st.act && !actIds.has(st.act)) errs.push(`主线步 ${st.id} 引用未知幕 ${st.act}`);
+      for (const h of st.hooks || []) {
+        const key = String(h.key || '');
+        if (key.startsWith('doc:') && !docMap[key.slice(4)]) errs.push(`主线步 ${st.id} 伏笔引用未知文档 ${key}`);
+      }
+    }
+  }
+  if (map) {
+    const locIds = new Set(locations.map((l) => l.id));
+    for (const p of map.places || []) if (!locIds.has(p.id)) errs.push(`舆图引用未知地点 ${p.id}`);
+    for (const t of map.traces || []) if (t.when?.doc && !docMap[t.when.doc]) errs.push(`舆图痕 ${t.id} 引用未知文档 ${t.when.doc}`);
+  }
+  if (historia) {
+    const names = new Set(historia.persons || []);
+    for (const f of historia.figures || []) {
+      if (!names.has(f.name)) names.add(f.name);
+      if (!f.line) errs.push(`闲笔 ${f.id} 缺 line`);
+    }
+  }
   for (const c of ej.cards) {
     for (const o of c.options || []) {
       for (const cst of o.cost || []) needItem(cst.item, `事件 ${c.id}.${o.key}`);
@@ -97,7 +134,8 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     docs: dj.docs, docMap, layerGates: dj.layerGates, canonAnnals: dj.canonAnnals || [], narrations, kpis,
     sidestories: side.stories || [], sideMap: Object.fromEntries((side.stories || []).map((s) => [s.id, s])),
     ge,
-    seals: sj.seals || [], sealMap
+    seals: sj.seals || [], sealMap,
+    prelude, map, mainline, historia
   };
 }
 

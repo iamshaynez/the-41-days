@@ -173,6 +173,7 @@ async function resumeRun(id) {
 function replayHistory(history, s) {
   let lastDay = null;
   for (const h of history) {
+    if (h.role === 'annals') continue; // 史笔住在右翼史卷里，不进正文书页
     if (h.day != null && h.day !== lastDay) { dayDivider(h.day); lastDay = h.day; }
     if (h.role === 'player') {
       const line = el('p', 'player-line', esc(h.text));
@@ -221,9 +222,12 @@ loadResume();
    ════════════════════════════════════════════════════════════════ */
 const rich = (() => {
   const esc1 = (t) => esc(t);
+  const MK_CLS = { 人: 'p', 地: 'l', 物: 'i', 事: 'e', 决: 'd', 伏: 'f' };
   return (t) => esc1(t)
     .replace(/\*\*(.+?)\*\*/g, '<b class="ink-em">$1</b>')
-    .replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<i class="em-kai">$1</i>');
+    .replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<i class="em-kai">$1</i>')
+    // 高亮标注（叙事双轴 §6）：六类 [[类|词]] → 色标 span（人朱/地青/物金/事玄/决绛/伏暗金）
+    .replace(/\[\[([人地物事决伏])\|([^\]]+)\]\]/g, (m, t, n) => `<span class="mk mk-${MK_CLS[t] || 'p'}">${n}</span>`);
 })();
 class Typist {
   /** hooks.makePara：自定义段落容器（默认正文叙事流）；hooks.mark=false 关闭名词标注 */
@@ -441,7 +445,9 @@ function applyState(s) {
 
   renderPartyline(s);
   renderHomeline(s);
-  renderPrologue(s); // 序章闪回拍排进正文流
+  renderPrologue(s); // 序章三幕（文本幕翻页 + 卡拍选择）排进正文流
+  renderMap(s.mapView);       // 右翼上：舆图（三态 + 走向 + 留痕）
+  renderChronicle(s.chronicle); // 右翼下：史卷（大事步 + 闲笔 + 我方一行）
   syncAsks(s);       // 世界停问的卡，嵌在正文流里
   if (state.popFor) fillCharPop(state.popFor); // 浮卡开着时随状态刷新
   if (s.over && s.ending && !s.endingRendered) { renderEnding(s); s.endingRendered = true; }
@@ -1019,7 +1025,8 @@ function syncAsks(s) {
     });
 }
 
-/** 序章：闪回拍排进正文流（序章是书，不是弹窗）——逻辑不变，版式与 ask 同宗 */
+/** 序章三幕（叙事双轴 §2）：文本幕（天下/围城/前传/合流）翻页推进，卡拍沿用停问版式。
+ *  首局无跳过键；二周目（short）给「翻过序章」——入口在 preludeView.canSkip。 */
 function renderPrologue(s) {
   if (s.phase !== 'prologue') {
     if (state.lastPrologueCard) {
@@ -1028,11 +1035,38 @@ function renderPrologue(s) {
     }
     return;
   }
-  if (!s.eventView) return;
-  if (state.lastPrologueCard === s.eventView.title) return;
-  state.lastPrologueCard = s.eventView.title;
+  const pv = s.preludeView;
+  const sig = pv ? `${pv.idx}:${pv.kind}:${pv.title || ''}:${pv.canSkip ? 1 : 0}` : `card:${s.eventView?.title || ''}`;
+  if (state.lastPrologueCard === sig) return;
+  state.lastPrologueCard = sig;
   document.querySelectorAll('.prologue').forEach((b) => b.classList.add('settled'));
   typist.flush();
+  if (pv && pv.kind !== 'card') {
+    const box = el('div', 'prologue prelude-beat');
+    const kicker = pv.kind === 'prequel' ? `前传 · ${pv.title}` : (pv.title || '卷首');
+    box.innerHTML = `<span class="kicker">${esc(kicker)}</span>`;
+    for (const p of String(pv.text).split('\n').filter(Boolean)) {
+      const para = el('p', '', rich(p));
+      markNouns(para);
+      box.appendChild(para);
+    }
+    const opts = el('div', 'prologue-opts');
+    const next = el('button', 'opt', '<span class="key">▸</span><span>翻页</span>');
+    next.type = 'button';
+    next.addEventListener('click', () => sendIntents([{ type: 'advance' }], '翻页'));
+    opts.appendChild(next);
+    if (pv.canSkip) {
+      const skip = el('button', 'opt opt-ghost', '<span class="key">⏎</span><span>翻过序章，直接进城</span>');
+      skip.type = 'button';
+      skip.addEventListener('click', () => sendIntents([{ type: 'skip_prelude' }], '翻过序章'));
+      opts.appendChild(skip);
+    }
+    box.appendChild(opts);
+    $('narration').appendChild(box);
+    scrollFlow(true);
+    return;
+  }
+  if (!s.eventView) return;
   const v = s.eventView;
   const box = el('div', 'prologue');
   box.innerHTML = `<span class="kicker">${esc(v.title)}</span>`;
@@ -1676,4 +1710,96 @@ function renderCapsuleForm(box, s) {
   };
   wrap.append(sel, input, btn, done);
   box.appendChild(wrap);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   右翼：舆图与史卷（叙事双轴-v0.1 §3/§4/§6）。
+   舆图 = 一张挂在墙上的手绘（无交互）：三态地点、今夜走向、战争留痕。
+   史卷 = 大事轴（史书体日笔 + 闲笔 + 投影）与我方一行（账不粉饰）。
+   ════════════════════════════════════════════════════════════════ */
+const TRACE_GLYPH = {
+  gap: '<path d="M-2.6,-3 l1.6,2.6 -2,3.2 M1,-3 l1.6,2.6 -2,3.2" class="tr-st"/>',
+  scar: '<path d="M-3.2,1 Q0,-3.4 3.2,1 Q0,4 -3.2,1 Z" class="tr-fl"/><path d="M-1.2,-2.6 v-3 M1.2,-2.6 v-4" class="tr-st"/>',
+  smoke: '<path d="M-1.6,2.4 q-1.1,-2.4 0,-4.8 M1.6,2.4 q1.1,-2.4 0,-4.8" class="tr-st"/>',
+  arrow: '<path d="M-3.2,3.2 L3.2,-3.2 M3.2,-3.2 h-2.8 M3.2,-3.2 v2.8" class="tr-st"/>',
+  arrow_hush: '<path d="M-3.2,3.2 L3.2,-3.2 M3.2,-3.2 h-2.8 M3.2,-3.2 v2.8 M-3.2,-1.6 h6.4" class="tr-st"/>',
+  drum: '<circle r="2.6" class="tr-st"/><path d="M-4.6,-4.2 a2.2,2.2 0 0 1 2.8,-0.4 M4.6,-4.2 a2.2,2.2 0 0 0 -2.8,-0.4" class="tr-st"/>',
+  ship: '<path d="M-3.2,0 h6.4 l-1.4,2 h-3.6 Z" class="tr-fl"/>',
+  ships: '<path d="M-4.4,0 h2 M-1.2,0 h2 M2,0 h2.4 M-2.8,-2.2 h2 M0.4,-2.2 h2 M3.2,-2.2 h1.4 M-1.6,2.2 h3.2" class="tr-st"/>',
+  door: '<rect x="-1.8" y="-3" width="3.6" height="6" class="tr-st"/><path d="M0,-3 v6" class="tr-st"/><circle cx="1.1" cy="0" r=".45" class="tr-fl"/>',
+  door_dry: '<rect x="-1.8" y="-3" width="3.6" height="6" class="tr-st"/><path d="M0,-3 v6 M-1.8,-3 L1.8,3 M1.8,-3 L-1.8,3" class="tr-st"/>',
+  seal: '<rect x="-2" y="-2" width="4" height="4" class="tr-st"/><path d="M-1,-1 l2,2 M1,-1 l-2,2" class="tr-st"/>',
+  rut: '<path d="M-4,-1.2 q4,1.2 8,0 M-4,1.6 q4,1.2 8,0" class="tr-st"/>',
+  lamp: '<circle cy="-1.4" r="1.1" class="tr-fl"/><path d="M0,-0.3 v3.2 M-1.4,3 h2.8" class="tr-st"/>',
+  frost: '', waterline: ''
+};
+function renderMap(mv) {
+  const panel = $('map-panel');
+  if (!mv) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const box = $('map-box');
+  const sig = [mv.places.filter((p) => p.state !== 'unknown').map((p) => `${p.id}${p.state === 'tonight' ? 'T' : 'K'}`).join(','),
+    mv.traces.map((t) => t.id).join(','), mv.winter ? 'w' : '', mv.rain ? 'r' : '', mv.tonight?.loc || ''].join('|');
+  quietSwap(box, sig);
+  box.classList.toggle('frost', !!mv.winter);
+  box.classList.toggle('rainy', !!mv.rain);
+  box.innerHTML = '';
+  const b = mv.base || { viewBox: [0, 0, 100, 100], paths: [] };
+  const [x, y, w, h] = b.viewBox || [0, 0, 100, 100];
+  const svg = el('div');
+  svg.innerHTML = `<svg viewBox="${x} ${y} ${w} ${h}" class="map-svg${mv.winter ? ' frost' : ''}${mv.rain ? ' rainy' : ''}" role="img" aria-label="江陵舆图">
+    ${(b.paths || []).map((p) => `<path d="${p.d}" class="mp-${p.cls}"/>${p.label ? `<text x="${p.lx}" y="${p.ly}" class="mp-label">${esc(p.label)}</text>` : ''}`).join('')}
+    ${(mv.gates || []).map((g) => `<circle cx="${g.x}" cy="${g.y}" r="0.9" class="mp-gate"><title>${esc(g.name)}</title></circle>`).join('')}
+    ${mv.route && mv.places.find((p) => p.id === mv.route.to) ? (() => {
+      const from = mv.places.find((p) => p.id === 'home') || { x: 50, y: 53 };
+      const to = mv.places.find((p) => p.id === mv.route.to);
+      return `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" class="mp-route"/>`;
+    })() : ''}
+    ${(mv.traces || []).map((t) => `<g transform="translate(${t.x},${t.y})" class="trace"><title>${esc(t.label || '')}</title>${TRACE_GLYPH[t.icon] || ''}</g>`).join('')}
+    ${mv.places.filter((p) => p.state !== 'unknown').map((p) => `
+      <g class="place ${p.state === 'tonight' ? 'tonight' : 'known'}">
+        <circle cx="${p.x}" cy="${p.y}" r="${p.state === 'tonight' ? 2.6 : 1.8}"/>
+        <text x="${p.x + 3}" y="${p.y + 1.4}">${esc(p.name)}${p.who ? `（${esc(p.who)}）` : ''}</text>
+      </g>`).join('')}
+  </svg>`;
+  box.appendChild(svg);
+  $('map-note').textContent = mv.tonight ? `今夜：${mv.places.find((p) => p.id === mv.tonight.loc)?.name || ''}${mv.tonight.who ? ' · ' + mv.tonight.who : ''}` : '白日，全员在橘里九号。';
+}
+function renderChronicle(ch) {
+  const panel = $('chronicle-panel');
+  if (!ch) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const box = $('chronicle-box');
+  const sig = ch.entries.map((e) => `${e.day}${e.ending ? '!' : ''}${(e.text || '').length}:${(e.pens || []).length}:${(e.mirrors || []).length}`).join('|');
+  quietSwap(box, sig);
+  box.innerHTML = '';
+  $('map-act').textContent = ch.currentAct ? `${ch.currentAct.title}` : '';
+  if (!ch.entries.length) {
+    box.appendChild(el('p', 'wing-note', '史卷未开——破晓即有一笔。'));
+    return;
+  }
+  for (const e of ch.entries) {
+    const d = el('div', 'chron-day' + (e.ending ? ' chron-end' : ''));
+    const head = el('div', 'chron-head');
+    head.innerHTML = `<span class="chron-d">第${e.day}日</span>${e.ending ? '<span class="chron-flag">收束</span>' : (e.act ? `<span class="chron-act">${esc(e.act)}</span>` : '<span class="chron-act chron-dim">闲笔</span>')}`;
+    d.appendChild(head);
+    if (e.text) {
+      const p = el('p', 'chron-text');
+      p.innerHTML = rich(e.text);
+      d.appendChild(p);
+    }
+    for (const pn of e.pens || []) {
+      const p = el('p', 'chron-pen');
+      p.innerHTML = `闲笔 · ${rich(pn.line)}`;
+      d.appendChild(p);
+    }
+    for (const m of e.mirrors || []) {
+      const p = el('p', 'chron-mir');
+      p.innerHTML = rich(m);
+      d.appendChild(p);
+    }
+    if (e.digest) d.appendChild(el('p', 'chron-dig', `我方 · ${esc(e.digest)}`));
+    box.appendChild(d);
+  }
+  box.scrollTop = box.scrollHeight;
 }

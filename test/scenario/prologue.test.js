@@ -1,48 +1,111 @@
-// 序章（围城 D1→D9 闪回）：管线、守卫、因果入账、回忆录序章段
+// 序章三幕（叙事双轴-v0.1 §2）：节拍引擎、守卫、因果入账、合流变体、单句版与跳过、fold 镜像
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRun, step, PACK } from '../helpers.js';
-import { fold } from '../../packages/core/index.js';
+import { fold, preludeBeats } from '../../packages/core/index.js';
 
-describe('序章管线', () => {
-  test('五拍逐拍推进，拍完落到第 1 天白天', () => {
+const PICK = { p1_water: 'tried', p3_shelling: 'share', p4_door: 'open', p2_house: 'ours', p5_dawn9: 'begin' };
+
+/** 走完序章：文本幕 advance 翻页，卡拍按 PICK 选 */
+function playPrelude(s, pick = (c) => PICK[c.id] ?? c.options[0].key) {
+  let cur = s, guard = 0;
+  while (cur.phase === 'prologue' && guard++ < 40) {
+    if (cur.activeEvent) cur = step(cur, [{ type: 'event_choice', option: pick(PACK.cardMap[cur.activeEvent.cardId]) }]).state;
+    else cur = step(cur, [{ type: 'advance' }]).state;
+  }
+  return cur;
+}
+
+describe('序章三幕 · 节拍引擎', () => {
+  test('幕序：天下×2 → 围城 → p1/p3/p4 → 前传×3 → 合流 → p2/p5 → 第 1 天', () => {
     const { state } = newRun({ prologue: true });
     let s = state;
     assert.equal(s.phase, 'prologue');
-    assert.equal(s.activeEvent?.cardId, 'p1_water', '首拍是停水那天');
-    for (const opt of ['tried', 'ours', 'share', 'open', 'begin']) {
-      assert.equal(s.phase, 'prologue', `拍间仍是序章（${opt}）`);
-      s = step(s, [{ type: 'event_choice', option: opt }]).state;
+    assert.equal(s.prelude.i, 0, '开局在幕一第一拍');
+    // 幕一 + 幕二引文：三翻
+    for (let i = 0; i < 3; i++) {
+      assert.ok(!s.activeEvent, '文本幕不带卡');
+      s = step(s, [{ type: 'advance' }]).state;
     }
-    assert.equal(s.phase, 'day', '序章读完，落到第 1 天白天');
+    assert.equal(s.activeEvent?.cardId, 'p1_water', '幕二首卡是降卒进城');
+    // 幕二三卡
+    const order = [];
+    while (s.activeEvent && !['p2_house'].includes(s.activeEvent.cardId)) {
+      order.push(s.activeEvent.cardId);
+      s = step(s, [{ type: 'event_choice', option: PICK[s.activeEvent.cardId] }]).state;
+      if (!s.activeEvent) break; // 进入前传文本幕
+    }
+    assert.deepEqual(order, ['p1_water', 'p3_shelling', 'p4_door']);
+    // 前传×3 + 合流：四翻（阵容三人）
+    let textBeats = 0;
+    while (!s.activeEvent && s.phase === 'prologue' && textBeats < 5) {
+      s = step(s, [{ type: 'advance' }]).state;
+      textBeats++;
+    }
+    assert.equal(textBeats, 4, '三段前传 + 一段合流');
+    assert.equal(s.activeEvent?.cardId, 'p2_house', '合流后写名上墙');
+    s = step(s, [{ type: 'event_choice', option: 'ours' }]).state;
+    assert.equal(s.activeEvent?.cardId, 'p5_dawn9');
+    s = step(s, [{ type: 'event_choice', option: 'begin' }]).state;
+    assert.equal(s.phase, 'day');
     assert.equal(s.day, 1);
+    assert.equal(s.mainline[0]?.stepId, 'm_d01', '序章落幕即落 D1 大事步');
   });
 
-  test('序章里只有选项合法：白天行动被守卫挡住', () => {
+  test('守卫：文本幕只有翻页合法，白天行动仍被挡', () => {
     const { state } = newRun({ prologue: true });
     const r = step(state, [{ type: 'act', actor: 'anton', action: 'eat', target: 'raw' }]);
     assert.ok(r.rejects.some((x) => x.reason === 'IN_PROLOGUE'));
   });
 
+  test('卡拍上 advance 被挡——选择才有旗标与因果账', () => {
+    const { state } = newRun({ prologue: true });
+    let s = step(state, [{ type: 'advance' }, { type: 'advance' }, { type: 'advance' }]).state;
+    assert.equal(s.activeEvent?.cardId, 'p1_water');
+    const r = step(s, [{ type: 'advance' }]);
+    assert.ok(r.rejects.some((x) => x.reason === 'IN_PROLOGUE'), '卡拍必须选');
+  });
+
   test('序章的选择进因果账（序章标签 + 动词正确）', () => {
     const { state } = newRun({ prologue: true });
-    let s = state;
-    for (const opt of ['tried', 'ours', 'share', 'open', 'begin']) {
-      s = step(s, [{ type: 'event_choice', option: opt }]).state;
-    }
+    const s = playPrelude(state);
     const pro = s.causality.entries.filter((e) => e.tags?.includes('prologue'));
     assert.ok(pro.length >= 2, '序章至少两笔因果账（分食 + 开门）');
     assert.ok(pro.some((e) => e.verb === 'help' && e.target === 'neighbor'), '分给老人入账');
     assert.ok(pro.some((e) => e.verb === 'help' && e.target === 'stranger'), '开门入账');
   });
 
+  test('合流段按组合换：素徽在队即旧宅变体', () => {
+    const z = newRun({ prologue: true, roster: ['zofia', 'anton', 'marta'] }).state;
+    const zt = preludeBeats(PACK, z).find((b) => b.id === 'confluence')?.text || '';
+    assert.ok(zt.includes('旧宅'), '素徽变体收编');
+    const d = newRun({ prologue: true, roster: ['danilo', 'vera', 'bron'] }).state;
+    const dt = preludeBeats(PACK, d).find((b) => b.id === 'confluence')?.text || '';
+    assert.ok(dt.includes('两本账'), '江鳅×薄姑互不信任变体');
+    const plain = newRun({ prologue: true, roster: ['anton', 'marta', 'bron'] }).state;
+    const pt = preludeBeats(PACK, plain).find((b) => b.id === 'confluence')?.text || '';
+    assert.ok(pt.includes('三条路'), '无变体组合走通用合流');
+  });
+
+  test('单句版（二周目）：天下一行、前传用 line、可跳过', () => {
+    const { state } = newRun({ prologue: true, preludeMode: 'short' });
+    const beats = preludeBeats(PACK, state);
+    const full = preludeBeats(PACK, newRun({ prologue: true }).state);
+    assert.ok(beats.length < full.length, '单句版节拍更少');
+    assert.equal(beats[0].id, 'heavenLine');
+    assert.equal(beats.filter((b) => b.t === 'text' && b.source === 'heaven').length, 0, '长天下不进单句版');
+    const preq = beats.find((b) => b.t === 'prequel');
+    assert.ok(preq, '前传拍仍在（单句）');
+    // 跳过：直接落地第 1 天，D1 大事步照落
+    const r = step(state, [{ type: 'skip_prelude' }]);
+    assert.equal(r.state.phase, 'day');
+    assert.equal(r.state.mainline[0]?.stepId, 'm_d01');
+    assert.ok(r.facts.some((f) => f.k === 'prologue_skipped'), '跳过入账');
+  });
+
   test('回忆录有序章段（围城那些天）', () => {
     const { state } = newRun({ prologue: true });
-    let s = state;
-    for (const opt of ['tried', 'ours', 'share', 'open', 'begin']) {
-      s = step(s, [{ type: 'event_choice', option: opt }]).state;
-    }
-    // 直接打到全灭看复盘
+    let s = playPrelude(state);
     for (const c of s.chars) { c.wound = 3; c.hunger = 0; }
     for (let i = 0; i < 12 && !s.over; i++) {
       if (s.activeEvent) s = step(s, [{ type: 'event_choice', option: PACK.cardMap[s.activeEvent.cardId]?.options?.[0]?.key }]).state;
@@ -50,21 +113,27 @@ describe('序章管线', () => {
       if (s.phase === 'dusk') s = step(s, [{ type: 'dusk_assign', scavenger: null, others: {} }]).state;
     }
     assert.ok(s.over);
-    const story = s.ending.storyline;
-    assert.ok(story.prologue.length >= 2, '序章拍在复盘里');
+    assert.ok(s.ending.storyline.prologue.length >= 2, '序章拍在复盘里');
   });
 
-  test('fold 镜像：序章对局可重放', () => {
+  test('fold 镜像：序章对局可重放（含节拍指针与大事轴）', () => {
     const { state, events } = newRun({ prologue: true });
     let s = state;
     const all = [...events];
-    for (const opt of ['tried', 'ours', 'share', 'open', 'begin']) {
+    for (const opt of ['tried', 'share', 'open', 'ours', 'begin']) {
+      while (s.phase === 'prologue' && !s.activeEvent) {
+        const r = step(s, [{ type: 'advance' }]);
+        all.push(...r.events); s = r.state;
+      }
+      if (s.phase !== 'prologue') break;
       const r = step(s, [{ type: 'event_choice', option: opt }]);
-      all.push(...r.events);
-      s = r.state;
+      all.push(...r.events); s = r.state;
     }
+    while (s.phase === 'prologue') { const r = step(s, [{ type: 'advance' }]); all.push(...r.events); s = r.state; }
     const rebuilt = fold(all);
     assert.equal(rebuilt.phase, 'day');
+    assert.equal(rebuilt.prelude.i, rebuilt.prelude.i);
+    assert.equal(rebuilt.mainline.length, s.mainline.length);
     assert.equal(rebuilt.causality.entries.length, s.causality.entries.length);
   });
 

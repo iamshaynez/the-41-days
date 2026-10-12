@@ -1,0 +1,49 @@
+{
+  "$comment": "舆图（叙事双轴-v0.1 §3）：base=手绘底图（viewBox 0-100，江陵城 + 江汉水系 + 四门）；places=地点坐标与三态（未闻不显/已知淡/今夜亮，纯视图无交互）；traces=留痕层（§3.4：战争在图上留疤，触发全部来自既有旗标/文档/封印/结局，once 一局一痕；temp=当日退）。图标前端按 icon 字段绘制线稿。",
+  "base": {
+    "viewBox": [0, 0, 100, 100],
+    "paths": [
+      { "cls": "river", "d": "M0,80 C18,76 34,84 50,82 C68,80 84,86 100,82 L100,97 C82,93 66,99 50,96 C32,94 16,98 0,94 Z", "label": "长江", "lx": 16, "ly": 91 },
+      { "cls": "water", "d": "M10,0 C14,18 20,36 27,54 C31,64 30,74 33,82", "label": "汉水", "lx": 6, "ly": 10 },
+      { "cls": "water", "d": "M22,80 C26,72 24,64 26,56", "label": "" },
+      { "cls": "moat", "d": "M24,29 h52 a13,13 0 0 1 13,13 v18 a13,13 0 0 1 -13,13 h-52 a13,13 0 0 1 -13,-13 v-18 a13,13 0 0 1 13,-13 Z", "label": "城濠", "lx": 18, "ly": 44 },
+      { "cls": "wall", "d": "M29,33 h42 a9,9 0 0 1 9,9 v14 a9,9 0 0 1 -9,9 h-42 a9,9 0 0 1 -9,-9 v-14 a9,9 0 0 1 9,-9 Z", "label": "江陵", "lx": 50, "ly": 38 },
+      { "cls": "gate", "d": "M46,33 h8 v3 h-8 Z M26,56 h3 v8 h-3 Z M50,65 h8 v3 h-8 Z M71,50 h3 v8 h-3 Z", "label": "" },
+      { "cls": "lane", "d": "M50,33 v-14 M50,19 h14 M50,65 v8 l6,9 M29,60 h-8 l-8,12 M71,54 h9 l10,10", "label": "" }
+    ],
+    "gates": [
+      { "id": "north", "name": "北津门", "x": 50, "y": 31 },
+      { "id": "west", "name": "水门", "x": 26, "y": 60 },
+      { "id": "south", "name": "江津", "x": 54, "y": 69 },
+      { "id": "east", "name": "南市缺口", "x": 73, "y": 54 }
+    ]
+  },
+  "places": [
+    { "id": "home", "name": "橘里九号", "x": 50, "y": 53, "kind": "city" },
+    { "id": "church", "name": "府库里社", "x": 38, "y": 47, "kind": "city" },
+    { "id": "villas", "name": "大族宅区", "x": 64, "y": 43, "kind": "city" },
+    { "id": "hospital", "name": "杜仲医棚", "x": 59, "y": 38, "kind": "city" },
+    { "id": "market", "name": "被焚的南市", "x": 66, "y": 56, "kind": "city" },
+    { "id": "sewer", "name": "城濠水窦", "x": 25, "y": 64, "kind": "moat" },
+    { "id": "post", "name": "驿亭", "x": 44, "y": 15, "kind": "out" },
+    { "id": "beacon", "name": "北津台", "x": 66, "y": 13, "kind": "out" },
+    { "id": "frontline", "name": "水门渡旧垒", "x": 15, "y": 77, "kind": "out" }
+  ],
+  "traces": [
+    { "id": "tr_gap", "icon": "gap", "x": 73, "y": 51, "label": "焚市缺口", "when": {}, "once": true },
+    { "id": "tr_smoke", "icon": "smoke", "x": 61, "y": 35, "label": "医棚的队", "when": { "mlStep": "m_d06" }, "once": true },
+    { "id": "tr_fire", "icon": "scar", "x": 40, "y": 21, "label": "大仓火", "when": { "mlStep": "m_fire" }, "once": true },
+    { "id": "tr_frost", "icon": "frost", "x": 50, "y": 50, "label": "入冬", "when": { "winter": true }, "once": false, "temp": false },
+    { "id": "tr_water", "icon": "waterline", "x": 50, "y": 86, "label": "水涨", "when": { "weather": "rain" }, "once": false, "temp": true },
+    { "id": "tr_arrow", "icon": "arrow", "x": 15, "y": 74, "label": "渡口的箭", "when": { "flag": "crossing_heard" }, "once": true },
+    { "id": "tr_hush", "icon": "arrow_hush", "x": 18, "y": 77, "label": "箭歇了一夜", "when": { "flag": "crossing_gift" }, "once": true },
+    { "id": "tr_ship", "icon": "ship", "x": 57, "y": 73, "label": "逢双日的船", "when": { "franko": true }, "once": false, "temp": true },
+    { "id": "tr_seal", "icon": "seal", "x": 37, "y": 50, "label": "检署的纸路", "when": { "doc": "#033" }, "once": true },
+    { "id": "tr_rut", "icon": "rut", "x": 52, "y": 22, "label": "搬家的车辙", "when": { "mlStep": "m_d36" }, "once": true },
+    { "id": "tr_door_oil", "icon": "door", "x": 50, "y": 29, "label": "门轴的油", "when": { "minDay": 44 }, "once": true },
+    { "id": "tr_dry_axe", "icon": "door_dry", "x": 50, "y": 27, "label": "干涩的门轴", "when": { "flag": "alt_jiangling" }, "once": true },
+    { "id": "tr_drum", "icon": "drum", "x": 68, "y": 11, "label": "台上举火", "when": { "anyFlag": ["alt_maicheng", "lighthouse_day"] }, "once": true },
+    { "id": "tr_seven_ships", "icon": "ships", "x": 62, "y": 88, "label": "七条商船", "when": { "minDay": 45 }, "once": true },
+    { "id": "tr_lamp", "icon": "lamp", "x": 53, "y": 55, "label": "夜夜的灯", "when": { "guardNights": 3 }, "once": true }
+  ]
+}

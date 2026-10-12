@@ -42,7 +42,7 @@ export function newChar(base) {
 }
 
 /** 开局（GDD §4.2 组合规则：3 人，首局保底一名正典钥匙角色） */
-export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, firstRun = true, prologue = false, echoes = null, sidestory = null } = {}) {
+export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, firstRun = true, prologue = false, preludeMode = 'full', echoes = null, sidestory = null } = {}) {
   const rng = new Rng(seed);
   const sideDef = sidestory ? pack.sideMap?.[sidestory] : null;
   let ids = sideDef ? sideDef.roster : roster;
@@ -68,6 +68,11 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
 
   const st = {
     v: 1, seed, difficulty, day: 1, phase: prologue ? 'prologue' : 'day', rngCursor: rng.cursor,
+    // 序章三幕（叙事双轴-v0.1 §2）：preludeMode 由 server 按账号历史定（首局 full，二周目 short）
+    preludeMode: prologue ? preludeMode : null,
+    prelude: prologue ? { i: 0 } : null,
+    // 大事轴日志（§4：fold 由 MAINLINE_STEP 镜像；mainlinePens 记闲笔已出之人）
+    mainline: [], mainlinePens: [],
     weather: 'clear', winterActive: false, winterStart, winterEnd,
     war: { endDay, telegraphed: false, ended: false, endingType: null },
     chars, inventory: inv,

@@ -1254,3 +1254,98 @@ button:focus-visible, .opt:focus-visible { outline: none; box-shadow: 0 0 0 3px 
 }
 body.motion-off *, body.motion-off *::before, body.motion-off *::after { animation: none !important; transition: none !important; }
 body.motion-off { scroll-behavior: auto; }
+
+/* ════════════════════════════════════════════════════════════════
+   叙事双轴（叙事双轴-v0.1）：左轴右翼布局 · 舆图 · 史卷 · 高亮标注
+   ════════════════════════════════════════════════════════════════ */
+
+/* —— 左轴右翼：书页居左，舆图与史卷立在案头右侧 —— */
+#stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(236px, 24vw, 316px); gap: 0 16px; animation: none; transform: none; }
+#stage-left { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+#wing { display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-top: 14px; }
+.wing-card {
+  display: flex; flex-direction: column; min-height: 0;
+  background: var(--paper); background-image: var(--grain);
+  border: 1px solid #241608;
+  box-shadow: inset 0 0 0 1px var(--gold-dim), 0 2px 0 var(--shadow);
+  padding: 12px 14px;
+}
+.wing-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--gold-dim); padding-bottom: 6px; }
+.wing-kicker { font-family: var(--font-li); font-size: 13px; letter-spacing: .32em; color: var(--brass); }
+.wing-sub { font-size: 10px; letter-spacing: .22em; color: var(--ink-3); }
+.wing-note { font-size: 11px; color: var(--ink-3); letter-spacing: .05em; margin-top: 8px; }
+#map-panel { flex: none; }
+#chronicle-panel { flex: 1; }
+#map-box { position: relative; }
+#map-box::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1.2s;
+  border-radius: 2px;
+}
+#map-box.frost::after { opacity: 1; background: rgba(168, 205, 220, .15); }
+#map-box.rainy::after { opacity: 1; background: rgba(90, 138, 168, .18); }
+
+/* —— 舆图 SVG：手绘线稿，未闻不显、已知淡、今夜亮 —— */
+.map-svg { width: 100%; height: auto; display: block; color: var(--ink-2); }
+.mp-river { fill: rgba(106, 138, 154, .34); stroke: rgba(106, 138, 154, .6); stroke-width: .4; }
+.mp-water { fill: none; stroke: rgba(106, 138, 154, .55); stroke-width: .7; stroke-linecap: round; }
+.mp-moat { fill: none; stroke: rgba(106, 138, 154, .5); stroke-width: .9; stroke-dasharray: 2.4 1.6; }
+.mp-wall { fill: rgba(35, 42, 47, .5); stroke: var(--ink-2); stroke-width: .8; }
+.mp-gate { fill: var(--brass); }
+.mp-lane { fill: none; stroke: var(--rule); stroke-width: .35; stroke-dasharray: 1.2 1.2; }
+.mp-label { fill: var(--ink-3); font-size: 3px; letter-spacing: .3em; font-family: var(--font-kai); }
+.map-svg.frost { filter: saturate(.72) brightness(1.04); }
+.map-svg.rainy .mp-river { fill: rgba(106, 138, 154, .5); }
+.place circle { fill: var(--paper-hi); stroke: var(--ink-3); stroke-width: .5; }
+.place text { fill: var(--ink-3); font-size: 3.1px; letter-spacing: .08em; font-family: var(--font-kai); }
+.place.known circle { stroke: var(--ink-2); }
+.place.known text { fill: var(--ink-2); }
+.place.tonight circle { fill: var(--accent); stroke: var(--accent-2); stroke-width: .9; }
+.place.tonight text { fill: var(--accent-2); font-weight: 700; }
+.mp-route { stroke: var(--accent-2); stroke-width: .55; stroke-dasharray: 1.8 1.4; }
+.trace { pointer-events: auto; }
+.trace .tr-st { stroke: var(--accent); stroke-width: .62; fill: none; stroke-linecap: round; }
+.trace .tr-fl { fill: var(--accent); }
+
+/* —— 史卷：史书体日笔（大事）＋闲笔＋回响＋我方一行 —— */
+#chronicle-box { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+#chronicle-box::-webkit-scrollbar { width: 4px; }
+#chronicle-box::-webkit-scrollbar-thumb { background: var(--rule-strong); border-radius: 2px; }
+.chron-day { border-left: 2px solid var(--rule); padding: 4px 0 8px 10px; margin: 2px 0 6px; }
+.chron-head { display: flex; align-items: baseline; gap: 8px; }
+.chron-d { font-family: var(--font-stele); font-size: 10.5px; color: var(--ink-3); letter-spacing: .12em; flex: none; }
+.chron-act { font-size: 9.5px; letter-spacing: .2em; color: var(--brass); }
+.chron-act.chron-dim { color: var(--ink-3); opacity: .7; }
+.chron-flag { font-size: 9.5px; letter-spacing: .2em; color: var(--accent-2); border: 1px solid var(--accent-wash); padding: 0 4px; }
+.chron-text { font-family: var(--font-stele); font-size: 12.5px; color: var(--ink-2); line-height: 1.7; margin: 3px 0 1px; }
+.chron-pen { font-family: var(--font-kai); font-size: 11.5px; color: var(--ink-3); line-height: 1.6; margin: 2px 0 0; }
+.chron-mir { font-family: var(--font-kai); font-size: 11.5px; color: var(--cold); line-height: 1.6; margin: 2px 0 0; }
+.chron-dig { font-size: 10.5px; color: var(--moss); letter-spacing: .04em; margin: 3px 0 0; }
+.chron-day.chron-end { border-left-color: var(--accent); }
+.chron-day.chron-end .chron-text { color: var(--ink); }
+
+/* —— 高亮标注（叙事双轴 §6）：人朱 / 地青 / 物金 / 事玄 / 决绛 / 伏暗金 —— */
+.mk { padding: 0 1px; }
+.mk-p { color: var(--accent-2); }
+.mk-l { color: #8fb8c9; }
+.mk-i { color: var(--brass); border-bottom: 1px dotted var(--gold-dim); }
+.mk-e { color: var(--ink); font-weight: 700; }
+.mk-d { color: var(--accent-2); background: var(--accent-wash); border-bottom: 1px solid var(--accent); }
+.mk-f { color: var(--brass); text-decoration: underline dotted rgba(212, 175, 55, .5); text-underline-offset: 3px; }
+
+/* —— 序章文本幕：卷首/前传/合流的排版（与卡拍同宗，长文居中书页） —— */
+.prelude-beat p { margin: 0 0 .9em; }
+.prelude-beat p:first-of-type { margin-top: .2em; }
+.opt.opt-ghost .key { color: var(--ink-3); }
+.opt.opt-ghost span:last-child { color: var(--ink-3); }
+
+/* —— 窄屏：右翼落为两卡并排，书页独占上行 —— */
+@media (max-width: 1080px) {
+  #stage { grid-template-columns: 1fr; }
+  #wing { flex-direction: row; padding-top: 0; }
+  .wing-card { flex: 1; min-height: 180px; }
+  #chronicle-box { max-height: 220px; }
+}
+@media (max-width: 640px) {
+  #wing { flex-direction: column; }
+  #map-box { max-width: 340px; }
+}
