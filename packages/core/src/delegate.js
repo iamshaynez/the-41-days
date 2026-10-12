@@ -22,6 +22,14 @@ export function feasibleIntent(state, pack, intent) {
       const c = intent.actor ? s.chars.find((x) => x.id === intent.actor) : null;
       if (!c || !c.alive || c.ap < 1) return false;
       if (intent.action === 'eat') return ['meal', 'canned', 'raw', 'meat'].some((i) => (s.inventory[i] || 0) > 0);
+      // 设施/耗材前置：渲染出来的选项不允许点了落空（线上教训：无灶 cook）
+      if (intent.action === 'cook') return !!s.facilities.stove;
+      if (intent.action === 'listen_radio') return !!s.facilities.radio;
+      if (intent.action === 'read') return (s.inventory.book || 0) > 0;
+      if (intent.action === 'treat') return ['bandage', 'meds', 'herbmed'].includes(intent.target) && has(s, intent.target);
+      if (intent.action === 'craft') return pack.recipes.some((r) => r.id === intent.target);
+      if (intent.action === 'build') return pack.facilityMap ? !!pack.facilityMap[intent.target] : true;
+      if (intent.action === 'chop') return (s.homeFurniture || 0) > 0;
       return true;
     }
     case 'dusk_assign': {

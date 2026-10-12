@@ -645,6 +645,9 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 .noise-line .rip { display: inline-block; animation: ripple 2.2s ease-in-out infinite; }
 @keyframes ripple { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 
+/* 视图头部的返回钮：档案馆/管理回到对局（嵌在 H1 里，字号随标题缩一档） */
+h1 .view-back { font-size: .38em; vertical-align: middle; margin-left: 14px; letter-spacing: .1em; }
+
 /* ——— 卡脚（统一交互面）：选项 + 刷新命运 + 输入行，都住在停问卡里 ——— */
 /* 谋士出的选项：与保底选项同宗，朱印换成菱形墨点以示来历 */
 .opt.opt-llm .key { border-color: var(--brass); color: var(--brass); box-shadow: inset 0 0 0 1px var(--gold-dim); }

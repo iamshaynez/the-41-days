@@ -55,6 +55,19 @@ describe('feasibleIntent（谋士选项的可行性门）', () => {
     assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'eat', target: 'raw' }));
   });
 
+  test('act 的设施/耗材前置：无灶不 cook、没书不读、没绷带不治（渲染的选项点得动）', () => {
+    const { state } = newRun({ seed: 37, roster: ['anton', 'marta', 'bron'] });
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'cook' }), '第 1 天没炉灶');
+    state.facilities.stove = 1;
+    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'cook' }));
+    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'read' }), '开局有两册书');
+    delete state.inventory.book;
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'read' }));
+    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'marta', action: 'treat', target: 'bandage', patient: 'anton' }), '有绷带即可（伤员细判留给内核）');
+    delete state.inventory.bandage;
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'marta', action: 'treat', target: 'bandage', patient: 'anton' }), '没绷带不治');
+  });
+
   test('dusk_assign：地点必须已知；夜访意图必须真的在夜里', () => {
     const { state } = newRun({ seed: 34, roster: ['anton', 'marta', 'bron'] });
     state.phase = 'dusk'; // 黄昏卡在黄昏相位上刷新选项

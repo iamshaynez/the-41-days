@@ -21,7 +21,7 @@ export const PRESETS = {
  */
 export function openaiCompat(cfg) {
   const url = cfg.baseUrl.replace(/\/$/, '') + '/chat/completions';
-  async function call({ system, user, json = false, stream = false, onDelta, signal }) {
+  async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens }) {
     const body = {
       model: cfg.model,
       messages: [
@@ -29,7 +29,7 @@ export function openaiCompat(cfg) {
         { role: 'user', content: user }
       ],
       temperature: cfg.temperature ?? 0.7,
-      max_tokens: cfg.maxTokens ?? 2048,
+      max_tokens: maxTokens ?? cfg.maxTokens ?? 2048,
       ...(json ? { response_format: { type: 'json_object' } } : {})
     };
     if (stream) body.stream = true;
@@ -59,10 +59,10 @@ export function openaiCompat(cfg) {
  */
 export function anthropicCompat(cfg) {
   const url = cfg.baseUrl.replace(/\/$/, '') + '/messages';
-  async function call({ system, user, json = false, stream = false, onDelta, signal }) {
+  async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens }) {
     const body = {
       model: cfg.model,
-      max_tokens: cfg.maxTokens ?? 2048,
+      max_tokens: maxTokens ?? cfg.maxTokens ?? 2048,
       temperature: cfg.temperature ?? 0.7,
       ...(system ? { system } : {}),
       messages: [{ role: 'user', content: user }]

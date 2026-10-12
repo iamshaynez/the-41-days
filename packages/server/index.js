@@ -12,7 +12,7 @@ import { hashPassword, verifyPassword, validateUsername, validatePassword, sessi
 import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect } from './narrate.js';
-import { loadPack, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith } from '../llm/index.js';
 import { anchorPool } from '../core/src/ge.js';
@@ -58,14 +58,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
 
   function loadPrompts() {
     const ents = Object.fromEntries(db.contentEntities('prompt'));
-    return {
-      referee: ents.referee?.text || '',
-      narrator: ents.narrator?.text || '',
-      actor: ents.actor?.text || '',
-      memoirist: ents.memoirist?.text || '',
-      playwright: ents.playwright?.text || '',
-      optionsmith: ents.optionsmith?.text || ''
-    };
+    // 老库缺条目（如新加的 optionsmith）时兜底读内容包原文件——提示词永远不允许是空的
+    const fromDisk = (n) => { try { return loadPrompt(n, PACK_DIR); } catch { return ''; } };
+    const pick = (n) => ents[n]?.text || fromDisk(n);
+    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith') };
   }
 
   // —— C 层导演（GE：LLM 在配才在场；离线即关，游戏完整可玩） ——
@@ -530,9 +526,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const body = await readBody(req);
         const card = ['day', 'dusk', 'night'].includes(body.card) ? body.card : null;
         if (!card) return json(res, 400, { error: 'card 不对' });
-        if (run.mode !== 'llm' || rateLimited(req.socket.remoteAddress || '?')) return json(res, 200, { options: [] });
+        if (rateLimited(req.socket.remoteAddress || '?')) return json(res, 200, { options: [], reason: '太快了，喘口气' });
+        if (run.mode !== 'llm') return json(res, 200, { options: [], reason: '这一局是直读模式（添加 LLM 供应商后新开的局才有谋士）' });
         const gw = buildGateway(id);
-        if (!gw?.providers?.referee && !gw?.providers?.narrator) return json(res, 200, { options: [] });
+        if (!gw?.providers?.referee && !gw?.providers?.narrator) return json(res, 200, { options: [], reason: '没有可用的 LLM 路由（管理页配置后自动接入）' });
         // 刷新预算：同一卡面至多两次（防刷屏，不省成本）
         const bkey = id + ':' + card + ':' + run.state.day;
         optionRefresh.set(bkey, (optionRefresh.get(bkey) || 0) + 1);
@@ -547,10 +544,12 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           };
           const provider = gw.providers.referee || gw.providers.narrator;
           const raw = await optionsmith({ provider, prompts: promptsCache }, brief);
-          return json(res, 200, { options: validateOptions(pack, st, raw) });
+          const options = validateOptions(pack, st, raw);
+          const reason = options.length ? '' : (raw ? '谋士出的选项都没过验证（id 对照/可行性/禁词）' : '谋士的输出没法解析成 JSON');
+          return json(res, 200, { options, reason });
         } catch (e) {
           log.warn('optionsmith 失败', { runId: id, error: String(e?.message || e) });
-          return json(res, 200, { options: [] });
+          return json(res, 200, { options: [], reason: `调用失败：${String(e?.message || e).slice(0, 120)}` });
         }
       }
 

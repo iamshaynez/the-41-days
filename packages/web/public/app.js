@@ -348,6 +348,15 @@ async function send(payload, displayText) {
   state.busy = false;
   setCardsEnabled(true);
 }
+/** 内核拒绝原因 → 玩家语言（错误码不亮给玩家） */
+const REJECT_TXT = {
+  NEED_FACILITY: '还缺家什', NO_AP: '行动力不够了', NO_FOOD: '没有能吃的', NO_FUEL: '没有柴了',
+  NO_MATERIAL: '材料不够', NO_TOOL: '没有趁手的工具', BAD_PHASE: '现在不是做这个的时候',
+  NOT_DUSK: '得等天黑', HOME_NIGHT: '今晚在家里', NO_MERCHANT: '摊子不在', NO_EVENT: '没有待决的事',
+  BAD_OPTION: '没有这个选项', UNAVAILABLE: '条件不够', IN_PROLOGUE: '序章里只能选', BAD_SHAPE: '这话没听懂',
+  BAD_TYPE: '这事做不了', EMPTY: '空的', TOO_MANY: '太多了'
+};
+
 function handleSse(block) {
   const ev = block.match(/^event: (.+)$/m)?.[1];
   const dataRaw = block.match(/^data: (.+)$/m)?.[1];
@@ -357,7 +366,7 @@ function handleSse(block) {
   if (ev === 'clarify') narrateRaw('……' + data.text, { cls: 'clarify' });
   if (ev === 'echo') narrateRaw(data.text, { cls: 'clarify' }); // 世界接住狂语的一笔（零状态变化）
   if (ev === 'state-patch') applyState(data.state);
-  if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => r.reason).join('、') + '）', { cls: 'sys' }); }
+  if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' }); }
   if (ev === 'error') narrateRaw('（出错：' + esc(data.error) + '）', { cls: 'sys' });
 }
 
@@ -780,6 +789,7 @@ function refreshRow(cardKey, optsEl) {
         added++;
       }
       b.classList.remove('thinking');
+      if (r.reason) b.title = r.reason;
       if (used >= 2) { b.dataset.done = '1'; txt().textContent = '就这些了'; }
       else { txt().textContent = added ? '⟳ 再想想' : '谋士没词了'; b.disabled = false; }
     } catch {
@@ -1047,6 +1057,9 @@ function closeSheets() {
   document.body.classList.remove('overlay-open');
 }
 $('overlay-backdrop').addEventListener('click', closeSheets);
+// 档案馆/管理的显式返回（菜单里的「对局」仍在，但入口要一眼看得见）
+$('back-from-archive').addEventListener('click', () => switchView('play'));
+$('back-from-admin').addEventListener('click', () => switchView('play'));
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (document.body.classList.contains('overlay-open')) closeSheets();
