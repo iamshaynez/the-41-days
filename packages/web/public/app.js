@@ -357,6 +357,7 @@ function handleSse(block) {
   if (ev === 'narration-delta') streamNarrate(data.d || '');
   if (ev === 'memoir-delta') streamMemoir(data.d || '');
   if (ev === 'clarify') narrateRaw('……' + data.text, { cls: 'clarify' });
+  if (ev === 'echo') narrateRaw(data.text, { cls: 'clarify' }); // 世界接住狂语的一笔（零状态变化）
   if (ev === 'state-patch') applyState(data.state);
   if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => r.reason).join('、') + '）', { cls: 'sys' }); }
   if (ev === 'error') narrateRaw('（出错：' + esc(data.error) + '）', { cls: 'sys' });
@@ -717,6 +718,7 @@ function settleAsk(rec) {
   if (!rec?.el) return;
   rec.el.classList.add('settled');
   rec.el.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+  rec.el.querySelectorAll('.opt-free input').forEach((i) => { i.disabled = true; });
 }
 /** 同步一类停问卡：视图没了→合上；签名变了→合上旧的、在书尾开新的一页 */
 function syncAsk(key, present, sig, build) {
@@ -747,20 +749,53 @@ function optBtn(label, key, onClick, hint = '') {
   b.addEventListener('click', () => { onClick(); });
   return b;
 }
+/** 末位自由输入行（命运导演 P0b）：与选项同宗的第四种可能——自己拿主意。
+ *  示例由内核按状态现算（freeExamples），随天数轮换；点「落笔」= 与选项同一条输入管线。 */
+function freeOptRow(s, kind, note = '') {
+  const row = el('div', 'opt-free');
+  const examples = s?.freeExamples?.[kind] || [];
+  const ex = examples.length ? examples[(s.day + examples.length) % examples.length] : '';
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.maxLength = 60;
+  inp.placeholder = note || ex || '想说什么都行——世界会接住';
+  inp.enterKeyHint = 'send';
+  inp.setAttribute('aria-label', '自己拿主意');
+  const btn = el('button', 'free-send', '✎ 落笔');
+  btn.type = 'button';
+  const go = () => {
+    const v = inp.value.trim();
+    if (!v || state.busy) return;
+    inp.value = '';
+    sendInput(v);
+  };
+  btn.addEventListener('click', go);
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  if (ex && !note) inp.title = `比如：「${ex}」`;
+  row.append(inp, btn);
+  return row;
+}
 function syncAsks(s) {
   const inPrologue = s.phase === 'prologue';
-  // 晨报：火烧眉毛的事（门口有事先应门，晨报让位）
+  // 晨报：火烧眉毛的事（门口有事先应门，晨报让位）+ 你种下的念头
   syncAsk('care', !!(!inPrologue && s.careView && !s.eventView && !s.over),
-    s.careView ? s.careView.title + s.careView.problems.map((p) => p.text).join('|') : '', (node) => {
+    s.careView ? s.careView.title + s.careView.problems.map((p) => p.text).join('|') + (s.directions || []).map((d) => d.text).join('|') : '', (node) => {
       node.innerHTML = askHead('晨报', s.careView.title, 'warn');
       const body = el('div', 'ask-body');
       for (const p of s.careView.problems.slice(0, 4)) {
         body.appendChild(el('p', 'care-line' + (p.sev >= 3 ? ' bad' : p.sev >= 2 ? ' mid' : ''), esc(p.text)));
       }
       node.appendChild(body);
+      if (s.directions?.length) {
+        const dir = el('div', 'ask-body dir-box');
+        dir.appendChild(el('p', 'm-kicker', '种下的念头'));
+        for (const d of s.directions) dir.appendChild(el('p', 'care-line', `「${esc(d.text)}」——${esc(d.name)}记着呢（第${d.day}天种下）`));
+        node.appendChild(dir);
+      }
       const opts = el('div', 'ask-opts');
       opts.appendChild(optBtn('知道了——今天让他们自己张罗', '▸', () => sendIntents([{ type: 'auto_day' }], '照常过吧')));
       node.appendChild(opts);
+      node.appendChild(freeOptRow(s, 'day'));
     });
   // 急件：门口的事（电报体 + 叩门章）
   syncAsk('event', !!(!inPrologue && s.eventView && !s.over),
@@ -776,17 +811,28 @@ function syncAsks(s) {
       const opts = el('div', 'ask-opts');
       v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendInput('选' + (i + 1), o.label))));
       node.appendChild(opts);
+      node.appendChild(freeOptRow(s, 'event', '说什么都行——但门口的事，总得拿个主意'));
     });
-  // 黄昏：今晚怎么安排（每晚必答）
+  // 黄昏：今晚怎么安排（每晚必答）；命运卡并屏（方案照常，命运追加，出门即路过）
   syncAsk('dusk', !!(s.duskView && !s.over),
-    s.duskView ? s.duskView.plans.map((p) => p.label).join('|') : '', (node) => {
+    s.duskView ? s.duskView.plans.map((p) => p.label).join('|') + (s.duskView.fate ? s.duskView.fate.title : '') : '', (node) => {
       node.innerHTML = askHead('黄昏', '今晚怎么安排', 'moon');
       const opts = el('div', 'ask-opts');
       for (const p of s.duskView.plans) {
         opts.appendChild(optBtn(p.label, { a: '甲', b: '乙', stay: '守' }[p.key] || '·', () => sendIntents([p.intent], p.label), p.hint || ''));
       }
       node.appendChild(opts);
-      node.appendChild(el('p', 'ask-hint', '或者自己开口：「今晚帕维尔去医院，带把刀」'));
+      if (s.duskView.fate) {
+        const fate = el('div', 'fate-box');
+        fate.appendChild(el('p', 'fate-title', esc(s.duskView.fate.title)));
+        for (const p of String(s.duskView.fate.text).split('\n').filter(Boolean)) fate.appendChild(el('p', '', esc(p)));
+        const fopts = el('div', 'ask-opts');
+        s.duskView.fate.options.forEach((o, i) => fopts.appendChild(optBtn(o.label, '◆', () => sendInput('选' + (i + 1), o.label))));
+        fate.appendChild(fopts);
+        fate.appendChild(el('p', 'ask-hint', '不答也行——出了门，这件事就过去了。'));
+        node.appendChild(fate);
+      }
+      node.appendChild(freeOptRow(s, 'dusk'));
     });
   // 夜访：岔路停问（地图退场——路在叙事里，停问在书页里）
   syncAsk('night', !!(s.nightView && !s.over),
@@ -822,9 +868,9 @@ function syncAsks(s) {
       } else if (!s.activeEvent) {
         opts.appendChild(optBtn('继续摸黑前进', '▸', () => sendIntents([{ type: 'auto_night' }], '继续')));
         opts.appendChild(optBtn('今晚到此为止', '←', () => sendIntents([{ type: 'night', action: 'retreat' }], '撤退')));
-        node.appendChild(el('p', 'ask-hint', '也可以具体说：「先观察」「去后仓库」「和他说话」'));
       }
       node.appendChild(opts);
+      node.appendChild(freeOptRow(s, 'night'));
     });
   // 价目：摊子摆到书页里（一键成交仍在；讨价还价用嘴）
   syncAsk('trade', !!(s.tradeView && s.tradeView.stock.length && !s.over),
@@ -845,7 +891,7 @@ function syncAsks(s) {
         for (const d of tv.deals) opts.appendChild(optBtn(d.label, '换', () => sendIntents([{ type: 'trade_op', give: d.give, get: d.get }], d.label)));
         node.appendChild(opts);
       }
-      node.appendChild(el('p', 'ask-hint', '也可以自己开价：「用2木板换1生食」'));
+      node.appendChild(freeOptRow(s, 'trade'));
     });
 }
 

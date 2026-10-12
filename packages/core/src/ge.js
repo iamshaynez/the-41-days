@@ -5,13 +5,26 @@ import { hashStr } from './rng.js';
 /** 提案指纹（GE-08 去重）：主题+对象+效果类型，7 天冷却 */
 export function geFingerprint(p) {
   const effTypes = (p.options || [])
-    .flatMap((o) => Object.keys(o).filter((k) => ['mood_all', 'mood_char', 'items_gain', 'item_cost', 'reputation', 'risk'].includes(k)))
+    .flatMap((o) => Object.keys(o).filter((k) => ['mood_all', 'mood_char', 'items_gain', 'item_cost', 'reputation', 'risk', 'flag'].includes(k)))
     .sort().join('+');
-  return 'g' + hashStr(`${p.theme}|${p.title}|${effTypes}`);
+  return 'g' + hashStr(`${p.arc || ''}|${p.theme}|${p.title}|${effTypes}`);
 }
 
-/** 校验提案。返回 {ok, reasons[]} */
-export function validateProposal(pack, state, p, { anchors } = {}) {
+/** 选项效果签名（文学性约束①：互质）——签名相同的两个选项 = 参数变体，不是立场 */
+const effectSignature = (o) => {
+  const keys = [];
+  if (o.mood_all !== undefined) keys.push('moodAll');
+  if (o.mood_char) keys.push(`mood:${o.mood_char.name}`);
+  if (o.items_gain) keys.push(`gain:${Object.keys(o.items_gain).sort().join('+')}`);
+  if (o.item_cost) keys.push(`cost:${Object.entries(o.item_cost).map(([k, n]) => `${k}${n}`).sort().join('+')}`);
+  if (o.reputation) keys.push(`rep:${o.reputation.key}${o.reputation.n > 0 ? '+' : '-'}`);
+  if (o.risk) keys.push('risk');
+  if (o.flag) keys.push(`flag:${Object.keys(o.flag).sort().join('+')}`);
+  return keys.sort().join('|') || 'none';
+};
+
+/** 校验提案。返回 {ok, reasons[]}。opts.arc：当前指派的命运弧（null = 普通微光卡） */
+export function validateProposal(pack, state, p, { anchors, arc = null } = {}) {
   const g = pack.ge;
   const reasons = [];
   if (!p || typeof p !== 'object') return { ok: false, reasons: ['不是对象'] };
@@ -22,12 +35,22 @@ export function validateProposal(pack, state, p, { anchors } = {}) {
   if (!Array.isArray(p.options) || p.options.length < 2 || p.options.length > 4) reasons.push('应对面须 2~4 个');
   // 主题轮盘
   if (p.theme && !g.themeWheel.includes(p.theme)) reasons.push(`主题出盘：${p.theme}`);
+  // 弧 adherence（P2b）：指派了弧，提案必须长在这条弧上
+  if (arc && p.arc !== arc.id) reasons.push(`弧不符：提案 ${p.arc || '（未声明）'} ≠ 指派 ${arc.id}`);
   // 锚定（GE-04）：≥2 个真实存在的锚
   const an = Array.isArray(p.anchors) ? p.anchors : [];
   if (anchors && an.filter((a) => anchors.includes(a)).length < 2) reasons.push('锚不足 2 个或不在当局的锚池里');
   // 防火墙（GE-10）：暗线词表 + 正史锚点，文本域逐字扫描
   const hay = [p.title, p.text, ...(p.options || []).map((o) => `${o.label} ${o.outcomeText || ''}`)].join(' ');
   for (const b of g.bannedTerms) if (hay.includes(b)) reasons.push(`正典/正史防火墙：${b}`);
+  // 锚引用（文学性约束②：特指胜过泛化）——正文/选项至少出现一个锚池里的人名或地名
+  if (anchors) {
+    const refAnchors = anchors
+      .filter((a) => /^(角色|地点):/.test(a))
+      .map((a) => a.slice(3))
+      .filter((v) => v.length >= 2);
+    if (refAnchors.length && !refAnchors.some((v) => hay.includes(v))) reasons.push('锚引用不足：通篇没有具体的人或地');
+  }
   // 效果白名单（GE-03，逐项核幅度）
   const caps = g.effectCaps;
   for (const [oi, o] of (p.options || []).entries()) {
@@ -58,6 +81,24 @@ export function validateProposal(pack, state, p, { anchors } = {}) {
       if (typeof o.reputation.n !== 'number' || Math.abs(o.reputation.n) > 1) reasons.push(`${where}：声望越带`);
     }
     if (o.risk !== undefined && o.risk !== true) reasons.push(`${where}：risk 只能为 true（一次检定，伤上限 1）`);
+    // 旗标白名单（P2b）：旗标只有命运弧能落，且只能从全局注册表里点菜；普通微光卡一律不许
+    if (o.flag !== undefined) {
+      const allowed = arc ? (arc.flags || []).filter((k) => (g.flagKeys || []).includes(k)) : [];
+      for (const k of Object.keys(o.flag)) {
+        if (!allowed.includes(k)) reasons.push(`${where}：旗标 ${k} 未注册（${arc ? `弧 ${arc.id} 未授权此键` : '微光卡不许落旗标'}）`);
+      }
+    }
+  }
+  // 选项互质（文学性约束①）：效果签名重复 = 参数变体冒充立场；至多一个零效果（无视类）选项
+  {
+    const sigs = (p.options || []).map(effectSignature);
+    const seen = new Set();
+    for (const sg of sigs) {
+      if (sg === 'none') continue; // 零效果单独计数
+      if (seen.has(sg)) { reasons.push('选项同质：效果签名重复'); break; }
+      seen.add(sg);
+    }
+    if (sigs.filter((x) => x === 'none').length > 1) reasons.push('选项同质：至多一个零效果选项');
   }
   // 去重（GE-08）：指纹冷却
   const fp = geFingerprint(p);
@@ -71,14 +112,15 @@ export function validateProposal(pack, state, p, { anchors } = {}) {
   return { ok: reasons.length === 0, reasons, fingerprint: fp };
 }
 
-/** 提案 → 事件卡（入 run 级卡册，不进内容包） */
-export function proposalToCard(pack, state, p) {
+/** 提案 → 事件卡（入 run 级卡册，不进内容包）。opts.arc：命运弧（卡片带上 at=arc.at 供导演黄昏驻场） */
+export function proposalToCard(pack, state, p, { arc = null } = {}) {
   const card = {
     id: `ge_${state.day}_${geFingerprint(p)}`,
     kind: 'internal', generated: true, weight: 0,
     when: { chance: 0 },
     title: p.title.trim(),
     text: p.text.trim(),
+    ...(arc?.at ? { at: arc.at } : {}),
     options: p.options.map((o, i) => {
       const effects = {};
       if (o.mood_all !== undefined) effects.mood = { ...(effects.mood || {}), all: o.mood_all };
@@ -89,6 +131,7 @@ export function proposalToCard(pack, state, p) {
       if (o.items_gain) effects.items = o.items_gain;
       if (o.reputation) effects.reputation = { [o.reputation.key]: o.reputation.n };
       if (o.outcomeText) effects.text = o.outcomeText;
+      if (o.flag) effects.flags = o.flag; // 命运弧旗标（验证器已核白名单；走既有 eventFlags 通道）
       const opt = { key: `g${i}`, label: o.label.trim(), effects };
       if (o.item_cost) opt.cost = Object.entries(o.item_cost).map(([item, n]) => ({ item, n }));
       if (o.risk) {

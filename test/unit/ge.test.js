@@ -7,7 +7,7 @@ import { validateProposal, proposalToCard, anchorPool } from '../../packages/cor
 function good() {
   return {
     title: '半块麦饼',
-    text: '对门的老者把半块麦饼放在你们门槛上，没留话。饼是热的，说明他家里今天有火。',
+    text: '对门的老者把半块麦饼放在你们门槛上，没留话。文简捡起来时饼还是热的，说明他家里今天有火。',
     theme: '稀缺',
     anchors: ['第5天', '天气:clear'],
     options: [

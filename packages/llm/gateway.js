@@ -37,8 +37,8 @@ export async function referee({ provider, prompts, worldBrief, dayActions, duskA
       const parsed = extractJson(r.text);
       if (!parsed || typeof parsed !== 'object') throw new Error('输出不是 JSON 对象');
       const intents = Array.isArray(parsed.intents) ? parsed.intents.filter(validIntent) : [];
-      if (!intents.length && !parsed.clarify && !parsed.say) throw new Error('intents 为空且无 clarify/say');
-      return { ok: true, intents, clarify: parsed.clarify || null, say: parsed.say || null, raw: r.text, usage: r.usage };
+      if (!intents.length && !parsed.clarify && !parsed.say && !parsed.echo) throw new Error('intents 为空且无 clarify/say/echo');
+      return { ok: true, intents, clarify: parsed.clarify || null, say: parsed.say || null, echo: parsed.echo || null, raw: r.text, usage: r.usage };
     } catch (e) {
       lastErr = String(e.message || e);
     }
@@ -78,13 +78,18 @@ export async function actor({ provider, prompts }, { npcName, npcCard, priceBand
 }
 
 /** 网关：按用途路由 + 主备降级（§7.2）。providers: {referee, narrator, actor}（已构造的 provider 或 null） */
-/** 编剧（内核 §8.8 GE-01）：提案一个 C 层微事件，JSON 走白名单校验（核心在 core/ge.js） */
+/** 编剧（内核 §8.8 GE-01）：提案一个 C 层微事件，JSON 走白名单校验（核心在 core/ge.js）。
+ *  v3 命运导演：brief.arc 可携带命运弧（皮肤自由、包络住数据）；文学性四约束见提示词。 */
 export async function playwright({ provider, prompts }, brief) {
+  const arcTxt = brief.arc
+    ? `\n# 本卡所属命运弧（写这张卡，不写别的）\n${brief.arc.brief}\n输出 JSON 增加 "arc": "${brief.arc.id}"；允许落的旗标键：${(brief.arc.flags || []).join('、')}（选项可用 "flag": {"键": true}）`
+    : '';
   const system = prompts.playwright
     .replace('{{theme}}', brief.theme || '')
+    .replace('{{arc}}', arcTxt)
     .replace('{{anchors}}', (brief.anchors || []).join('、'))
     .replace('{{world}}', brief.worldBrief || '');
-  const r = await provider.call({ system, user: '提案一个微事件。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 900 });
+  const r = await provider.call({ system, user: '提案一个微事件。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 1200 });
   return extractJson(r.text);
 }
 

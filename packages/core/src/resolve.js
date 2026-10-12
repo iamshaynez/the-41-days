@@ -137,6 +137,14 @@ function applyOne(ctx, intent) {
       return applyDayAction(ctx, intent);
     case 'dusk_assign': {
       if (s.phase !== 'dusk') return { ok: false, reason: 'NOT_DUSK' };
+      if (s.activeEvent?.duskFate) {
+        // 黄昏命运卡：人动身了，门口的问题也就过去了——命运不等人（路过也是一种回答）
+        const fateCard = s.geCards?.[s.activeEvent.cardId] || ctx.pack.cardMap[s.activeEvent.cardId];
+        const cardId = s.activeEvent.cardId;
+        s.activeEvent = null;
+        ctx.emit('EVENT_CHOSEN', { cardId, option: 'passed' });
+        ctx.fact('fate_passed', { title: fateCard?.title || '' });
+      }
       return startNight(ctx, intent);
     }
     case 'night': {

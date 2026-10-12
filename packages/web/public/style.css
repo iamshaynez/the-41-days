@@ -576,6 +576,31 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 .opt:active:not(:disabled) .key { transform: translateY(4px) scale(.94); background: var(--accent); color: #f3e9d4; }
 .opt .plan-hint { display: block; font-size: .85em; color: var(--ink-3); margin-top: 2px; }
 .opt:disabled { cursor: default; }
+/* 末位自由输入行（命运导演 P0b）：与选项同宗的第四种可能——自己拿主意。
+   虚线笔迹感：像在简帛上补一行批注，不像填表单 */
+.opt-free { display: flex; gap: 8px; margin-top: 10px; align-items: stretch; }
+.opt-free input {
+  flex: 1; min-width: 0;
+  background: transparent; border: none; border-bottom: 1px dashed var(--ink-3);
+  color: var(--ink); font: inherit; letter-spacing: .02em;
+  padding: 6px 2px; outline: none;
+}
+.opt-free input:focus { border-bottom-color: var(--accent); }
+.opt-free input::placeholder { color: var(--ink-3); opacity: .85; }
+.free-send {
+  border: 1px solid var(--ink-3); background: transparent; color: var(--ink-2);
+  font: inherit; font-size: .82em; padding: 4px 12px; cursor: pointer; white-space: nowrap;
+}
+.free-send:hover { border-color: var(--accent); color: var(--accent); }
+.free-send:disabled { opacity: .4; cursor: default; }
+.ask.settled .opt-free { display: none; }
+/* 黄昏命运区（duskFate）：与方案卡同屏的一张追加入场的问题 */
+.fate-box { margin-top: 12px; padding: 10px 12px 4px; border-left: 3px double var(--accent); border-top: 1px solid var(--gold-dim); }
+.fate-box .fate-title { font-weight: 700; color: var(--ink); letter-spacing: .06em; margin: 2px 0 6px; }
+.fate-box p { margin: 4px 0; line-height: 1.8; }
+/* 晨报「种下的念头」区 */
+.dir-box { border-top: 1px dashed var(--ink-3); margin-top: 8px; padding-top: 2px; }
+.dir-box .m-kicker { margin-bottom: 2px; }
 
 /* 清单：点线引导（价目 / 容器 / 细目共用） */
 .leaders { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; }

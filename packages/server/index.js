@@ -12,7 +12,7 @@ import { hashPassword, verifyPassword, validateUsername, validatePassword, sessi
 import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect } from './narrate.js';
-import { loadPack, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, policyOf, validateIntentShape } from '../core/index.js';
+import { loadPack, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, freeExamples, policyOf, validateIntentShape } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist } from '../llm/index.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from './echoes.js';
@@ -150,8 +150,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   function enrich(state) {
     const view = { ...state };
     view.itemNames = Object.fromEntries(pack.items.map((i) => [i.id, i.name]));
-    // 事件卡视图
-    if (state.activeEvent) {
+    // 事件卡视图（黄昏命运卡除外——它并进黄昏方案卡，不另开一张急件）
+    if (state.activeEvent && !state.activeEvent.duskFate) {
       const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId]; // C 层生成卡走 run 级卡册
       if (card) {
         const names = state.chars.map((c) => c.name).join('、');
@@ -182,9 +182,17 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (step?.stop && step.stop.kind !== 'event') view.nightView.fork = { kind: step.stop.kind, text: step.stop.text, options: step.stop.options };
       }
     }
-    // 黄昏决策卡（每晚必答）：2~3 个完整方案，点一个或自己说
-    if (state.phase === 'dusk' && !state.activeEvent && !state.over) {
+    // 黄昏决策卡（每晚必答）：2~3 个完整方案，点一个或自己说。
+    // 黄昏命运卡（duskFate）与方案卡同屏：方案照常，命运作为追加问题；出门即路过。
+    if (state.phase === 'dusk' && !state.over && (!state.activeEvent || state.activeEvent.duskFate)) {
       view.duskView = planDusk(state, pack);
+      if (state.activeEvent?.duskFate) {
+        const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId];
+        if (card) view.duskView.fate = {
+          title: card.title, text: card.text || '',
+          options: (card.options || []).map((o) => ({ key: o.key, label: o.label }))
+        };
+      }
     }
     // 晨报问题前置（白天）：火烧眉毛的事 + 主建议入口
     if (state.phase === 'day' && !state.over) {
@@ -194,6 +202,12 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     // 情境建议（替代静态 chips）：玩家可能想说的话，由状态现算
     view.suggests = suggests(state, pack);
     view.policy = policyOf(state);
+    // v3 命运导演：活着的念头（晨报区展示）+ 自由输入语境示例（停问卡末位输入行）
+    view.directions = Object.values(state.directions || {}).filter((d) => d.alive).map((d) => ({
+      id: d.id, text: d.text, day: d.day,
+      name: d.subject ? (state.chars.find((c) => c.id === d.subject)?.name || d.subject) : '这个家'
+    }));
+    view.freeExamples = freeExamples(state, pack);
     // 人物视图（人话状态；desc 供名词情报卡引用——只转述内核已知，不现编）
     view.charView = state.chars.map((c) => ({
       id: c.id, name: c.name, role: c.role, alive: c.alive, desc: c.desc || '',
@@ -414,7 +428,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (display.trim()) ink.push({ day: state.day, role: 'player', text: display });
 
         // 意图解析：决策卡直传结构化意图（v2）→ LLM 裁判 → 直读兜底（同一 schema，同一 resolve 管线）
-        let intents = [], clarify = null, say = null, degraded = false;
+        let intents = [], clarify = null, say = null, echo = null, degraded = false;
         const gw = run.mode === 'llm' ? buildGateway(id) : null;
         if (Array.isArray(body.intents) && body.intents.length) {
           intents = body.intents.filter(validateIntentShape).slice(0, 20);
@@ -424,12 +438,18 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           }
         } else if (gw) {
           const r = await gw.parse(input, state);
-          if (r.ok && !r.degraded) { intents = r.intents; clarify = r.clarify; say = r.say; }
+          if (r.ok && !r.degraded) { intents = r.intents; clarify = r.clarify; say = r.say; echo = r.echo || null; }
           else degraded = true;
-          if (degraded || !intents.length) { const fb = parseDirect(state, pack, input); intents = intents.concat(fb.intents); clarify = clarify || fb.clarify || null; }
+          // 直读兜底只在降级或真的一无所获时跑——echo 是合法的完整回应，不许被 clarify 抢走
+          if (degraded || (!intents.length && !clarify && !echo)) { const fb = parseDirect(state, pack, input); intents = intents.concat(fb.intents); clarify = clarify || fb.clarify || null; }
         } else {
           const fb = parseDirect(state, pack, input);
           intents = fb.intents; clarify = fb.clarify || null;
+        }
+        // 未被接住的话（v3）：echo 演出世界如何接住它，素材环收存原文——
+        // 两天后命运导演可能长出一张回应卡（离谱输入的兜底不是拒绝，是消化）
+        if (!intents.length && !clarify && input.trim()) {
+          intents = [{ type: 'whisper', text: input.slice(0, 60) }];
         }
 
         res.writeHead(200, {
@@ -444,6 +464,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           db.appendNarration(id, ink);
           send('done', { state: enrich(state), events: [] });
           return res.end();
+        }
+        if (echo) { // 世界的回应先落一笔（作为叙事入前文），再走素材收存
+          send('echo', { text: echo });
+          ink.push({ day: state.day, role: 'narrator', text: echo });
         }
 
         const result = resolveInput(state, pack, intents);

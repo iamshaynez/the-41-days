@@ -18,7 +18,7 @@ export { chooseEventOption, buildEnding, optionAvailable } from './src/events.js
 export { resolveInput, beginRun, validateIntentShape } from './src/resolve.js';
 export { fold } from './src/fold.js';
 export { parseDirect } from './src/parser.js';
-export { planDay, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, charDigest } from './src/delegate.js';
+export { planDay, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, freeExamples, charDigest } from './src/delegate.js';
 export {
   VERBS, recordCausal, addPrivateNote, eventVerb, tickAutonomous, tickDirections, slumberGuard, denyFoodCount,
   valenceOf, charArc, pairKey, pairStage, bondStage, alienated, stageOf, STAGE_NAMES

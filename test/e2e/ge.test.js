@@ -13,7 +13,7 @@ let token;
 
 const PROPOSAL = {
   title: '半块麦饼',
-  text: '对门的老者把半块麦饼放在你们门槛上，没留话。饼是热的，说明他家里今天有火。',
+  text: '文简开门槛时，对门的老者把半块麦饼塞进他手里，没留话。饼是热的，说明他家里今天有火。',
   theme: '稀缺',
   anchors: [], // 桩：服务端以锚池校验，anchors 在桩里由 text 占位（见下）
   options: [
@@ -30,14 +30,20 @@ before(async () => {
       const payload = JSON.parse(body || '{}');
       const sys = payload.messages?.[0]?.content || '';
       if (sys.includes('编剧')) {
-        // 编剧桩：把锚池里现成的两个锚写进提案（校验要求的真实锚）
+        // 编剧桩：把锚池里现成的两个锚写进提案（校验要求的真实锚）；
+        // 锚引用断言要求正文出现真实人物——阵容随机，故从锚池动态取名
         const m = sys.match(/# 当局锚池（只能从这里挑）\n(.+)/);
         const pool = (m?.[1] || '').split('、').filter(Boolean);
-        const p = { ...PROPOSAL, anchors: pool.slice(0, 2) };
+        const who = (pool.find((a) => a.startsWith('角色:')) || '').slice(3) || '有人';
+        const p = { ...PROPOSAL, text: `${who}开门槛时，对门的老者把半块麦饼塞进他手里，没留话。饼是热的，说明他家里今天有火。`, anchors: pool.slice(0, 2) };
         return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(p) } }] }));
       }
       if (payload.response_format?.type === 'json_object') {
         const userMsg = payload.messages?.at(-1)?.content || '';
+        if (userMsg.includes('龙')) {
+          // 裁判桩：狂语 → echo（世界接住这句话，不执行任何动作）
+          return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ intents: [], clarify: null, say: null, echo: '没有人应你的话。风把这句话吹散了，渡口的水纹了一路。' }) } }] }));
+        }
         const intents = userMsg.trim().startsWith('选')
           ? [{ type: 'event_choice', option: 'g0' }] // 桩：事件选择直通第一项
           : [{ type: 'act', actor: 'bron', action: 'eat' }];
@@ -107,6 +113,23 @@ describe('C 层全链（编剧桩）', () => {
     s = await input(r.id, '选1');
     assert.ok(!s.activeEvent || s.activeEvent.cardId.startsWith('ge_'), '结算后至多注入下一张 C 层卡');
     assert.equal((s.inventory?.wood || 0), before + 1, '效果白名单入账（板材 +1）');
+  });
+
+  test('狂语兜底：echo 演出 + 素材环收存（世界什么都听着）', async () => {
+    const r = await api('POST', '/api/runs', { prologue: false });
+    const res = await fetch(`${base}/api/runs/${r.id}/input`, {
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ input: '我在渡口看见龙了' })
+    });
+    const raw = await res.text();
+    assert.ok(/^event: echo$/m.test(raw), 'SSE 应有 echo 事件');
+    let state = null;
+    for (const block of raw.split('\n\n')) {
+      const ev = block.match(/^event: (.+)$/m)?.[1];
+      const data = block.match(/^data: (.+)$/m)?.[1];
+      if (ev === 'state-patch') state = JSON.parse(data).state;
+    }
+    assert.ok(state.whispers?.some((w) => w.text.includes('龙')), '素材环收存原话');
   });
 
   test('防火墙：提案含正史名人 → 永不进场', async () => {

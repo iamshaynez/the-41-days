@@ -324,6 +324,25 @@ export function tradeDeals(state, pack) {
   return deals;
 }
 
+/* ════════════════════════ 自由输入示例：freeExamples ════════════════════════
+   停问卡末位输入行的语境化示例（命运导演 P0b）：教玩家"能说什么"。
+   状态现算、按天轮换；示例优先选直读解析器也认得的说法——不说系统做不到的话。 */
+export function freeExamples(state, pack) {
+  const s = state;
+  const out = { day: [], dusk: [], night: [], trade: [], event: [] };
+  if (s.over || s.phase === 'prologue') return out;
+  const alive = aliveChars(s);
+  if (!alive.length) return out;
+  const name = (i) => alive[Math.min(i, alive.length - 1)]?.name || '有人';
+  const known = (s.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]);
+  const locName = (i) => pack.locMap[known[Math.min(i, Math.max(known.length - 1, 0))]]?.name || '南市';
+  out.day = ['照常过吧', '以后省着吃', `鼓励${name(0)}把想做的事做完`];
+  out.dusk = [`今晚${name(0)}去${locName(0)}，带铁撬`, '今晚谁都不出门', `今晚${name(1)}守夜`];
+  out.night = ['先观察一下这间屋', '再搜最后一点，就回去', '撤退'];
+  out.trade = ['用2木板换1生食', '这价太黑了，便宜点'];
+  out.event = ['先问清楚他是谁，再说', '隔着门回话，不开门'];
+  return out;
+}
 /* ════════════════════════ 情境建议：suggests ════════════════════════
    取代静态 chips：由状态驱动的"你可能想说"（文本经由直读/裁判解析，管线唯一）。 */
 export function suggests(state, pack) {
