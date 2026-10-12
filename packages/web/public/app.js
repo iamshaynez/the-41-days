@@ -770,7 +770,6 @@ function refreshRow(cardKey, optsEl) {
   const seen = new Set([...optsEl.querySelectorAll('.opt')].map((x) => x.dataset.label).filter(Boolean));
   b.addEventListener('click', async () => {
     if (state.busy || used >= 2) return;
-    used++;
     b.disabled = true; b.classList.add('thinking'); txt().textContent = '谋士在想…';
     try {
       const res = await fetch(`/api/runs/${state.runId}/options`, {
@@ -790,6 +789,7 @@ function refreshRow(cardKey, optsEl) {
       }
       b.classList.remove('thinking');
       if (r.reason) b.title = r.reason;
+      if (added) used++; // 只有真出了选项才计入两次上限
       if (used >= 2) { b.dataset.done = '1'; txt().textContent = '就这些了'; }
       else { txt().textContent = added ? '⟳ 再想想' : '谋士没词了'; b.disabled = false; }
     } catch {

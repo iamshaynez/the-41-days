@@ -5,7 +5,7 @@ import { recordCausal, pairStage } from './causality.js';
 
 export const DAY_ACTIONS = ['eat', 'cook', 'craft', 'build', 'treat', 'talk', 'guard', 'sleep', 'rest', 'listen_radio', 'search_home', 'open_room', 'chop', 'repair', 'read', 'play_piano'];
 
-const AP_COST = { eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2, rest: 0, listen_radio: 1, search_home: 1, open_room: 1, chop: 1, repair: 1, read: 1, play_piano: 1 };
+export const AP_COST = { eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2, rest: 0, listen_radio: 1, search_home: 1, open_room: 1, chop: 1, repair: 1, read: 1, play_piano: 1 };
 
 export function applyDayAction(ctx, intent) {
   const s = ctx.s, pack = ctx.pack;

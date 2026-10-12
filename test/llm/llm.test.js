@@ -32,7 +32,7 @@ before(async () => {
         res.end(JSON.stringify({ choices: [{ message: { content: '石大把最后一口热的咽下去，像咽下一个承诺。' } }] }));
         return;
       }
-      if (req.url === '/messages') {
+      if (req.url === '/v1/messages') { // 协议约定路径（GLM 实测裸 /messages 是 200 包 404）
         res.writeHead(200, { 'content-type': 'application/json' });
         return res.end(JSON.stringify({ content: [{ type: 'text', text: '（anthropic 桩）' }] }));
       }

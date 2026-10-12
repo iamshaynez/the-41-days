@@ -19,9 +19,31 @@ export const PRESETS = {
  * OpenAI 兼容适配器（DeepSeek / GLM 开放平台 / 任意兼容端点）
  * cfg: {baseUrl, model, apiKey, temperature?, maxTokens?, timeoutMs?}
  */
+
+/** 带超时与一次自动重试的 fetch（参考 gb-pmo：超时重试覆盖瞬时抖动；其余错误不重试）。
+ *  两次超时后抛中文指引——GLM 思维链模型动辄 60s+，默认上限 120s（gb-pmo 同款）。 */
+async function fetchWithRetry(url, init, timeoutMs) {
+  const attempt = () => {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), timeoutMs);
+    return fetch(url, { ...init, signal: init.signal || ctl.signal }).finally(() => clearTimeout(timer));
+  };
+  try {
+    return await attempt();
+  } catch (e) {
+    if (e?.name !== 'AbortError') throw e;
+    try {
+      return await attempt();
+    } catch (e2) {
+      if (e2?.name !== 'AbortError') throw e2;
+      throw new Error(`LLM 响应超时（已自动重试一次，每次上限 ${timeoutMs}ms）：思维链模型可能想得太久——可在供应商参数里调大 timeoutMs`);
+    }
+  }
+}
+
 export function openaiCompat(cfg) {
   const url = cfg.baseUrl.replace(/\/$/, '') + '/chat/completions';
-  async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens }) {
+  async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens, maxTimeout }) {
     const body = {
       model: cfg.model,
       messages: [
@@ -33,12 +55,15 @@ export function openaiCompat(cfg) {
       ...(json ? { response_format: { type: 'json_object' } } : {})
     };
     if (stream) body.stream = true;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.apiKey}` },
-      body: JSON.stringify(body),
-      signal: signal || AbortSignal.timeout(cfg.timeoutMs || 60000)
-    });
+    const timeoutMs = maxTimeout ?? cfg.timeoutMs ?? 120000;
+    const headers = { 'content-type': 'application/json', authorization: `Bearer ${cfg.apiKey}` };
+    const post = (b) => fetchWithRetry(url, { method: 'POST', headers, body: JSON.stringify(b), signal }, timeoutMs);
+    let res = await post(body);
+    if (res.status === 400 && json) {
+      // GLM 等端点对 response_format 无官方承诺：去参重试一次（gb-pmo 同款）
+      delete body.response_format;
+      res = await post(body);
+    }
     if (!res.ok) throw new Error(`${cfg.model} HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     if (stream && onDelta) {
       let text = '';
@@ -49,6 +74,10 @@ export function openaiCompat(cfg) {
       return { text, usage: null };
     }
     const data = await res.json();
+    // 有些网关用 HTTP 200 包错误对象（无 choices）——空正文按错误处理
+    if (!Array.isArray(data.choices) || !data.choices.length) {
+      throw new Error(`${cfg.model} 响应无 choices：${JSON.stringify(data).slice(0, 160)}`);
+    }
     return { text: data.choices?.[0]?.message?.content || '', usage: data.usage || null };
   }
   return { adapter: 'openai-compat', model: cfg.model, call };
@@ -58,21 +87,29 @@ export function openaiCompat(cfg) {
  * Anthropic 兼容适配器（GLM coding plan）
  */
 export function anthropicCompat(cfg) {
-  const url = cfg.baseUrl.replace(/\/$/, '') + '/messages';
-  async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens }) {
+  // Anthropic 协议约定：POST {baseUrl}/v1/messages（GLM/Anthropic 同规；
+  // 实测 open.bigmodel.cn 对裸 /messages 回 HTTP200 包 404——空正文极难排查）
+  const base = cfg.baseUrl.replace(/\/$/, '');
+  const url = /\/v\d+$/.test(base) ? base + '/messages' : base + '/v1/messages';
+  async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens, maxTimeout, thinking }) {
     const body = {
       model: cfg.model,
       max_tokens: maxTokens ?? cfg.maxTokens ?? 2048,
       temperature: cfg.temperature ?? 0.7,
       ...(system ? { system } : {}),
+      ...(thinking ? { thinking } : {}), // GLM 思维链模型：budget_tokens 是唯一能压时长的开关（实测有效）
       messages: [{ role: 'user', content: user }]
     };
     if (stream) body.stream = true;
     const headers = { 'content-type': 'application/json', 'x-api-key': cfg.apiKey, 'anthropic-version': '2023-06-01' };
-    const res = await fetch(url, {
-      method: 'POST', headers, body: JSON.stringify(body),
-      signal: signal || AbortSignal.timeout(cfg.timeoutMs || 60000)
-    });
+    const timeoutMs = maxTimeout ?? cfg.timeoutMs ?? 120000;
+    const post = (b) => fetchWithRetry(url, { method: 'POST', headers, body: JSON.stringify(b), signal }, timeoutMs);
+    let res = await post(body);
+    if (res.status === 400 && thinking) {
+      // thinking 参数并非所有 anthropic 兼容端点都认：400 时去参重试一次
+      delete body.thinking;
+      res = await post(body);
+    }
     if (!res.ok) throw new Error(`${cfg.model} HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     if (stream && onDelta) {
       let text = '';
@@ -82,7 +119,12 @@ export function anthropicCompat(cfg) {
       return { text, usage: null };
     }
     const data = await res.json();
-    return { text: (data.content || []).map((c) => c.text || '').join(''), usage: data.usage || null };
+    // 思维链模型可能把 max_tokens 全烧在 thinking 块上——空正文按错误处理，别静默吞
+    const text = (data.content || []).map((c) => c.text || '').join('');
+    if (!text.trim()) {
+      throw new Error(`${cfg.model} 空正文（stop=${data.stop_reason ?? '?'}——若是思维链模型，max_tokens 可能被 thinking 烧尽）`);
+    }
+    return { text, usage: data.usage || null };
   }
   return { adapter: 'anthropic-compat', model: cfg.model, call };
 }

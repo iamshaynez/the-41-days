@@ -142,15 +142,16 @@ describe('C 层全链（编剧桩）', () => {
     assert.ok(state.whispers?.some((w) => w.text.includes('龙')), '素材环收存原话');
   });
 
-  test('刷新命运（/options）：可行选项放行，不可行的静默过滤，预算两次', async () => {
+  test('刷新命运（/options）：可行选项放行，不可行的静默过滤，成功两次后预算封顶', async () => {
     const r = await api('POST', '/api/runs', { prologue: false });
-    const call = () => api('POST', `/api/runs/${r.id}/options`, { card: 'day', exclude: [] });
-    const r1 = await call();
+    const call = (exclude) => api('POST', `/api/runs/${r.id}/options`, { card: 'day', exclude });
+    const r1 = await call([]);
     assert.ok(r1.options?.length === 1, `应只剩可行选项（实际 ${JSON.stringify(r1.options)}）`);
     assert.ok(r1.options[0].intents[0].type === 'act');
-    await call(); // 第二次仍在预算内
-    const r3 = await call();
-    assert.equal(r3.budget, true, '第三次应触预算');
+    // 第二次带上排除项，桩会再出一个可行选项（成功两次）
+    const r2 = await call([r1.options[0].label]);
+    const r3 = await call([]);
+    assert.equal(r3.budget, true, '成功两次后应触预算');
     assert.deepEqual(r3.options, []);
   });
 

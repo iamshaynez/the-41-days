@@ -2,6 +2,7 @@
 // 三个规划器产出与裁判/直读解析器完全相同的意图对象，走同一条 resolve 管线——
 // 自动化不发明第二条状态通道。bots.js 是这些策略的对抗性参考，本文件是游戏内正式版。
 import { aliveChars, apMaxOf, policyOf } from './state.js';
+import { DAY_ACTIONS, AP_COST } from './dayActions.js';
 
 const itemName = (pack, id) => pack.itemMap[id]?.name || id;
 const has = (s, id, n = 1) => (s.inventory[id] || 0) >= n;
@@ -19,8 +20,9 @@ export function feasibleIntent(state, pack, intent) {
   switch (intent.type) {
     case 'act': {
       if (s.phase !== 'day') return false;
+      if (!DAY_ACTIONS.includes(intent.action)) return false; // 谋士会发明动作——只认内核动词表
       const c = intent.actor ? s.chars.find((x) => x.id === intent.actor) : null;
-      if (!c || !c.alive || c.ap < 1) return false;
+      if (!c || !c.alive || c.ap < Math.max(1, AP_COST[intent.action] ?? 1)) return false;
       if (intent.action === 'eat') return ['meal', 'canned', 'raw', 'meat'].some((i) => (s.inventory[i] || 0) > 0);
       // 设施/耗材前置：渲染出来的选项不允许点了落空（线上教训：无灶 cook）
       if (intent.action === 'cook') return !!s.facilities.stove;

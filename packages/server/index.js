@@ -79,8 +79,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     for (const r of routes) {
       const p = r.provider_id ? db.providerRaw(r.provider_id) : null;
       const f = r.fallback_provider_id ? db.providerRaw(r.fallback_provider_id) : null;
-      if (p && p.enabled) providers[r.purpose] = makeProvider({ baseUrl: p.base_url, model: p.model, apiKey: decryptKey(p.api_key_enc), ...(JSON.parse(p.params_json || '{}')) });
-      if (f && f.enabled) providers[r.purpose + ':fallback'] = makeProvider({ baseUrl: f.base_url, model: f.model, apiKey: decryptKey(f.api_key_enc), ...(JSON.parse(f.params_json || '{}')) });
+      // adapter 必须随行传入——漏了它，anthropic-compat 会被静默当成 openai 兼容
+      //（打到 /chat/completions 上，GLM 网关用 HTTP200 包 404，整层无声降级成直读）
+      if (p && p.enabled) providers[r.purpose] = makeProvider({ adapter: p.adapter, baseUrl: p.base_url, model: p.model, apiKey: decryptKey(p.api_key_enc), ...(JSON.parse(p.params_json || '{}')) });
+      if (f && f.enabled) providers[r.purpose + ':fallback'] = makeProvider({ adapter: f.adapter, baseUrl: f.base_url, model: f.model, apiKey: decryptKey(f.api_key_enc), ...(JSON.parse(f.params_json || '{}')) });
     }
     if (!Object.keys(providers).length) return null;
     const gw = { providers };
@@ -530,10 +532,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (run.mode !== 'llm') return json(res, 200, { options: [], reason: '这一局是直读模式（添加 LLM 供应商后新开的局才有谋士）' });
         const gw = buildGateway(id);
         if (!gw?.providers?.referee && !gw?.providers?.narrator) return json(res, 200, { options: [], reason: '没有可用的 LLM 路由（管理页配置后自动接入）' });
-        // 刷新预算：同一卡面至多两次（防刷屏，不省成本）
+        // 刷新预算：同一卡面至多两次「成功出选项」的刷新（失败/被滤不扣玩家次数）
         const bkey = id + ':' + card + ':' + run.state.day;
-        optionRefresh.set(bkey, (optionRefresh.get(bkey) || 0) + 1);
-        if (optionRefresh.get(bkey) > 2) return json(res, 200, { options: [], budget: true });
+        if ((optionRefresh.get(bkey) || 0) >= 2) return json(res, 200, { options: [], budget: true });
         try {
           const st = run.state;
           const brief = {
@@ -546,6 +547,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           const raw = await optionsmith({ provider, prompts: promptsCache }, brief);
           const options = validateOptions(pack, st, raw);
           const reason = options.length ? '' : (raw ? '谋士出的选项都没过验证（id 对照/可行性/禁词）' : '谋士的输出没法解析成 JSON');
+          if (options.length) optionRefresh.set(bkey, (optionRefresh.get(bkey) || 0) + 1);
           return json(res, 200, { options, reason });
         } catch (e) {
           log.warn('optionsmith 失败', { runId: id, error: String(e?.message || e) });

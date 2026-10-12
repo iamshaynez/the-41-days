@@ -33,7 +33,7 @@ export async function referee({ provider, prompts, worldBrief, dayActions, duskA
       ? input
       : `上一次你的输出无法解析（${lastErr}）。请严格只输出一个 JSON 对象：{"intents":[...],"clarify":null,"say":null}。玩家输入：${input}`;
     try {
-      const r = await provider.call({ system, user, json: true, temperature: 0.1, maxTokens: 1024 });
+      const r = await provider.call({ system, user, json: true, temperature: 0.1, maxTokens: 4000, thinking: { type: 'enabled', budget_tokens: 1024 } });
       const parsed = extractJson(r.text);
       if (!parsed || typeof parsed !== 'object') throw new Error('输出不是 JSON 对象');
       const intents = Array.isArray(parsed.intents) ? parsed.intents.filter(validIntent) : [];
@@ -54,14 +54,14 @@ export async function referee({ provider, prompts, worldBrief, dayActions, duskA
 /** 叙事者：facts → 散文（流式回调可选）。离线时由调用方走直读模板。 */
 export async function narrator({ provider, prompts, worldBrief }, facts, onDelta) {
   const system = prompts.narrator.replace('{{world}}', worldBrief).replace('{{facts}}', JSON.stringify(facts, null, 1));
-  const r = await provider.call({ system, user: '请渲染。', temperature: 0.85, maxTokens: 1200, stream: !!onDelta, onDelta });
+  const r = await provider.call({ system, user: '请渲染。', temperature: 0.85, maxTokens: 4000, stream: !!onDelta, onDelta });
   return { text: r.text, usage: r.usage };
 }
 
 /** 回忆录作者：结局 storyline → 文学复盘（EPI-02；N-02 校验由调用方 memoirLint 执行） */
 export async function memoirist({ provider, prompts }, storyline, onDelta) {
   const system = prompts.memoirist.replace('{{story}}', JSON.stringify(storyline, null, 1));
-  const r = await provider.call({ system, user: '请撰写。', temperature: 0.8, maxTokens: 1600, stream: !!onDelta, onDelta });
+  const r = await provider.call({ system, user: '请撰写。', temperature: 0.8, maxTokens: 5000, stream: !!onDelta, onDelta });
   return { text: r.text, usage: r.usage };
 }
 
@@ -89,7 +89,7 @@ export async function playwright({ provider, prompts }, brief) {
     .replace('{{arc}}', arcTxt)
     .replace('{{anchors}}', (brief.anchors || []).join('、'))
     .replace('{{world}}', brief.worldBrief || '');
-  const r = await provider.call({ system, user: '提案一个微事件。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 1200 });
+  const r = await provider.call({ system, user: '提案一个微事件。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 6000, thinking: { type: 'enabled', budget_tokens: 1024 } });
   return extractJson(r.text);
 }
 
@@ -101,7 +101,7 @@ export async function optionsmith({ provider, prompts }, brief) {
     .replace('{{exclude}}', (brief.exclude || []).join('；') || '（无）')
     .replace('{{anchors}}', (brief.anchors || []).join('、'))
     .replace('{{world}}', brief.worldBrief || '');
-  const r = await provider.call({ system, user: '给这张卡补 1~3 个新选项。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 600 });
+  const r = await provider.call({ system, user: '给这张卡补 1~3 个新选项。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 5000, thinking: { type: 'enabled', budget_tokens: 1024 } });
   return extractJson(r.text);
 }
 

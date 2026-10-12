@@ -35,7 +35,7 @@ describe('anthropic 协议全链（GLM 路径）', () => {
       req.on('data', (c) => (body += c));
       req.on('end', () => {
         const payload = JSON.parse(body || '{}');
-        calls.push({ headers: req.headers, payload });
+        calls.push({ url: req.url, headers: req.headers, payload });
         // 模拟 GLM：围栏 JSON + 前后闲话；一个好选项 + 一个写中文名的必被滤
         res.end(JSON.stringify({
           model: payload.model,
@@ -55,9 +55,11 @@ describe('anthropic 协议全链（GLM 路径）', () => {
     const brief = { card: cardBrief(state, PACK, 'day'), exclude: [], anchors: ['角色:文简'], worldBrief: '' };
     const raw = await optionsmith({ provider, prompts }, brief);
 
-    // 请求侧：按调用 maxTokens；anthropic 头；system 带 id 对照
+    // 请求侧：路径为协议约定的 /v1/messages（GLM 实测裸 /messages 是 200 包 404）；
+    // 按调用 maxTokens；anthropic 头；system 带 id 对照
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].payload.max_tokens, 600, '按调用的 maxTokens 要传到 anthropic body');
+    assert.ok(calls[0].url.endsWith('/v1/messages'), `路径应为 /v1/messages（实际 ${calls[0].url}）`);
+    assert.equal(calls[0].payload.max_tokens, 5000, '按调用的 maxTokens 要传到 anthropic body（思维链模型留余量）');
     assert.ok(calls[0].headers['x-api-key'] === 'sk-test');
     assert.ok(calls[0].payload.system.includes('【id 对照'), 'system 应含 id 对照段');
 
