@@ -19,20 +19,61 @@ export function feasibleIntent(state, pack, intent) {
   if (!intent || typeof intent !== 'object' || !OPTION_INTENT_TYPES.has(intent.type)) return false;
   switch (intent.type) {
     case 'act': {
+      // 谋士选项的硬保证：过了这道门的动作，内核必须做得动。
+      // 逐动词镜像 applyDayAction 的落空条件（线上教训：talk 目标不存在→NO_TARGET、
+      // 家里翻空→search_home NOTHING、门没坏→repair、无斧→chop）
       if (s.phase !== 'day') return false;
-      if (!DAY_ACTIONS.includes(intent.action)) return false; // 谋士会发明动作——只认内核动词表
+      if (!DAY_ACTIONS.includes(intent.action)) return false;
       const c = intent.actor ? s.chars.find((x) => x.id === intent.actor) : null;
       if (!c || !c.alive || c.ap < Math.max(1, AP_COST[intent.action] ?? 1)) return false;
-      if (intent.action === 'eat') return ['meal', 'canned', 'raw', 'meat'].some((i) => (s.inventory[i] || 0) > 0);
-      // 设施/耗材前置：渲染出来的选项不允许点了落空（线上教训：无灶 cook）
-      if (intent.action === 'cook') return !!s.facilities.stove;
-      if (intent.action === 'listen_radio') return !!s.facilities.radio;
-      if (intent.action === 'read') return (s.inventory.book || 0) > 0;
-      if (intent.action === 'treat') return ['bandage', 'meds', 'herbmed'].includes(intent.target) && has(s, intent.target);
-      if (intent.action === 'craft') return pack.recipes.some((r) => r.id === intent.target);
-      if (intent.action === 'build') return pack.facilityMap ? !!pack.facilityMap[intent.target] : true;
-      if (intent.action === 'chop') return (s.homeFurniture || 0) > 0;
-      return true;
+      switch (intent.action) {
+        case 'eat': return ['meal', 'canned', 'raw', 'meat'].some((i) => (s.inventory[i] || 0) > 0);
+        case 'cook':
+          return !!s.facilities.stove
+            && ((s.inventory.raw || 0) > 0 || (s.inventory.meat || 0) > 0 || (s.inventory.veg || 0) >= 2)
+            && (c.traits?.cook || (s.facilities.stoveFireLeft || 0) > 0
+              || (s.inventory.firewood || 0) > 0 || (s.inventory.book || 0) > 0 || (s.inventory.wood || 0) > 0);
+        case 'craft': {
+          const r = pack.recipes.find((x) => x.id === intent.target);
+          if (!r || (r.facility && !s.facilities[r.facility])) return false;
+          return (r.need || []).every((n) => has(s, n.item, n.n));
+        }
+        case 'build': {
+          const f = pack.facilityMap ? pack.facilityMap[intent.target] : null;
+          if (!f) return false;
+          return Object.entries(f.cost || {}).every(([k, n]) => has(s, k, n));
+        }
+        case 'treat': {
+          if (!['bandage', 'meds', 'herbmed'].includes(intent.target) || !has(s, intent.target)) return false;
+          const patient = intent.target === 'bandage'
+            ? aliveChars(s).find((x) => x.wound >= 1 && x.woundTreatedDay !== s.day)
+            : aliveChars(s).find((x) => x.sick >= 1 && x.sickTreatedDay !== s.day && !x.sickTreatedHerb);
+          return !!patient;
+        }
+        case 'talk': {
+          const t = intent.target ? s.chars.find((x) => x.id === intent.target) : null;
+          return !!t && t.alive && t.id !== c.id;
+        }
+        case 'rest': return !c.bedRest;
+        case 'read': return (s.inventory.book || 0) > 0 && !c.readToday;
+        case 'listen_radio': return !!s.facilities.radio;
+        case 'search_home': {
+          if (intent.target === 'yard' && (s.echoes?.capsules || []).some((x) => !s.capsuleFound?.[x.key])) return true;
+          return (pack.locMap.home.rooms || []).some((r) => s.house.opened[r.id] && (r.containers || []).some((ct) =>
+            !s.house.searched[ct.id] && (ct.type !== 'locked' || s.house.searched[ct.id + ':open'])));
+        }
+        case 'open_room': {
+          const r = (pack.locMap.home.rooms || []).find((x) => x.id === intent.target);
+          if (!r || s.house.opened[r.id]) return false;
+          if (r.door === 'locked') return has(s, 'crowbar') || has(s, 'lockpick');
+          if (r.door === 'rubble') return has(s, 'shovel') && c.ap >= 2;
+          return true;
+        }
+        case 'chop': return has(s, 'axe') && (s.homeFurniture || 0) > 0;
+        case 'repair': return s.doorLevel > 0 && has(s, 'wood', 2);
+        case 'play_piano': return !!c.traits?.piano && (s.facilities.piano || 0) >= 3;
+        default: return true; // guard / sleep
+      }
     }
     case 'dusk_assign': {
       if (s.phase !== 'dusk') return false;
