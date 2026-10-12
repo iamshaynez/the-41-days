@@ -354,7 +354,9 @@ const REJECT_TXT = {
   NO_MATERIAL: '材料不够', NO_TOOL: '没有趁手的工具', BAD_PHASE: '现在不是做这个的时候',
   NOT_DUSK: '得等天黑', HOME_NIGHT: '今晚在家里', NO_MERCHANT: '摊子不在', NO_EVENT: '没有待决的事',
   BAD_OPTION: '没有这个选项', UNAVAILABLE: '条件不够', IN_PROLOGUE: '序章里只能选', BAD_SHAPE: '这话没听懂',
-  BAD_TYPE: '这事做不了', EMPTY: '空的', TOO_MANY: '太多了'
+  BAD_TYPE: '这事做不了', EMPTY: '空的', TOO_MANY: '太多了', NOTHING: '没什么可翻的了', NO_TARGET: '没有这样的人',
+  NO_CHAR: '这个人不在', BAD_TARGET: '没有这个地方', NO_ITEM: '东西不够', NO_NEED: '现在不需要',
+  DONE_TODAY: '今天已经做过了', NEED_TRAIT: '他不会这个', NEED_REPAIR: '得先修好它', NO_LOC: '不知道这个地方'
 };
 
 function handleSse(block) {
