@@ -907,6 +907,7 @@ function syncAsks(s) {
   // 夜访：岔路停问（地图退场——路在叙事里，停问在书页里）
   syncAsk('night', !!(s.nightView && !s.over),
     s.nightView ? [s.nightView.loc, s.nightView.room, s.nightView.slots, s.nightView.noise,
+      s.nightView.directives ? 'directives' : '',
       s.nightView.fork ? s.nightView.fork.kind + s.nightView.fork.text : '',
       s.nightView.containers.map((c) => c.name + c.searched + c.locked).join('/'),
       s.nightView.npcs.map((n) => n.name + n.state).join('/')].join('|') : '', (node) => {
@@ -932,7 +933,17 @@ function syncAsks(s) {
         }).join('、')));
       }
       const opts = el('div', 'ask-opts');
-      if (nv.fork) {
+      if (nv.directives) {
+        node.appendChild(el('p', 'fork-text', '定一个方针，他自己走完这一夜——遇人绕不绕、锁撬不撬、手动不动，方针和运气说了算。'));
+        for (const d of nv.directives) {
+          const ob = optBtn(d.label, '◆', () => sendIntents([{ type: 'night_directive', stance: d.stance, text: d.label }], d.label), d.hint || '');
+          ob.dataset.label = d.label;
+          opts.appendChild(ob);
+        }
+        const micro = optBtn('今夜我自己一步步走', '·', () => sendIntents([{ type: 'auto_night' }], '自己走'));
+        micro.dataset.label = micro.textContent;
+        opts.appendChild(micro);
+      } else if (nv.fork) {
         node.appendChild(el('p', 'fork-text', esc(nv.fork.text || '怎么办？')));
         for (const o of nv.fork.options) opts.appendChild(optBtn(o.label, '◆', () => sendIntents(o.intents, o.label)));
       } else if (!s.activeEvent) {
