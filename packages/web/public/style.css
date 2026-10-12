@@ -652,6 +652,9 @@ h1 .view-back { font-size: .38em; vertical-align: middle; margin-left: 14px; let
 /* 谋士出的选项：与保底选项同宗，朱印换成菱形墨点以示来历 */
 .opt.opt-llm .key { border-color: var(--brass); color: var(--brass); box-shadow: inset 0 0 0 1px var(--gold-dim); }
 .opt.opt-llm:hover:not(:disabled) .key { background: var(--brass); color: #1b1610; }
+/* 戏文轨（◈）：说得出口但内核没有的事——舞台导演接戏，斜体示意这是"一拍演出" */
+.opt.opt-stage { font-style: italic; }
+.opt.opt-stage .key { border-style: dashed; }
 /* 刷新命运：一行小字按钮；等待时点一支烛，不转圈 */
 .opt-refresh-row { margin-top: 8px; }
 .opt-refresh {

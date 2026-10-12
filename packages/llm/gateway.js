@@ -110,6 +110,16 @@ export async function optionsmith({ provider, prompts }, brief) {
   return extractJson(r.text);
 }
 
+
+/** 舞台导演（stage-play 双轨的戏文轨）：接住内核之外的玩家动作——
+ *  写一段当场戏文 + 可选白名单微效果（内核照常裁决，越界即弃）。 */
+export async function stagedirector({ provider, prompts }, brief) {
+  const system = prompts.stage
+    .replace('{{world}}', brief.worldBrief || '');
+  const r = await provider.call({ system, user: `玩家这一拍：${brief.move}`, json: true, temperature: 0.9, maxTokens: 2500, thinking: THINKING_LOW });
+  return extractJson(r.text);
+}
+
 export function makeGateway({ providers, log = () => {} }) {
   async function call(purpose, fn) {
     const primary = providers[purpose];

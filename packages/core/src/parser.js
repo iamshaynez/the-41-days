@@ -271,3 +271,69 @@ function findContainer(loc, text) {
   for (const r of loc.rooms) for (const c of r.containers || []) if (text.includes(c.name)) return c.id;
   return null;
 }
+
+
+/** 意图归一化（谋士宽进严出的"宽进"）：模型写了中文名时翻成 id，再交验证。
+ *  只翻"本来就不是合法 id"的字段——已是 id 的原样保留。 */
+export function normalizeIntent(state, pack, intent) {
+  if (!intent || typeof intent !== 'object') return intent;
+  const byName = (name) => {
+    if (!name || typeof name !== 'string') return name;
+    if (state.chars.some((c) => c.id === name)) return name; // 已是 id
+    const hit = state.chars.find((c) => c.alive && c.name === name);
+    if (hit) return hit.id;
+    return CHAR_ALIAS[name] ? CHAR_ALIAS[name] : name;
+  };
+  const item = (id) => {
+    if (!id || typeof id !== 'string') return id;
+    if (pack.itemMap[id]) return id; // 已是 id
+    return ITEM_ALIAS[id] || id;
+  };
+  const loc = (id) => {
+    if (!id || typeof id !== 'string') return id;
+    if (pack.locMap[id]) return id; // 已是 id
+    return LOC_ALIAS[id] || id;
+  };
+  const roomish = (id) => {
+    if (!id || typeof id !== 'string') return id;
+    const n = state.night;
+    if (!n || n.home) return id;
+    const l = pack.locMap[n.locId];
+    if (!l) return id;
+    const r = l.rooms.find((x) => x.id === id);
+    if (r) return id; // 已是 id
+    const byRoom = l.rooms.find((x) => x.name === id || x.name.includes(id));
+    if (byRoom) return byRoom.id;
+    const byCont = l.rooms.flatMap((x) => x.containers || []).find((c) => c.id === id || c.name === id || c.name.includes(id));
+    if (byCont) return byCont.id;
+    const byNpc = (l.npcs || []).find((x) => x.id === id || x.name === id || x.name.includes(id));
+    if (byNpc) return byNpc.id;
+    return id;
+  };
+  const out = { ...intent };
+  if (out.type === 'act') {
+    if (out.actor) out.actor = byName(out.actor);
+    if (out.patient) out.patient = byName(out.patient);
+    if (out.target) {
+      if (out.action === 'talk') out.target = byName(out.target);
+      else if (out.action === 'eat') out.target = item(out.target);
+      else if (out.action === 'treat') out.target = ({ '草药药': 'herbmed', '良药': 'meds', '绷带': 'bandage' })[out.target] || item(out.target);
+      else if (out.action === 'build') out.target = FAC_ALIAS[out.target] || out.target;
+      else if (out.action === 'craft') out.target = RECIPE_ALIAS[out.target] || out.target;
+      else if (['open_room', 'search_home'].includes(out.action)) out.target = {cellar: 'cellar', woodshed: 'garage', attic: 'attic', bedroom: 'bedroom', backyard: 'yard'}[out.target] || out.target;
+    }
+  } else if (out.type === 'dusk_assign') {
+    if (out.scavenger) out.scavenger = byName(out.scavenger);
+    if (out.location) out.location = loc(out.location);
+    if (Array.isArray(out.gear)) out.gear = out.gear.map(item);
+    if (out.others) out.others = Object.fromEntries(Object.entries(out.others).map(([k, v]) => [byName(k), v]));
+  } else if (out.type === 'night') {
+    if (out.target) out.target = roomish(out.target);
+  } else if (out.type === 'trade_op') {
+    if (out.give) out.give = Object.fromEntries(Object.entries(out.give).map(([k, v]) => [item(k), v]));
+    if (out.get) out.get = Object.fromEntries(Object.entries(out.get).map(([k, v]) => [item(k), v]));
+  } else if (out.type === 'direction') {
+    if (out.subject) out.subject = byName(out.subject);
+  }
+  return out;
+}

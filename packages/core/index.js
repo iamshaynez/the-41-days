@@ -17,7 +17,8 @@ export { genFrankoStock, sellPrice, executeTrade } from './src/trade.js';
 export { chooseEventOption, buildEnding, optionAvailable } from './src/events.js';
 export { resolveInput, beginRun, validateIntentShape } from './src/resolve.js';
 export { fold } from './src/fold.js';
-export { parseDirect } from './src/parser.js';
+export { parseDirect, normalizeIntent } from './src/parser.js';
+export { applySceneEffects } from './src/scene.js';
 export { planDay, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, freeExamples, charDigest, feasibleIntent, OPTION_INTENT_TYPES } from './src/delegate.js';
 export {
   VERBS, recordCausal, addPrivateNote, eventVerb, tickAutonomous, tickDirections, slumberGuard, denyFoodCount,

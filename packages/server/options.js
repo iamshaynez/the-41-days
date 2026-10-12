@@ -1,7 +1,7 @@
 // 谋士选项的验证器（统一交互面）：LLM 出的选项必须「点得动」——
 // 形状（意图白名单）→ 可行性（feasibleIntent 只读检查）→ 禁词（正典防火墙），
 // 三关全过才许渲染。纯视图数据：不碰 state、不进事件流，点了才走输入管线。
-import { validateIntentShape, feasibleIntent } from '../core/index.js';
+import { validateIntentShape, feasibleIntent, normalizeIntent } from '../core/index.js';
 
 /**
  * @param {object} raw 谋士输出 {options: [{label, hint?, intents}]}
@@ -19,9 +19,21 @@ export function validateOptions(pack, state, raw, { card } = {}) {
     // 收卷意图（auto_day）是白天方略的专属结尾：模型自带的一律收走，
     // 只有今日卡由我们统一补在最后（黄昏/夜访是世界的提问，不越权收卷）
     let intents = (Array.isArray(o.intents) ? o.intents : [])
-      .filter((it) => it.type !== 'auto_day')
-      .filter((it) => validateIntentShape(it) && feasibleIntent(state, pack, it));
-    if (!intents.length) continue; // 空壳方略不要：标签再好，没有可执行内容就不出
+      .filter((it) => it.type !== 'auto_day' && it.type !== 'scene')
+      .map((it) => normalizeIntent(state, pack, it)) // 宽进：中文名翻成 id 再验
+      .filter((it) => validateIntentShape(it) && feasibleIntent(state, pack, it)); // 严出：验证照旧
+    if (!intents.length) {
+      // 戏文轨：内核没有、但说得出口的事——不过滤，交给舞台导演当场接戏
+      const text = `${o.label.trim()}${o.hint ? '——' + String(o.hint).trim() : ''}`.slice(0, 80);
+      out.push({
+        label: o.label.trim().slice(0, 24),
+        hint: (typeof o.hint === 'string' ? o.hint.trim().slice(0, 30) + ' · ' : '') + '戏文：世界会接这一拍',
+        intents: [{ type: 'scene', text }],
+        stage: true
+      });
+      if (out.length >= 4) break;
+      continue;
+    }
     if (card === 'day') intents.push({ type: 'auto_day' });
     intents = intents.slice(0, 5);
     const hint = typeof o.hint === 'string' ? o.hint.trim().slice(0, 30) : '';

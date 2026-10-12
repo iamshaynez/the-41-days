@@ -26,7 +26,7 @@ describe('卡面语境：id 对照表', () => {
   });
 });
 
-describe('anthropic 协议全链（GLM 路径）', () => {
+describe('anthropic 协议全链（GLM 路径，宽进归一化）', () => {
   let stub, calls;
   before(async () => {
     calls = [];
@@ -64,10 +64,12 @@ describe('anthropic 协议全链（GLM 路径）', () => {
     assert.ok(calls[0].payload.system.includes('【id 对照'), 'system 应含 id 对照段');
     assert.deepEqual(calls[0].payload.thinking, { type: 'low' }, '应带 GLM low 档（实测 6s vs 默认 70~195s）');
 
-    // 响应侧：围栏 JSON 能抠出来；验证器只放行 id 正确的
+    // 响应侧：围栏 JSON 能抠出来；中文名经归一化翻译成 id（宽进）后两个都可行
     const options = validateOptions(PACK, state, raw);
-    assert.equal(options.length, 1, `应只剩 id 正确的选项：${JSON.stringify(options)}`);
+    assert.equal(options.length, 2, `id 正确 + 中文名归一化，都应放行：${JSON.stringify(options)}`);
     assert.equal(options[0].intents[0].actor, 'anton');
     assert.equal(options[0].intents[0].target, 'raw');
+    assert.equal(options[1].intents[0].actor, 'anton', '文简→anton');
+    assert.equal(options[1].intents[0].target, 'raw', '糙米→raw');
   });
 });

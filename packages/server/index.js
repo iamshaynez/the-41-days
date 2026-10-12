@@ -15,6 +15,8 @@ import { worldBrief, renderDirect } from './narrate.js';
 import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith } from '../llm/index.js';
+import { stagedirector } from '../llm/gateway.js';
+import { applySceneEffects } from '../core/index.js';
 import { anchorPool } from '../core/src/ge.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from './echoes.js';
 import { createGeDirector } from './ge.js';
@@ -61,7 +63,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     // 老库缺条目（如新加的 optionsmith）时兜底读内容包原文件——提示词永远不允许是空的
     const fromDisk = (n) => { try { return loadPrompt(n, PACK_DIR); } catch { return ''; } };
     const pick = (n) => ents[n]?.text || fromDisk(n);
-    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith') };
+    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith'), stage: pick('stage') };
   }
 
   // —— C 层导演（GE：LLM 在配才在场；离线即关，游戏完整可玩） ——
@@ -499,6 +501,26 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           db.saveState(id, result.state);
         }
 
+        // 戏文轨（stage-play）：scene_request 事实交给舞台导演——写一段当场戏文，
+        // 可附白名单微效果（心情/声望/念头），越界即整份丢弃；LLM 缺席走直读兜底
+        for (const f of result.facts.filter((x) => x.k === 'scene_request')) {
+          const stageOut = gw ? await stagedirector({ provider: gw.providers.narrator || gw.providers.referee, prompts: promptsCache },
+            { worldBrief: worldBrief(result.state, pack), move: f.text }).catch((e) => ({ __error: String(e?.message || e).slice(0, 200) })) : null;
+          if (stageOut?.__error) log.warn('stage director failed', { runId: id, error: stageOut.__error });
+          if (stageOut?.text?.trim()) {
+            send('stage', { text: stageOut.text.trim() });
+            ink.push({ day: result.state.day, role: 'narrator', text: stageOut.text.trim() });
+            if (stageOut.effects) {
+              const applied = applySceneEffects(result.state, pack, stageOut.effects);
+              if (applied.ok) { db.appendEvents(id, applied.events); result.facts.push(...applied.facts); }
+              else log.warn('戏文微效果被拒', { runId: id, reasons: applied.reasons });
+            }
+          } else {
+            const line = '你做了。没有什么立刻改变——但这一刻被这座城记住了。';
+            send('stage', { text: line });
+            ink.push({ day: result.state.day, role: 'narrator', text: line });
+          }
+        }
         // 叙事：LLM 流式 → 直读模板兜底（空白输出也视为没写出来，落兜底）
         let text = '';
         const gwN = run.mode === 'llm' ? gw : null;
@@ -513,6 +535,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
         if (result.rejects?.length) ink.push({ day: result.state.day, role: 'sys', text: '（有些事做不到：' + result.rejects.map((r) => r.reason).join('、') + '）' });
         db.appendNarration(id, ink);
+        db.saveState(id, result.state); // 戏文微效果可能改了状态——以最终态发补丁
         send('state-patch', { state: enrich(result.state) });
         send('done', { rejects: result.rejects, degraded, say });
         return res.end();
