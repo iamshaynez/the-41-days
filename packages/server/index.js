@@ -545,7 +545,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           };
           const provider = gw.providers.referee || gw.providers.narrator;
           const raw = await optionsmith({ provider, prompts: promptsCache }, brief);
-          const options = validateOptions(pack, st, raw);
+          const options = validateOptions(pack, st, raw, { card });
           const reason = options.length ? '' : (raw ? '谋士出的选项都没过验证（id 对照/可行性/禁词）' : '谋士的输出没法解析成 JSON');
           if (options.length) optionRefresh.set(bkey, (optionRefresh.get(bkey) || 0) + 1);
           return json(res, 200, { options, reason });
