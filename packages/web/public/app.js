@@ -367,6 +367,7 @@ function handleSse(block) {
   if (ev === 'memoir-delta') streamMemoir(data.d || '');
   if (ev === 'clarify') narrateRaw('……' + data.text, { cls: 'clarify' });
   if (ev === 'echo') narrateRaw(data.text, { cls: 'clarify' }); // 世界接住狂语的一笔（零状态变化）
+  if (ev === 'stage') narrateRaw(data.text); // 戏文轨：舞台导演接的一拍，落进正文
   if (ev === 'state-patch') applyState(data.state);
   if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' }); }
   if (ev === 'error') narrateRaw('（出错：' + esc(data.error) + '）', { cls: 'sys' });
@@ -783,8 +784,9 @@ function refreshRow(cardKey, optsEl) {
       for (const o of r.options || []) {
         if (seen.has(o.label)) continue;
         seen.add(o.label);
-        const ob = optBtn(o.label, '◇', () => sendIntents(o.intents, o.label), o.hint || '');
+        const ob = optBtn(o.label, o.stage ? '◈' : '◇', () => sendIntents(o.intents, o.label), o.hint || '');
         ob.classList.add('opt-llm');
+        if (o.stage) ob.classList.add('opt-stage');
         ob.dataset.label = o.label;
         optsEl.appendChild(ob);
         added++;
