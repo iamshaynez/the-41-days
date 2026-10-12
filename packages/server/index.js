@@ -424,6 +424,17 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         return json(res, 200, { ok: true });
       }
 
+      // 删除对局（真删）：存档、事件、书页与这一局的复盘随局走；档案馆的文件与真相保留
+      if (req.method === 'DELETE' && /^\/api\/runs\/[^/]+$/.test(path)) {
+        const id = path.split('/')[3];
+        const ctx = loadOwnRun(id);
+        if (!ctx) return;
+        geDirector.drop(id);
+        if (!db.deleteRun(id)) return json(res, 404, { error: 'run not found' });
+        log.info('对局已删除', { runId: id, userId: ctx.s.userId });
+        return json(res, 200, { ok: true });
+      }
+
       // 玩家输入 → SSE（叙事流式 + 终态）
       if (req.method === 'POST' && /^\/api\/runs\/[^/]+\/input$/.test(path)) {
         const id = path.split('/')[3];
@@ -640,7 +651,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const layer1 = docs.length >= gates.layer1, layer2 = docs.length >= gates.layer2;
         return json(res, 200, {
           docs: docs.map((d) => ({ id: d.key, ...d.data })),
-          runs: runs.map((r) => r.data),
+          runs: runs.map((r) => ({ ...r.data, runId: r.key })),
           seals: seals.map((x) => ({ id: x.key, ...x.data })),
           // 史册格（GDD-v0.2 §12.1）：正史栏=通行叙事（公开水面），野史栏=你打出来的那几页
           annals: entries.filter((e) => e.kind === 'annal').map((e) => ({ id: e.key, ...e.data })),
