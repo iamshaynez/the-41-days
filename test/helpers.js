@@ -3,8 +3,8 @@ import { loadPack, createRun, beginRun, resolveInput } from '../packages/core/in
 
 export const PACK = loadPack();
 
-export function newRun({ seed = 100, roster = ['anton', 'marta', 'bron'], difficulty = 'documentary', prologue = false, sidestory = null } = {}) {
-  const state = createRun(PACK, { seed, roster: sidestory ? null : roster, difficulty, prologue, sidestory });
+export function newRun({ seed = 100, roster = ['anton', 'marta', 'bron'], difficulty = 'documentary', prologue = false, preludeMode = 'full', sidestory = null } = {}) {
+  const state = createRun(PACK, { seed, roster: sidestory ? null : roster, difficulty, prologue, preludeMode, sidestory });
   const { events } = beginRun(state, PACK, { prologue });
   return { state, events };
 }

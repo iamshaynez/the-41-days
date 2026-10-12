@@ -14,6 +14,8 @@ import { tickAutonomous, tickDirections } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
 import { planDay, planNightStep } from './delegate.js';
+import { preludeBeats } from './prelude.js';
+import { mainlineTick } from './mainline.js';
 
 /** 意图白名单（shared 契约） */
 export function validateIntentShape(intent) {
@@ -26,6 +28,8 @@ export function validateIntentShape(intent) {
     case 'event_choice': return typeof intent.option === 'string';
     case 'meta': return typeof intent.query === 'string';
     case 'advance': return true;
+    case 'skip_prelude': return true;
+    case 'prelude_full': return true;
     case 'policy': return typeof intent.key === 'string';
     case 'direction': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
     case 'whisper': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
@@ -141,8 +145,11 @@ function runAutoNight(ctx, rejects, autoIntent) {
 
 function applyOne(ctx, intent) {
   const s = ctx.s;
-  // 序章守卫：闪回里只有"选哪个"是合法的（PH-03：阶段推进只由内核驱动）
-  if (s.phase === 'prologue' && intent.type !== 'event_choice' && intent.type !== 'meta') {
+  // 序章守卫：闪回里"选哪个"与"翻页"合法（PH-03：阶段推进只由内核驱动；
+  // 翻页只对文本幕开放——卡拍必须选，选择才有旗标与因果账）
+  if (s.phase === 'prologue' && intent.type !== 'event_choice' && intent.type !== 'meta'
+    && intent.type !== 'skip_prelude' && intent.type !== 'prelude_full'
+    && !(intent.type === 'advance' && preludeBeats(ctx.pack, s)[s.prelude?.i ?? 0]?.t !== 'card')) {
     ctx.fact('in_prologue', {});
     return { ok: false, reason: 'IN_PROLOGUE' };
   }
@@ -225,13 +232,32 @@ function applyOne(ctx, intent) {
     case 'event_choice': {
       const r = chooseEventOption(ctx, intent.option);
       // 序章：一选一拍，选完进下一拍，拍完落地第 1 天
-      if (r.ok && s.phase === 'prologue') firePrologueNext(ctx);
+      if (r.ok && s.phase === 'prologue') firePreludeBeat(ctx, (s.prelude?.i ?? 0) + 1);
       return r;
     }
     case 'advance': {
+      if (s.phase === 'prologue') { firePreludeBeat(ctx, (s.prelude?.i ?? 0) + 1); return { ok: true }; }
       if (s.phase === 'day') { toDusk(ctx); return { ok: true }; }
       if (s.phase === 'night' && !s.night?.home) { endNightReturn(ctx, 'advance'); return { ok: true }; }
       return { ok: false, reason: 'BAD_PHASE' };
+    }
+    case 'skip_prelude': {
+      if (s.phase !== 'prologue') return { ok: false, reason: 'BAD_PHASE' };
+      endPrologue(ctx, true);
+      return { ok: true };
+    }
+    case 'prelude_full': {
+      // 翻全卷（叙事双轴 §2.4）：单句版展开为完整三幕——从「天下」重读；
+      // 已作答的卡不重复（旗标与因果账已入册），正展示未作答的卡退回重演。
+      if (s.phase !== 'prologue' || (s.preludeMode || 'full') !== 'short') return { ok: false, reason: 'BAD_PHASE' };
+      if (s.activeEvent?.cardId && s.firedOnce[s.activeEvent.cardId]) {
+        delete s.firedOnce[s.activeEvent.cardId];
+        ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
+      }
+      ctx.setFlag('preludeMode', 'full');
+      ctx.fact('prelude_full', {});
+      firePreludeBeat(ctx, 0);
+      return { ok: true };
     }
     case 'meta':
       ctx.fact('meta', { query: intent.query });
@@ -241,24 +267,36 @@ function applyOne(ctx, intent) {
   }
 }
 
-/** 序章逐拍推进（kind: prologue 按 seq 排序，once 烧掉）；拍完落到第 1 天白天 */
-function firePrologueNext(ctx) {
+/** 序章节拍引擎（叙事双轴-v0.1 §2）：文本幕 advance 翻页、卡拍 event_choice 推进；
+ *  老存档（无 prelude 指针）自愈——已烧掉的卡拍自动跳过。 */
+function firePreludeBeat(ctx, from) {
   const s = ctx.s;
-  const next = ctx.pack.cards
-    .filter((c) => c.kind === 'prologue')
-    .sort((a, b) => (a.seq || 0) - (b.seq || 0))
-    .find((c) => !s.firedOnce[c.id]);
-  if (!next) {
-    s.phase = 'day';
-    ctx.emit('PHASE', { to: 'day' });
-    ctx.fact('prologue_end', { day: s.day, weather: s.weather });
-    return;
+  const beats = preludeBeats(ctx.pack, s);
+  let i = from;
+  while (i < beats.length && beats[i].t === 'card' && s.firedOnce[beats[i].id]) i++;
+  if (i >= beats.length) { endPrologue(ctx); return; }
+  s.prelude = { i };
+  ctx.emit('PRELUDE_BEAT', { i });
+  const b = beats[i];
+  if (b.t === 'card') {
+    s.firedOnce[b.id] = true;
+    ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
+    s.activeEvent = { cardId: b.id };
+    ctx.emit('EVENT_FIRED', { cardId: b.id });
+    ctx.fact('prologue_beat', { cardId: b.id, title: ctx.pack.cardMap[b.id]?.title });
+  } else {
+    s.activeEvent = null; // 文本幕接管（翻全卷会从卡拍跳回天下，旧卡必须卸下）
+    ctx.fact('prelude_beat', { kind: b.t, id: b.id });
   }
-  s.firedOnce[next.id] = true;
-  ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
-  s.activeEvent = { cardId: next.id };
-  ctx.emit('EVENT_FIRED', { cardId: next.id });
-  ctx.fact('prologue_beat', { cardId: next.id, title: next.title });
+}
+
+/** 序章落幕：落地第 1 天白天；D1 的大事步与序章落定同拍（叙事双轴 §4.3） */
+function endPrologue(ctx, skipped = false) {
+  const s = ctx.s;
+  s.phase = 'day';
+  ctx.emit('PHASE', { to: 'day' });
+  ctx.fact(skipped ? 'prologue_skipped' : 'prologue_end', { day: s.day, weather: s.weather });
+  mainlineTick(ctx);
 }
 
 /** 开局第一批 + 序章首拍（若有） */
@@ -268,7 +306,7 @@ export function beginRun(state, pack, { prologue = false } = {}) {
   const ctx = new Ctx(state, pack, events, facts);
   if (prologue && state.phase === 'prologue') {
     ctx.fact('prologue_start', {});
-    firePrologueNext(ctx);
+    firePreludeBeat(ctx, 0);
   } else {
     ctx.emit('PHASE', { to: 'day' });
     ctx.fact('run_started', { day: 1, chars: state.chars.map((c) => c.name).join('、') });
@@ -282,6 +320,7 @@ export function beginRun(state, pack, { prologue = false } = {}) {
         ctx.fact('event', { cardId: card.id, title: card.title });
       }
     }
+    mainlineTick(ctx); // 主线 D1 大事步（无序章开局与序章落幕同拍）
   }
   ctx.emit('CURSOR', { to: state.rngCursor });
   return { state, events, facts };
@@ -312,6 +351,7 @@ function toDawn(ctx) {
   tickProduction(ctx);
   tickWar(ctx);
   drawMorningEvents(ctx);
+  mainlineTick(ctx);      // 大事轴日步：破晓选步＋闲笔＋投影（叙事双轴 §4.3）
   s.phase = 'day';
   ctx.emit('PHASE', { to: 'day' });
   ctx.fact('phase_day', { day: s.day, weather: s.weather });

@@ -99,14 +99,17 @@ describe('决断意志全流程（只点卡 + 大白话）', () => {
 });
 
 describe('序章 → 首日衔接（新玩家的头两分钟）', () => {
-  test('序章五拍全是选择题；落地后建议栏就有"让他们自己张罗"', () => {
+  test('序章节拍：文本幕翻页、卡拍选择；落地后建议栏就有"让他们自己张罗"', () => {
     let s = beginRun(createRun(pack, { seed: 11, roster: ['bron', 'marta', 'katya'], prologue: true }), pack, { prologue: true }).state;
     assert.equal(s.phase, 'prologue');
     let beats = 0;
-    while (s.phase === 'prologue' && beats++ < 8) {
-      assert.ok(s.activeEvent, '序章每一拍都是一张选择卡');
-      const card = pack.cardMap[s.activeEvent.cardId];
-      s = resolveInput(s, pack, [{ type: 'event_choice', option: card.options[0].key }]).state;
+    while (s.phase === 'prologue' && beats++ < 40) {
+      if (s.activeEvent) {
+        const card = pack.cardMap[s.activeEvent.cardId];
+        s = resolveInput(s, pack, [{ type: 'event_choice', option: card.options[0].key }]).state;
+      } else {
+        s = resolveInput(s, pack, [{ type: 'advance' }]).state; // 三幕文本（叙事双轴 §2）
+      }
     }
     assert.equal(s.phase, 'day');
     const sg = suggests(s, pack);
