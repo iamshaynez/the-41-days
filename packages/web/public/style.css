@@ -598,6 +598,14 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 .fate-box { margin-top: 12px; padding: 10px 12px 4px; border-left: 3px double var(--accent); border-top: 1px solid var(--gold-dim); }
 .fate-box .fate-title { font-weight: 700; color: var(--ink); letter-spacing: .06em; margin: 2px 0 6px; }
 .fate-box p { margin: 4px 0; line-height: 1.8; }
+/* 黄昏夜方针挡位：小字选钮一行（默认跟现行规矩） */
+.stance-row { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; flex-wrap: wrap; }
+.stance-label { font-size: .76em; color: var(--ink-3); letter-spacing: .06em; }
+.stance { font: inherit; font-size: .78em; color: var(--ink-2); background: none; border: 1px solid var(--rule); padding: 3px 12px; cursor: pointer; border-radius: 2px; }
+.stance.on { border-color: var(--accent); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-wash); }
+.stance-micro { border-style: dashed; }
+.ask.settled .stance-row { display: none; }
+
 /* 晨报「种下的念头」区 */
 .dir-box { border-top: 1px dashed var(--ink-3); margin-top: 8px; padding-top: 2px; }
 .dir-box .m-kicker { margin-bottom: 2px; }

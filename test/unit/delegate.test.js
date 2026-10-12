@@ -167,8 +167,10 @@ describe('晨报问题（dawnProblems）与情境建议（suggests）', () => {
   test('第一天白天的建议含"自己张罗"与"我能做什么"', () => {
     const s = newRun();
     const sg = suggests(s, pack);
-    assert.ok(sg.some((x) => x.text === '照常过吧'));
+    assert.ok(sg.some((x) => x.intents?.at(-1)?.type === 'auto_day' && x.label.includes('自己张罗')), '自动日常以收卷意图直传');
     assert.ok(sg.some((x) => x.label.includes('我能做什么')));
+    // 宏观节奏：白天建议全部收卷（求助除外）
+    for (const x of sg.filter((y) => y.label !== '我能做什么？')) assert.equal(x.intents.at(-1).type, 'auto_day', `${x.label} 应收卷`);
   });
   test('夜里建议带 auto_night 结构化意图', () => {
     let s = toNight('villas');
