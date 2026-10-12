@@ -79,6 +79,27 @@ export function actionMenu(state, pack) {
   return m.join('\n');
 }
 
+/** 夜访可行域：当前房间的容器 id、可去的房间 id、在场 NPC id——
+ *  夜间意图的 target 只认这些 id（中文名一律被滤，线上教训同白天） */
+export function nightMenu(state, pack) {
+  const n = state.night;
+  if (!n || n.home) return '（不在夜访中）';
+  const loc = pack.locMap[n.locId];
+  if (!loc) return '（不在夜访中）';
+  const st = state.locState[n.locId] || { searched: {}, npcState: {} };
+  const idx = loc.rooms.findIndex((r) => r.id === n.room);
+  const room = loc.rooms[idx];
+  const lines = [`当前房间：${room.name}（${room.id}）`];
+  const conts = (room.containers || []).filter((c) => !st.searched[c.id]);
+  if (conts.length) lines.push(`本屋可搜容器（search@id）：${conts.map((c) => `${c.id}${c.type === 'locked' ? '（上锁，先 open@' + c.id + '）' : ''}`).join('、')}`);
+  const moves = [loc.rooms[idx - 1], loc.rooms[idx + 1]].filter(Boolean);
+  if (moves.length) lines.push(`可去房间（move@id${moves.some((r) => r.door && r.door !== 'open') ? '，有的有门：locked 需 open@、rubble 需 clear@、bars 需 bars@' : ''}）：${moves.map((r) => `${r.name}(${r.id}${r.door && r.door !== 'open' ? ' 门:' + r.door : ''})`).join('、')}`);
+  const npcs = (loc.npcs || []).filter((x) => !st.npcState[x.id]);
+  if (npcs.length) lines.push(`在场的人（dialogue/attack@id）：${npcs.map((x) => `${x.name}(${x.id})`).join('、')}`);
+  lines.push('无目标的动作：observe（看一圈）/ retreat（收工回家）');
+  return lines.join('\n');
+}
+
 /** 卡面语境摘要（提示词 {{card}} 段）：给谋士看的当前卡状态（附 id 对照与可行域） */
 export function cardBrief(state, pack, card) {
   const ids = idTable(state, pack);
@@ -89,7 +110,7 @@ export function cardBrief(state, pack, card) {
   }
   if (card === 'night') {
     const loc = pack.locMap[state.night?.locId];
-    return `深夜，夜访${loc?.name || ''}，当前房间「${loc?.rooms?.find((r) => r.id === state.night?.room)?.name || ''}」，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}` : ''}。夜间动作：move/observe/search/open/clear/bars/dialogue/attack/retreat。\n\n${ids}`;
+    return `深夜，夜访${loc?.name || ''}，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}（有人听见了）` : ''}。夜间动作：move/observe/search/open/clear/bars/dialogue/attack/retreat——target 一律写【夜访可行域】里给出的 id。\n\n【夜访可行域】\n${nightMenu(state, pack)}\n\n${ids}`;
   }
   // day：今日卡
   return `白天，今日怎么过。你出的是**今日方略**：2~4 个意图、覆盖至少两个人（act/direction/policy 可混编；direction 种下的念头会在日后显形）。方略之后管家会自动补完日常并进入黄昏——不需要你自己加 auto_day，也不必覆盖每个人。全队休整类方略可以只写一两个意图。${menu}\n\n${ids}`;

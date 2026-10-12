@@ -356,7 +356,7 @@ const REJECT_TXT = {
   BAD_OPTION: '没有这个选项', UNAVAILABLE: '条件不够', IN_PROLOGUE: '序章里只能选', BAD_SHAPE: '这话没听懂',
   BAD_TYPE: '这事做不了', EMPTY: '空的', TOO_MANY: '太多了', NOTHING: '没什么可翻的了', NO_TARGET: '没有这样的人',
   NO_CHAR: '这个人不在', BAD_TARGET: '没有这个地方', NO_ITEM: '东西不够', NO_NEED: '现在不需要',
-  DONE_TODAY: '今天已经做过了', NEED_TRAIT: '他不会这个', NEED_REPAIR: '得先修好它', NO_LOC: '不知道这个地方'
+  DONE_TODAY: '今天已经做过了', NEED_TRAIT: '他不会这个', NEED_REPAIR: '得先修好它', NO_LOC: '不知道这个地方', MAX: '已经修到顶了'
 };
 
 function handleSse(block) {
@@ -790,7 +790,7 @@ function refreshRow(cardKey, optsEl) {
         added++;
       }
       b.classList.remove('thinking');
-      if (r.reason) b.title = r.reason;
+      if (r.reason) { b.title = r.reason; row.appendChild(el('p', 'ask-hint opt-refresh-reason', '（' + esc(r.reason.slice(0, 60)) + '）')); }
       if (added) used++; // 只有真出了选项才计入两次上限
       if (used >= 2) { b.dataset.done = '1'; txt().textContent = '就这些了'; }
       else { txt().textContent = added ? '⟳ 再想想' : '谋士没词了'; b.disabled = false; }
