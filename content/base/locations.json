@@ -1,0 +1,1201 @@
+{
+  "$comment": "内核设计-v0.2 §4（避难所内景）与 GDD-v0.2 §8.1（地点卡，荆州卷）。door: open|locked|rubble|bars；容器 tool 门槛同内核 §4；loot 为权重表 [{item,count:[min,max],w}]。内部 id 沿用 v0.1。",
+  "locations": [
+    {
+      "id": "home",
+      "name": "橘里九号",
+      "threat": 0,
+      "home": true,
+      "rooms": [
+        {
+          "id": "hall",
+          "name": "门厅",
+          "door": "open",
+          "containers": []
+        },
+        {
+          "id": "living",
+          "name": "堂屋（断弦的琴）",
+          "door": "open",
+          "containers": [
+            {
+              "id": "piano_bench",
+              "name": "琴席夹层",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "parts",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    1
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "kitchen",
+          "name": "灶间",
+          "door": "open",
+          "containers": [
+            {
+              "id": "cupboard",
+              "name": "碗柜",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cellar",
+          "name": "地窖",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "cellar_cache",
+              "name": "食物窖藏",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "canned",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "raw",
+                  "count": [
+                    3,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            },
+            {
+              "id": "cellar_hidden",
+              "name": "暗格",
+              "type": "hidden",
+              "doc": "#028",
+              "loot": []
+            }
+          ]
+        },
+        {
+          "id": "bedroom",
+          "name": "楼上卧房",
+          "door": "rubble",
+          "containers": [
+            {
+              "id": "wardrobe",
+              "name": "衣笥",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "wood",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "bandage",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "attic",
+          "name": "阁楼",
+          "door": "rubble",
+          "containers": [
+            {
+              "id": "attic_box",
+              "name": "旧物箱",
+              "type": "locked",
+              "docs": [
+                "#045"
+              ],
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    1,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "elec",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "wine",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "brocade",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "yard",
+          "name": "后院",
+          "door": "open",
+          "containers": []
+        },
+        {
+          "id": "garage",
+          "name": "柴房",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "scrap_car",
+              "name": "旧辎车",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "parts",
+                  "count": [
+                    4,
+                    6
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "comp",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "fuel",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": []
+    },
+    {
+      "id": "market",
+      "name": "被焚的南市",
+      "threat": 2,
+      "knownAtStart": true,
+      "rooms": [
+        {
+          "id": "front",
+          "name": "坍塌的入口",
+          "door": "open",
+          "containers": [
+            {
+              "id": "m_shelf1",
+              "name": "倾倒的铺板",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "parts",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "wood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "raw",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "coldroom",
+          "name": "粮行区",
+          "door": "open",
+          "containers": [
+            {
+              "id": "m_cold",
+              "name": "米缸",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    5,
+                    8
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "veg",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "canned",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "storage",
+          "name": "后库",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "m_stock",
+              "name": "库存箱",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "canned",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "raw",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "comp",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "bandage",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "crowbar",
+                  "count": [
+                    1,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "m_looter",
+          "name": "守粮行的溃兵",
+          "stance": "wary",
+          "armed": true,
+          "firstScript": "looter_with_knife",
+          "desc": "军衣不合身，饿得手都在抖。"
+        }
+      ],
+      "docsPool": [
+        "#014",
+        "#002"
+      ],
+      "flavor": "铺面像被巨兽舔过。三天前这里还有排队买米的人。"
+    },
+    {
+      "id": "church",
+      "name": "府库里社",
+      "threat": 0,
+      "knownAtStart": true,
+      "rooms": [
+        {
+          "id": "nave",
+          "name": "社堂",
+          "door": "open",
+          "containers": [
+            {
+              "id": "c_pew",
+              "name": "廊下",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "wood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "cigs",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "raw",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                }
+              ]
+            },
+            {
+              "id": "c_soup",
+              "name": "施粥棚",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    3,
+                    5
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "veg",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sacristy",
+          "name": "守藏室",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "c_box",
+              "docs": [
+                "#059",
+                "#046"
+              ],
+              "name": "死档匣",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "candle",
+                  "count": [
+                    0,
+                    0
+                  ],
+                  "w": 0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "priest",
+          "name": "守藏吏文修",
+          "stance": "friendly",
+          "armed": false,
+          "firstScript": "priest_intro",
+          "desc": "他把最后半袋麸分给了比你们先来的人。"
+        }
+      ],
+      "docsPool": [
+        "#058",
+        "#026"
+      ],
+      "flavor": "庑廊的穿堂风翻动简册，灰尘在光柱里缓慢地游。"
+    },
+    {
+      "id": "hospital",
+      "name": "杜仲医棚",
+      "threat": 0,
+      "knownAtStart": true,
+      "trade": {
+        "focus": [
+          "bandage",
+          "meds",
+          "herbmed"
+        ],
+        "rate": 1.1
+      },
+      "rooms": [
+        {
+          "id": "lobby",
+          "name": "棚口",
+          "door": "open",
+          "containers": []
+        },
+        {
+          "id": "ward",
+          "name": "里棚",
+          "door": "open",
+          "containers": [
+            {
+              "id": "h_locker",
+              "name": "药柜",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "herbmed",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "bandage",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "tamara",
+          "name": "杜仲",
+          "stance": "friendly",
+          "armed": false,
+          "firstScript": "tamara_intro",
+          "desc": "她的葛衣洗得发灰，眼睛却是这座城里最清醒的。"
+        }
+      ],
+      "docsPool": [
+        "#021"
+      ],
+      "flavor": "棚里挤满了榻。她两边都在救——这话说出来，两边都会要她的命。"
+    },
+    {
+      "id": "post",
+      "name": "驿亭",
+      "threat": 2,
+      "intelUnlock": "knows_post",
+      "rooms": [
+        {
+          "id": "sorting",
+          "name": "亭舍",
+          "door": "open",
+          "containers": [
+            {
+              "id": "p_desk",
+              "name": "案下抽屉",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "comp",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "wood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "lockpick",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "canned",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "raw",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "deadletter",
+          "name": "死信库",
+          "door": "bars",
+          "containers": [
+            {
+              "id": "p_sacks",
+              "name": "死信麻袋",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "coffee",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ],
+              "docs": [
+                "#014",
+                "#039",
+                "#041",
+                "#061",
+                "#062",
+                "#055"
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "几千封没能送到的信。有的收信人已经不存在了，寄信人还在等回音。"
+    },
+    {
+      "id": "villas",
+      "name": "大族宅区",
+      "threat": 1,
+      "knownAtStart": true,
+      "rooms": [
+        {
+          "id": "v_house1",
+          "name": "朱门宅",
+          "door": "open",
+          "containers": [
+            {
+              "id": "v_cellar",
+              "name": "酒窖",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "wine",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "jewel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "brocade",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "canned",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "raw",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "v_house2",
+          "name": "乐师的宅子",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "v_desk",
+              "name": "书案抽屉",
+              "type": "locked",
+              "loot": [
+                {
+                  "item": "elec",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "coffee",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ],
+              "docs": [
+                "#007",
+                "#044",
+                "#063"
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "大族走的时候带走了符传，留下了所有带不走的东西。"
+    },
+    {
+      "id": "frontline",
+      "name": "水门渡旧垒",
+      "threat": 4,
+      "intelUnlock": "knows_frontline",
+      "rooms": [
+        {
+          "id": "f_shell",
+          "name": "半塌的旧垒",
+          "door": "open",
+          "containers": [
+            {
+              "id": "f_flat",
+              "name": "反锁的垒屋",
+              "type": "locked",
+              "docs": [
+                "#052"
+              ],
+              "loot": [
+                {
+                  "item": "rifle",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "bullet",
+                  "count": [
+                    2,
+                    5
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "meds",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "canned",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "f_trench",
+          "name": "废壕沟",
+          "door": "rubble",
+          "containers": [
+            {
+              "id": "f_cache",
+              "name": "辎重箱",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "powder",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "canned",
+                  "count": [
+                    4,
+                    6
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "raw",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "bandage",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 2
+                }
+              ],
+              "docs": [
+                "#033"
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "f_patrol",
+          "name": "守渡军士",
+          "stance": "hostile",
+          "armed": true,
+          "desc": "箭先于问题出现。"
+        },
+        {
+          "id": "bailing",
+          "name": "箭楼上的白翎",
+          "stance": "wary",
+          "armed": true,
+          "desc": "箭楼的轮廓比人声先出来。他按一支你听不出的拍子放箭。"
+        }
+      ],
+      "docsPool": [
+        "#003",
+        "#031"
+      ],
+      "flavor": "滩涂上叠着十一年前的旧垒。最贵的东西都留在没人敢去的地方。"
+    },
+    {
+      "id": "sewer",
+      "name": "城濠水窦",
+      "threat": 2,
+      "intelUnlock": "knows_sewer",
+      "rooms": [
+        {
+          "id": "sw_edge",
+          "name": "濠边",
+          "door": "open",
+          "containers": [
+            {
+              "id": "sw_mud",
+              "name": "烂泥滩",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "parts",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sw_culvert",
+          "name": "水窦",
+          "door": "bars",
+          "containers": [
+            {
+              "id": "sw_cache",
+              "name": "堵塞的货包",
+              "type": "open",
+              "docs": [
+                "#060"
+              ],
+              "loot": [
+                {
+                  "item": "comp",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "canned",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "lockpick",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sw_den",
+          "name": "濠鼠窝",
+          "door": "open",
+          "containers": [
+            {
+              "id": "sw_offerings",
+              "name": "换剩下的杂物堆",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "herb",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "haoshu",
+          "name": "濠鼠中间人",
+          "stance": "neutral",
+          "armed": false,
+          "firstScript": "sewer_intro",
+          "desc": "他要吃的，他知道路。"
+        }
+      ],
+      "docsPool": [],
+      "flavor": "城濠的水不臭，是因为还活着。濠里的人知道所有墙根的洞。"
+    },
+    {
+      "id": "beacon",
+      "name": "北津台",
+      "threat": 3,
+      "intelUnlock": "knows_beacon",
+      "rooms": [
+        {
+          "id": "bc_slope",
+          "name": "台下坡道",
+          "door": "open",
+          "containers": [
+            {
+              "id": "bc_scrap",
+              "name": "坡道杂物堆",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "parts",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bc_base",
+          "name": "台基",
+          "door": "rubble",
+          "containers": [
+            {
+              "id": "bc_cache",
+              "name": "烽卒的储备龛",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "fuel",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "elec",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bc_top",
+          "name": "台顶",
+          "door": "open",
+          "containers": []
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "江边第三台。鼓架还在，薪柴还干——像有人一直在等它再响。"
+    }
+  ]
+}

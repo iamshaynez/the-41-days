@@ -1,0 +1,50 @@
+{
+  "$comment": "内核设计-v0.2 §3.1 物品总目录（荆州卷汉化，id 不变）。slots=背包格 stack=每格堆叠 value=交易参考价值点 fuel=燃烧值 eat=进食饥饿增量 read=可读",
+  "items": [
+    { "id": "parts", "name": "杂件", "cat": "材料", "slots": 1, "stack": 10, "value": 1 },
+    { "id": "wood", "name": "板材", "cat": "材料", "slots": 1, "stack": 10, "value": 2 },
+    { "id": "comp", "name": "铁件", "cat": "材料", "slots": 1, "stack": 5, "value": 3 },
+    { "id": "elec", "name": "铜件", "cat": "材料", "slots": 1, "stack": 3, "value": 8 },
+    { "id": "chem", "name": "漆", "cat": "材料", "slots": 1, "stack": 5, "value": 9 },
+    { "id": "powder", "name": "硝石", "cat": "材料", "slots": 1, "stack": 5, "value": 10 },
+
+    { "id": "firewood", "name": "薪柴", "cat": "燃料", "slots": 1, "stack": 5, "value": 3, "fuel": 1 },
+    { "id": "fuel", "name": "膏油", "cat": "燃料", "slots": 1, "stack": 3, "value": 6, "fuel": 2 },
+    { "id": "book", "name": "简册", "cat": "燃料", "slots": 1, "stack": 3, "value": 4, "fuel": 1, "read": true },
+
+    { "id": "water", "name": "水", "cat": "食物", "slots": 1, "stack": 5, "value": 1 },
+    { "id": "veg", "name": "葵菜", "cat": "食物", "slots": 1, "stack": 5, "value": 3, "eat": 1 },
+    { "id": "raw", "name": "糙米", "cat": "食物", "slots": 1, "stack": 5, "value": 4, "eat": 1 },
+    { "id": "meat", "name": "彘肩", "cat": "食物", "slots": 1, "stack": 5, "value": 5, "eat": 1, "cookAs": "raw" },
+    { "id": "canned", "name": "肉脯", "cat": "食物", "slots": 1, "stack": 3, "value": 12, "eat": 2 },
+    { "id": "sugar", "name": "饴蜜", "cat": "食物", "slots": 1, "stack": 5, "value": 7 },
+    { "id": "meal", "name": "熟食", "cat": "食物", "slots": 1, "stack": 3, "value": 8, "eat": 2, "noTrade": true },
+
+    { "id": "herb", "name": "草药", "cat": "药品", "slots": 1, "stack": 5, "value": 4 },
+    { "id": "herbmed", "name": "汤药", "cat": "药品", "slots": 1, "stack": 3, "value": 16 },
+    { "id": "bandage", "name": "裹创布", "cat": "药品", "slots": 1, "stack": 3, "value": 22 },
+    { "id": "meds", "name": "良药", "cat": "药品", "slots": 1, "stack": 2, "value": 28 },
+
+    { "id": "tobacco", "name": "艾草", "cat": "嗜好", "slots": 1, "stack": 5, "value": 5 },
+    { "id": "cigs", "name": "艾条", "cat": "嗜好", "slots": 1, "stack": 3, "value": 11 },
+    { "id": "coffee", "name": "蜜水", "cat": "嗜好", "slots": 1, "stack": 3, "value": 11 },
+    { "id": "moonshine", "name": "浊酒", "cat": "嗜好", "slots": 1, "stack": 3, "value": 15 },
+
+    { "id": "jewel", "name": "珠玑", "cat": "贵重", "slots": 1, "stack": 2, "value": 18 },
+    { "id": "wine", "name": "醇醪", "cat": "贵重", "slots": 1, "stack": 2, "value": 16 },
+    { "id": "brocade", "name": "蜀锦", "cat": "贵重", "slots": 1, "stack": 2, "value": 22 },
+
+    { "id": "lockpick", "name": "拨针", "cat": "工具", "slots": 1, "stack": 2, "value": 8 },
+    { "id": "crowbar", "name": "铁撬", "cat": "工具", "slots": 1, "stack": 1, "value": 9, "weapon": 1 },
+    { "id": "shovel", "name": "锸", "cat": "工具", "slots": 1, "stack": 1, "value": 8 },
+    { "id": "saw", "name": "锯", "cat": "工具", "slots": 1, "stack": 1, "value": 8 },
+    { "id": "axe", "name": "斧", "cat": "工具", "slots": 1, "stack": 1, "value": 14, "weapon": 1 },
+    { "id": "knife", "name": "环首刀", "cat": "武器", "slots": 1, "stack": 1, "value": 11, "weapon": 1, "backstab": true },
+
+    { "id": "pistol", "name": "手弩", "cat": "武器", "slots": 1, "stack": 1, "value": 38, "weapon": 2, "loud": 2, "ammo": true },
+    { "id": "rifle", "name": "强弩", "cat": "武器", "slots": 1, "stack": 1, "value": 50, "weapon": 3, "loud": 2, "ammo": true },
+    { "id": "bullet", "name": "弩箭", "cat": "武器", "slots": 1, "stack": 10, "value": 5 },
+
+    { "id": "doc", "name": "文档", "cat": "情报", "slots": 0, "stack": 99, "value": 8, "docOnly": true }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "$comment": "内核设计-v0.2 §3.2 制造配方 + §4 设施树（荆州卷）。facilities 为可建清单（含升级 prev），recipes 为配方。内部 id 不变；radio=烽鼓具（听更/终局件），piano=续弦的琴（素徽专属）。",
+  "recipes": [
+    { "id": "cook_meal", "out": { "item": "meal", "n": 1 }, "need": [ { "item": "raw", "n": 1 } ], "fuel": 1, "facility": "stove", "ap": 1 },
+    { "id": "fine_meal", "out": { "item": "meal", "n": 1, "fine": true }, "need": [ { "item": "raw", "n": 1 }, { "item": "veg", "n": 1 }, { "item": "water", "n": 1 } ], "facility": "stove", "ap": 1, "chefOnly": true },
+    { "id": "make_cigs", "out": { "item": "cigs", "n": 2 }, "need": [ { "item": "tobacco", "n": 2 } ], "facility": "workbench", "wbLevel": 1, "ap": 1 },
+    { "id": "make_herbmed", "out": { "item": "herbmed", "n": 1 }, "need": [ { "item": "herb", "n": 3 } ], "facility": "workbench", "wbLevel": 1, "ap": 1 },
+    { "id": "make_lockpick", "out": { "item": "lockpick", "n": 1 }, "need": [ { "item": "comp", "n": 1 } ], "facility": "workbench", "wbLevel": 1, "ap": 1 },
+    { "id": "make_knife", "out": { "item": "knife", "n": 1 }, "need": [ { "item": "wood", "n": 1 }, { "item": "comp", "n": 2 } ], "facility": "metal", "ap": 2 },
+    { "id": "make_axe", "out": { "item": "axe", "n": 1 }, "need": [ { "item": "wood", "n": 2 }, { "item": "comp", "n": 3 } ], "facility": "metal", "ap": 2 },
+    { "id": "make_reinforce", "out": { "item": "comp", "n": 0, "direct": "door_level" }, "need": [ { "item": "comp", "n": 2 } ], "facility": "metal", "ap": 1, "$comment": "加固件直接升门级" },
+    { "id": "make_moonshine", "out": { "item": "moonshine", "n": 1 }, "need": [ { "item": "sugar", "n": 1 }, { "item": "water", "n": 2 } ], "fuel": 1, "facility": "distill", "ap": 1, "days": 2 },
+    { "id": "make_bullet", "out": { "item": "bullet", "n": 5 }, "need": [ { "item": "powder", "n": 1 }, { "item": "comp", "n": 1 } ], "facility": "workbench", "wbLevel": 3, "ap": 2 }
+  ],
+  "facilities": [
+    { "id": "bed", "name": "简易床", "max": 4, "cost": { "wood": 5, "parts": 8 }, "ap": 2, "upgrades": [ { "id": "bed_good", "name": "像样的床", "cost": { "wood": 5, "parts": 10, "comp": 2 }, "ap": 2, "perUnit": true } ] },
+    { "id": "stove", "name": "炉灶", "max": 1, "cost": { "wood": 5, "parts": 6 }, "ap": 2, "upgrades": [ { "id": "stove_eco", "name": "节能灶", "cost": { "wood": 4, "parts": 8, "comp": 4 }, "ap": 2 } ] },
+    { "id": "heater", "name": "火盆", "max": 1, "cost": { "wood": 4, "parts": 4 }, "ap": 2, "burn": 2, "upgrades": [ { "id": "heater_iron", "name": "铁炉", "cost": { "wood": 5, "parts": 8, "comp": 5 }, "ap": 2, "burn": 3 } ] },
+    { "id": "workbench", "name": "工作台", "max": 1, "cost": { "wood": 10, "parts": 10 }, "ap": 3, "upgrades": [ { "id": "workbench2", "name": "二级工作台", "cost": { "wood": 8, "parts": 8, "comp": 5, "elec": 2 }, "ap": 3 }, { "id": "workbench3", "name": "三级工作台", "cost": { "comp": 8, "elec": 4, "powder": 2 }, "ap": 3 } ] },
+    { "id": "metal", "name": "铁砧", "max": 1, "cost": { "wood": 6, "parts": 10, "comp": 5 }, "ap": 3 },
+    { "id": "rain", "name": "集雨器", "max": 1, "cost": { "wood": 5, "parts": 8, "comp": 4 }, "ap": 2, "upgrades": [ { "id": "rain_filter", "name": "带滤网集雨器", "cost": { "comp": 3, "parts": 4 }, "ap": 1 } ] },
+    { "id": "trap", "name": "捕鼠笼", "max": 1, "cost": { "wood": 3, "parts": 6, "comp": 2 }, "ap": 2 },
+    { "id": "garden", "name": "药圃", "max": 1, "cost": { "parts": 8, "comp": 6 }, "ap": 2, "waterStart": 2, "days": 4, "yield": { "herb": 4 }, "upgrades": [ { "id": "garden_veg", "name": "葵菜园", "cost": { "parts": 6, "comp": 8 }, "ap": 2, "waterStart": 3, "days": 5, "yield": { "veg": 4 } } ] },
+    { "id": "distill", "name": "蒸馏器", "max": 1, "cost": { "wood": 6, "parts": 10, "comp": 8 }, "ap": 3 },
+    { "id": "radio", "name": "烽鼓具", "max": 1, "cost": { "parts": 6, "comp": 4, "elec": 2 }, "ap": 2 },
+    { "id": "piano", "name": "续弦的琴（素徽，三次）", "max": 3, "cost": { "wood": 2, "parts": 4 }, "ap": 2, "charOnly": "zofia" }
+  ],
+  "doorReinforce": { "maxLevel": 3, "levels": [ { "cost": { "wood": 5, "parts": 5 }, "ap": 2 }, { "cost": { "comp": 2 }, "ap": 1, "facility": "metal" }, { "cost": { "comp": 3, "parts": 5 }, "ap": 2, "facility": "metal" } ] }
+}

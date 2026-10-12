@@ -1,0 +1,236 @@
+{
+  "$comment": "内核设计-v0.2 §2 + 人物设计-v0.2 §4 幸存者池（荆州卷）。ethics 为 M-10 伦理向量；traits 为机制钩子；persona 为因果引擎人格卡（sensitive=读数倍率，protests=坚持即机制 P-03）。内部 id 沿用 v0.1（anton→文简……），仅迁移显示层。",
+  "characters": [
+    {
+      "id": "anton", "name": "文简", "role": "退休塾师", "backpack": 8, "combat": -1,
+      "traits": { "negotiate": 0.05, "craftAdv": true },
+      "ethics": { "stealCiv": 1.2, "killCiv": 1.5, "killEnemy": 1.2, "help": 0.8 },
+      "frail": true, "desc": "教了一辈子书，现在算的是还剩几顿饭。",
+      "persona": {
+        "epithet": "用秩序对抗崩塌",
+        "knot": "女儿在公安，等他去找",
+        "taboo": "绝不烧字纸",
+        "sensitive": { "burn_book": 3, "deny_food": 1.5 },
+        "protests": [
+          { "verb": "burn_book", "mood": -2, "oncePerDay": true, "line": "烧一枚是一枚。你们烧的不是竹，是有人写过字的时间。" }
+        ],
+        "voice": [
+          "账不是这么算的。账是：他们还在，我们就还欠着。",
+          "竹会烧，手会洗。记在心里，心不死。",
+          "我教了四十年书，只学会一件事：先把人算上，再算别的。"
+        ]
+      }
+    },
+    {
+      "id": "marta", "name": "辛夷", "role": "药婆", "backpack": 10, "combat": 0,
+      "traits": { "healer": true },
+      "ethics": { "stealCiv": 1.2, "killCiv": 1.5, "killEnemy": 1.0, "help": 1.5 },
+      "softHearted": true, "desc": "见过太多不该发生的死。她不允许眼前再发生一次。",
+      "persona": {
+        "epithet": "用忙碌压住记忆",
+        "knot": "建安十三年疫营那场分诊，和那个名字",
+        "taboo": "绝不放弃任何伤员",
+        "sensitive": { "refuse_help": 2, "kill_civ": 1.5, "witness_death": 1.3 },
+        "protests": [
+          { "verb": "kill_civ", "mood": -2, "oncePerDay": false, "line": "药不分制服。这条也不分。" }
+        ],
+        "voice": [
+          "药不分制服。",
+          "我数过的脉搏比你吃过的盐多。躺下。",
+          "别说没办法。这三个字我十一年没说过。"
+        ]
+      }
+    },
+    {
+      "id": "bron", "name": "石大", "role": "火铺卒", "backpack": 14, "combat": 1,
+      "traits": { "breach": true },
+      "ethics": { "stealCiv": 1.0, "killCiv": 1.3, "killEnemy": 0.8, "help": 1.0 },
+      "desc": "从火里背出来过七个人。他的肩膀比门框结实。",
+      "persona": {
+        "epithet": "用肩膀抵债",
+        "knot": "那次大火，第七个和第一个之间",
+        "taboo": "绝不谈那次大火",
+        "sensitive": { "volunteer": 1.5, "witness_death": 1.3, "guard_night": 1.3 },
+        "protests": [],
+        "voice": [
+          "门让我来。你们的肩膀，留着扛别的。",
+          "闩我查过了。三遍。睡吧。",
+          "塌下来的东西，清开就是了。人心里的另说。"
+        ]
+      }
+    },
+    {
+      "id": "katya", "name": "白简", "role": "誊抄学徒", "backpack": 10, "combat": 0,
+      "traits": { "negotiate": 0.15, "radioTruth": true },
+      "addiction": "coffee",
+      "ethics": { "stealCiv": 0.8, "killCiv": 1.2, "killEnemy": 0.8, "help": 1.0 },
+      "canonKey": true, "desc": "职业本能是追问。这座城不想回答的那些问题，他都记在心里。",
+      "persona": {
+        "epithet": "用追问赎罪",
+        "knot": "降卒进城前，他誊过的那版榜",
+        "taboo": "从不说“据说”",
+        "sensitive": { "trade_evidence": 2, "refuse_help": 0.8, "listen_radio": 1.5 },
+        "protests": [
+          { "verb": "trade_evidence", "mood": -1, "oncePerDay": true, "line": "这份纸卖了，就再也要不回来了。你确定？" }
+        ],
+        "voice": [
+          "名字、日期、谁说的。没有这三样的句子，我不抄。",
+          "露布上那个「大破」，三个月了，每次一模一样。你看不出来吗？",
+          "蜜水是我的灯油。没了它，我照样认字。"
+        ]
+      }
+    },
+    {
+      "id": "pavel", "name": "阿走", "role": "驿卒", "backpack": 10, "combat": 0,
+      "traits": { "sprint": true, "stealthy": 2 },
+      "ethics": { "stealCiv": 1.0, "killCiv": 1.3, "killEnemy": 1.0, "help": 0.8 },
+      "desc": "跑赢过所有人。现在他只想跑赢流矢。",
+      "persona": {
+        "epithet": "用玩笑包裹恐惧",
+        "knot": "逃难那一夜，他跑得最快的一次",
+        "taboo": "绝不独自睡觉",
+        "sensitive": { "volunteer": 1.5, "witness_death": 1.3 },
+        "protests": [],
+        "voice": [
+          "我去。我快——这次我慢。",
+          "接力队，轮到我了。棒子别掉。",
+          "黑的地方别站着不动。这是我唯一的战术。"
+        ]
+      }
+    },
+    {
+      "id": "emil", "name": "老甑", "role": "邸舍庖厨", "backpack": 10, "combat": 0,
+      "traits": { "cook": true },
+      "ethics": { "stealCiv": 1.0, "killCiv": 1.5, "killEnemy": 1.0, "help": 1.0 },
+      "desc": "他能把三样破烂做成一顿像样的晚饭，也能闻出仓米里掺了几成沙。",
+      "persona": {
+        "epithet": "用一口热饭对抗非人化",
+        "knot": "大仓的掺法，和他留下的徒弟",
+        "taboo": "绝不做喂不饱人的饭",
+        "sensitive": { "deny_food": 2, "feed": 1.5 },
+        "protests": [
+          { "verb": "deny_food", "mood": -1, "oncePerDay": true, "line": "吃的就在柜子里。让它过夜，是对饭的不尊重。" }
+        ],
+        "voice": [
+          "饭要趁热。话要趁软。",
+          "三样东西就能做一顿饭：一点油，一点盐，一点不想将就。",
+          "饿着肚子谈不了明天。先吃。"
+        ]
+      }
+    },
+    {
+      "id": "zofia", "name": "素徽", "role": "乐户琴师", "backpack": 8, "combat": -1,
+      "traits": { "piano": true },
+      "ethics": { "stealCiv": 1.3, "killCiv": 1.5, "killEnemy": 1.3, "help": 1.2 },
+      "canonKey": true, "desc": "哥哥被征走的那天，琴弦断了一根。她一直在听，听所有像箭声又不像箭声的声音。",
+      "persona": {
+        "epithet": "用倾听代替存在",
+        "knot": "三短一长的箭声，和这栋房子",
+        "taboo": "不在更鼓里练琴",
+        "sensitive": { "play_music": 1.5, "kill_civ": 1.5, "witness_death": 1.3 },
+        "protests": [],
+        "voice": [
+          "嘘。你们听——不对，这个声音里没有风。",
+          "音乐和那个声音，不共用一个房间。",
+          "我数得出来夜里有几个人走过。别问我怎么数的。"
+        ]
+      }
+    },
+    {
+      "id": "grigory", "name": "大柯", "role": "梓匠", "backpack": 12, "combat": 1,
+      "traits": { "craftDisc": 0.2 },
+      "ethics": { "stealCiv": 1.0, "killCiv": 1.2, "killEnemy": 0.8, "help": 1.0 },
+      "desc": "想给家里人打一口像样的棺。木料一直没凑够。",
+      "persona": {
+        "epithet": "用手说话",
+        "knot": "被“征发”的门版，和那个寒夜",
+        "taboo": "木头绝不装在抢来的门上",
+        "sensitive": { "steal_civ": 1.5, "burn_book": 1.3 },
+        "protests": [
+          { "verb": "steal_civ", "mood": -1, "oncePerDay": true, "line": "来路不正的木头，我不上手。" }
+        ],
+        "voice": [
+          "门挡的是风。挡人的是墙。别把两样搞反。",
+          "东西放门口就行。",
+          "手不懂记仇。人别比手笨。"
+        ]
+      }
+    },
+    {
+      "id": "yura", "name": "阿禾", "role": "15 岁屯候火夫", "backpack": 8, "combat": 0,
+      "traits": { "growth": true }, "student": true,
+      "ethics": { "stealCiv": 1.5, "killCiv": 2.0, "killEnemy": 1.5, "help": 1.2 },
+      "desc": "大人们以为他不懂。他什么都懂，只是装不懂，这样他们能好受一点。",
+      "persona": {
+        "epithet": "全队的镜子",
+        "knot": "津戍、水窦，和姐姐",
+        "taboo": "从不说谎——除了“我不怕”",
+        "sensitive": { "kill_civ": 2, "refuse_help": 1.5, "witness_death": 1.5 },
+        "protests": [],
+        "voice": [
+          "我不怕。（停半秒）你们呢？",
+          "今天我生日。衣带上有，不信你看。",
+          "教我吧。我学得快，忘得慢。"
+        ]
+      }
+    },
+    {
+      "id": "vera", "name": "薄姑", "role": "仓曹女史", "backpack": 10, "combat": 0,
+      "traits": { "bookkeep": 0.1, "ledgerEye": true },
+      "ethics": { "stealCiv": 0.8, "killCiv": 1.0, "killEnemy": 0.8, "help": 1.3 },
+      "canonKey": true, "desc": "围城前一周，她封过四百多枚检署。她认得那种符传的编号段——不管它换什么抬头。",
+      "persona": {
+        "epithet": "用精确赎罪",
+        "knot": "412 枚检署，和第 413 枚",
+        "taboo": "绝不在没读完的券书上落印",
+        "sensitive": { "trade_evidence": 2, "steal_civ": 1.5, "deny_food": 1.2 },
+        "protests": [
+          { "verb": "trade_evidence", "mood": -1, "oncePerDay": true, "line": "这笔账我记下了。用纸的人，得对纸负责。" }
+        ],
+        "voice": [
+          "给我看纸。纸比人诚实——纸至少不假装。",
+          "来路呢？三个字，不难答。",
+          "我封的检，我认得编号段。换抬头没用。"
+        ]
+      }
+    },
+    {
+      "id": "danilo", "name": "江鳅", "role": "私枭", "backpack": 12, "combat": 1,
+      "traits": { "blackmarket": true }, "addiction": "moonshine",
+      "ethics": { "stealCiv": 0.5, "killCiv": 0.8, "killEnemy": 0.5, "help": 0.5 },
+      "wanted": true, "desc": "军法队的通缉令上是他十年前的画像。他不担心——他担心的是画像越来越像了。",
+      "persona": {
+        "epithet": "用玩世不恭执行纪律",
+        "knot": "那船药，和降卒营的冬天",
+        "taboo": "不碰平民的随身物",
+        "sensitive": { "steal_civ": 1.5, "help": 0.5 },
+        "protests": [
+          { "verb": "steal_civ", "mood": -1, "oncePerDay": true, "line": "穷人的口袋是圣地。这条不议价。" }
+        ],
+        "voice": [
+          "规矩一条：穷人的口袋是圣地，官家的仓是菜地。",
+          "鲁舟见我都客气三分。你知道为什么吗？别答，答了就俗了。",
+          "通缉令上那张脸是我十年前。岁月才是最大的私枭。"
+        ]
+      }
+    },
+    {
+      "id": "alexey", "name": "逄灶", "role": "老烽燧卒", "backpack": 10, "combat": 0,
+      "traits": { "radioFix": true }, "legWound": true,
+      "ethics": { "stealCiv": 1.0, "killCiv": 1.3, "killEnemy": 1.0, "help": 1.0 },
+      "canonKey": true, "desc": "话少。修东西的时候比说话多。旧伤在阴天提醒他哪条腿先迈。",
+      "persona": {
+        "epithet": "用手代替嘴",
+        "knot": "建安十三年那夜，北津台，和那一棍",
+        "taboo": "修好的台必须能举火",
+        "sensitive": { "listen_radio": 1.5, "trade_evidence": 1.5 },
+        "protests": [],
+        "voice": [
+          "别说话，听——鼓没有乱。乱的从来是人。",
+          "湿了的柴，和死了的台，是一回事。",
+          "东西修好了就得能用。人也一样。"
+        ]
+      }
+    }
+  ]
+}

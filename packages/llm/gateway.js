@@ -1,0 +1,117 @@
+// LLM 网关与两个角色：裁判（意图解析）与叙事者（GDD §11.1 四角色中的两个可测核心）。
+// 铁律：LLM 输出仅作建议；结构校验失败走修复链，再失败回退直读模式（技术架构 §7.2/7.3）。
+import { makeProvider } from './providers.js';
+
+/** 从模型输出里抠 JSON（容忍 ```json 包裹与前后闲话） */
+export function extractJson(text) {
+  if (!text) return null;
+  let t = text.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1].trim();
+  const start = t.search(/[{[]/);
+  if (start < 0) return null;
+  const openCh = t[start];
+  const closeCh = openCh === '{' ? '}' : ']';
+  const end = t.lastIndexOf(closeCh);
+  if (end <= start) return null;
+  try { return JSON.parse(t.slice(start, end + 1)); } catch { return null; }
+}
+
+const validIntent = (it) => it && typeof it === 'object' && typeof it.type === 'string';
+
+/** 裁判：自然语言 → 意图列表。修复链：解析失败→带错误重试一轮→仍失败→直读解析器兜底 */
+export async function referee({ provider, prompts, worldBrief, dayActions, duskActions, nightScene, merchant }, input, fallbackParser) {
+  const system = prompts.referee
+    .replace('{{world}}', worldBrief)
+    .replace('{{day_actions}}', dayActions || '')
+    .replace('{{dusk_actions}}', duskActions || '')
+    .replace('{{night_scene}}', nightScene || '（无）')
+    .replace('{{merchant}}', merchant || '（无）');
+  let lastErr = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const user = attempt === 0
+      ? input
+      : `上一次你的输出无法解析（${lastErr}）。请严格只输出一个 JSON 对象：{"intents":[...],"clarify":null,"say":null}。玩家输入：${input}`;
+    try {
+      const r = await provider.call({ system, user, json: true, temperature: 0.1, maxTokens: 1024 });
+      const parsed = extractJson(r.text);
+      if (!parsed || typeof parsed !== 'object') throw new Error('输出不是 JSON 对象');
+      const intents = Array.isArray(parsed.intents) ? parsed.intents.filter(validIntent) : [];
+      if (!intents.length && !parsed.clarify && !parsed.say) throw new Error('intents 为空且无 clarify/say');
+      return { ok: true, intents, clarify: parsed.clarify || null, say: parsed.say || null, raw: r.text, usage: r.usage };
+    } catch (e) {
+      lastErr = String(e.message || e);
+    }
+  }
+  // 降级：直读解析器（与 LLM 同一套意图 schema）
+  if (fallbackParser) {
+    const fb = fallbackParser(input);
+    return { ok: true, intents: fb.intents, clarify: fb.clarify || null, say: null, degraded: true };
+  }
+  return { ok: false, error: lastErr };
+}
+
+/** 叙事者：facts → 散文（流式回调可选）。离线时由调用方走直读模板。 */
+export async function narrator({ provider, prompts, worldBrief }, facts, onDelta) {
+  const system = prompts.narrator.replace('{{world}}', worldBrief).replace('{{facts}}', JSON.stringify(facts, null, 1));
+  const r = await provider.call({ system, user: '请渲染。', temperature: 0.85, maxTokens: 1200, stream: !!onDelta, onDelta });
+  return { text: r.text, usage: r.usage };
+}
+
+/** 回忆录作者：结局 storyline → 文学复盘（EPI-02；N-02 校验由调用方 memoirLint 执行） */
+export async function memoirist({ provider, prompts }, storyline, onDelta) {
+  const system = prompts.memoirist.replace('{{story}}', JSON.stringify(storyline, null, 1));
+  const r = await provider.call({ system, user: '请撰写。', temperature: 0.8, maxTokens: 1600, stream: !!onDelta, onDelta });
+  return { text: r.text, usage: r.usage };
+}
+
+/** 演员：NPC 对话（价格带内浮动由提示词约束，越带由内核驳回） */
+export async function actor({ provider, prompts }, { npcName, npcCard, priceBand, history, playerSay }) {
+  const system = prompts.actor
+    .replace('{{npc_name}}', npcName)
+    .replace('{{npc_card}}', npcCard)
+    .replace('{{price_band}}', priceBand || '（非交易场景）')
+    .replace('{{history}}', (history || []).slice(-6).map((h) => `${h.who}: ${h.text}`).join('\n') || '（开场）')
+    .replace('{{player_say}}', playerSay);
+  const r = await provider.call({ system, user: playerSay, temperature: 0.8, maxTokens: 256 });
+  return { text: r.text.trim() };
+}
+
+/** 网关：按用途路由 + 主备降级（§7.2）。providers: {referee, narrator, actor}（已构造的 provider 或 null） */
+/** 编剧（内核 §8.8 GE-01）：提案一个 C 层微事件，JSON 走白名单校验（核心在 core/ge.js） */
+export async function playwright({ provider, prompts }, brief) {
+  const system = prompts.playwright
+    .replace('{{theme}}', brief.theme || '')
+    .replace('{{anchors}}', (brief.anchors || []).join('、'))
+    .replace('{{world}}', brief.worldBrief || '');
+  const r = await provider.call({ system, user: '提案一个微事件。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 900 });
+  return extractJson(r.text);
+}
+
+export function makeGateway({ providers, log = () => {} }) {
+  async function call(purpose, fn) {
+    const primary = providers[purpose];
+    const fallback = providers[purpose + ':fallback'] || null;
+    const t0 = Date.now();
+    if (primary) {
+      try {
+        const out = await fn(primary);
+        log({ purpose, provider: primary.model, ms: Date.now() - t0, ok: true });
+        return { ...out, via: primary.model };
+      } catch (e) {
+        log({ purpose, provider: primary.model, ms: Date.now() - t0, ok: false, error: String(e.message || e).slice(0, 200) });
+      }
+    }
+    if (fallback) {
+      try {
+        const out = await fn(fallback);
+        log({ purpose, provider: fallback.model, ms: Date.now() - t0, ok: true, fallback: true });
+        return { ...out, via: fallback.model };
+      } catch (e) {
+        log({ purpose, provider: fallback.model, ms: Date.now() - t0, ok: false, error: String(e.message || e).slice(0, 200) });
+      }
+    }
+    return { degraded: true };
+  }
+  return { call };
+}

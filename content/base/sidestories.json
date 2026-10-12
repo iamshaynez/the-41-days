@@ -1,0 +1,302 @@
+{
+  "$comment": "别传（长线体验-v0.2 §3.4 CH-04/05）：主线之外的短篇局。stories=局定义（解锁门/天数/阵容/开局修饰/结局变体），sideChars=旁传专属角色（不进随机池），cards=各局的日更手作卡（kind:timeline，每天一张，side 标记归属）。全部机制复用主线效果白名单。",
+  "sideChars": [
+    { "id": "luzhou", "name": "鲁舟", "role": "船牙", "backpack": 12, "combat": 0,
+      "traits": { "negotiate": 0.1 },
+      "ethics": { "stealCiv": 0.8, "killCiv": 1.0, "killEnemy": 0.8, "help": 1.0 },
+      "desc": "他的船比他的话多。",
+      "persona": { "epithet": "水面上的账", "knot": "每一趟都少卖一样东西的账", "taboo": "不问货的去处——这是假话", "voice": ["水路不认人，认吃水。", "逢双日，我在。"] } },
+    { "id": "duzhong", "name": "杜仲", "role": "医匠", "backpack": 10, "combat": -1,
+      "traits": { "healer": true },
+      "ethics": { "stealCiv": 1.2, "killCiv": 1.5, "killEnemy": 1.0, "help": 1.5 },
+      "softHearted": true, "desc": "棚里挤满了榻。她两边都在救。",
+      "persona": { "epithet": "先来后到，不问军籍", "knot": "208 年疫营那一夜", "taboo": "不说没办法", "voice": ["药不分制服。", "躺下。"] } },
+    { "id": "subo", "name": "素伯", "role": "屯候鼓手", "backpack": 9, "combat": 0,
+      "traits": {},
+      "ethics": { "stealCiv": 1.0, "killCiv": 1.5, "killEnemy": 1.0, "help": 1.0 },
+      "desc": "第三台的鼓手，节拍稳得像刻出来的。",
+      "persona": { "epithet": "节奏是呼吸", "knot": "妹妹的乐籍", "taboo": "不乱拍子", "voice": ["鼓不乱，台就不乱。", "第四小节前，偷半口气。"] } },
+    { "id": "fuyi1", "name": "老卒", "role": "樊城役夫", "backpack": 10, "combat": 0,
+      "traits": {}, "ethics": { "stealCiv": 1.0, "killCiv": 1.2, "killEnemy": 0.8, "help": 1.0 },
+      "desc": "修城墙的。现在城墙挡的是水。", "persona": { "epithet": "数板的人", "knot": "城不没者数板", "taboo": "", "voice": ["板还剩几块，人就还在。"] } },
+    { "id": "fuyi2", "name": "小子和", "role": "樊城役夫", "backpack": 8, "combat": 0,
+      "traits": { "growth": true }, "student": true,
+      "ethics": { "stealCiv": 1.5, "killCiv": 2.0, "killEnemy": 1.5, "help": 1.2 },
+      "desc": "被征来运土的，十五岁。", "persona": { "epithet": "全队的镜子", "knot": "娘在城北", "taboo": "从不说谎", "voice": ["我不怕。你们呢？"] } },
+    { "id": "fuyi3", "name": "哑婶", "role": "樊城炊妇", "backpack": 10, "combat": 0,
+      "traits": { "cook": true },
+      "ethics": { "stealCiv": 1.0, "killCiv": 1.5, "killEnemy": 1.0, "help": 1.0 },
+      "desc": "不说话。她做的饭替她说话。", "persona": { "epithet": "用一口热饭对抗非人化", "knot": "灶", "taboo": "不做喂不饱人的饭", "voice": ["（她把半块饼推过来。）"] } },
+    { "id": "liaohua", "name": "廖化", "role": "败军主簿", "backpack": 10, "combat": 1,
+      "traits": { "stealthy": 1 },
+      "ethics": { "stealCiv": 1.0, "killCiv": 1.3, "killEnemy": 0.8, "help": 1.2 },
+      "desc": "羽军主簿。城开那天，他成了该死的人。", "persona": { "epithet": "昼夜西行", "knot": "母亲", "taboo": "不降", "voice": ["路是往西边的。", "歇半个时辰就走。"] } },
+    { "id": "laomu", "name": "廖母", "role": "老母", "backpack": 6, "combat": -1,
+      "frail": true,
+      "traits": {},
+      "ethics": { "stealCiv": 1.2, "killCiv": 1.5, "killEnemy": 1.2, "help": 0.8 },
+      "desc": "走得慢。走得稳。", "persona": { "epithet": "家还在西边", "knot": "儿子的从前", "taboo": "", "voice": ["化儿，水。", "我走得动。"] } },
+    { "id": "weng1", "name": "大瓮", "role": "拾荒者", "backpack": 12, "combat": 0,
+      "traits": {},
+      "ethics": { "stealCiv": 0.8, "killCiv": 1.0, "killEnemy": 0.8, "help": 0.8 },
+      "desc": "旧战场的清道夫。", "persona": { "epithet": "翻检骨头的人", "knot": "十一年前的笛声", "taboo": "", "voice": ["骨头不咬人。"] } },
+    { "id": "weng2", "name": "小瓮", "role": "拾荒者", "backpack": 8, "combat": -1,
+      "traits": { "growth": true }, "student": true,
+      "ethics": { "stealCiv": 1.5, "killCiv": 2.0, "killEnemy": 1.5, "help": 1.2 },
+      "desc": "大瓮的徒弟，怕野犬。", "persona": { "epithet": "学翻检的人", "knot": "怕黑", "taboo": "", "voice": ["这个值钱吗？"] } }
+  ],
+  "stories": [
+    {
+      "id": "luzhou", "title": "鲁舟的一趟船",
+      "blurb": "五天水程：卖给谁、瞒什么、收不收那沓纸。",
+      "unlock": { "kind": "seal", "key": "seal_franko_net" },
+      "unlockHint": "在主线里识破鲁舟的身份后解锁",
+      "days": 5, "roster": ["luzhou"],
+      "setup": { "inventory": { "raw": 8, "canned": 3, "bandage": 2, "meds": 1, "jewel": 1, "brocade": 1, "powder": 2 } },
+      "intro": "你是鲁舟。舱底压着券局的货，船尾压着券局的眼线没有的东西——你自己的眼睛。五天，一个来回。",
+      "ending": {
+        "title": "回程",
+        "variants": [
+          { "whenFlags": ["lz_took_docs"], "text": "券局的人点了头。你的船期从此更准了，准得像更鼓。", "note": "批注：他的赝品里从此少了点什么。" },
+          { "whenFlags": ["lz_fake"], "text": "上家掂了掂你仿的那一卷，笑了：『做得比真的好。』", "note": "批注：他救下的纸，比他主人知道的多。" },
+          { "whenFlags": ["lz_refused_docs"], "text": "船期照常。只是每一趟，你都少卖了一样东西。", "note": "批注：这也算一笔账。" }
+        ],
+        "default": { "text": "船靠了岸。货卸了，钱收了，水还是那条水。", "note": "批注：逢双日，他在。" }
+      }
+    },
+    {
+      "id": "duzhong", "title": "杜仲的医棚",
+      "blurb": "五天分诊：药只有一份，棚外两边都在等。",
+      "unlock": { "kind": "seal", "key": "seal_shelling_list" },
+      "unlockHint": "在主线里读到伤兵簿后解锁",
+      "days": 5, "roster": ["duzhong"],
+      "setup": { "inventory": { "raw": 6, "canned": 2, "meds": 1, "bandage": 1, "herbmed": 1, "herb": 3 } },
+      "intro": "你是杜仲。降卒营边上的医棚，榻上躺着两边的人。规矩是建安十三年立的：先来后到，不问军籍。",
+      "ending": {
+        "title": "封棚",
+        "variants": [
+          { "whenFlags": ["dz_fair"], "text": "五天，棚里的规矩没有弯过。有人活着出去，两边都有。", "note": "批注：药不分制服。" },
+          { "whenFlags": ["dz_bent"], "text": "规矩弯了一次。就一次。她夜里把那页簿子翻过来，没有记。", "note": "批注：她什么都知道。" }
+        ],
+        "default": { "text": "棚子还立着。明天还有人来。", "note": "批注：先来后到。" }
+      }
+    },
+    {
+      "id": "subo", "title": "白翎的渡口",
+      "blurb": "三夜：更籍、鼓语、和妹妹的名字。",
+      "unlock": { "kind": "seal", "key": "seal_brother_dead" },
+      "unlockHint": "在主线里走完白翎线后解锁",
+      "days": 3, "roster": ["subo"],
+      "setup": { "inventory": { "raw": 4, "canned": 1 } },
+      "intro": "你是素伯，江边第三台的鼓手。征书上是你妹妹的名字——你替她来了。三个月前，有人来买你知道的东西。",
+      "ending": {
+        "title": "最后一更",
+        "variants": [
+          { "whenFlags": ["sb_sold"], "text": "你顶了全部的罪。「阵殁」两个字写得很好看。同一天，教坊的册子上，一个名字被划掉了。", "note": "批注：她至今不知道是谁办的。" },
+          { "whenFlags": ["sb_refused"], "text": "你没卖。三个月后你死在一次真正的巡哨里，和别人没有任何不同。鼓谱随你下了葬。", "note": "批注：野史不收这一种——但它发生过。" }
+        ],
+        "default": { "text": "鼓声按拍子走完了最后一更。", "note": "批注：第四小节前，他偷了半口气。" }
+      }
+    },
+    {
+      "id": "fancheng", "title": "樊城 · 数板",
+      "blurb": "十天：城不没者数板。你在板上。",
+      "unlock": { "kind": "annal" },
+      "unlockHint": "在主线里打出任意一页野史后解锁",
+      "days": 10, "roster": ["fuyi1", "fuyi2", "fuyi3"],
+      "setup": {
+        "inventory": { "raw": 5, "canned": 1, "firewood": 2 },
+        "winter": true,
+        "knownLocs": ["market", "church"]
+      },
+      "intro": "建安二十四年秋，樊城。汉水漫上来了，你们的将军在围城里，围城的军队在水里。你们是三个役夫——修城墙的人，现在城墙挡的是水。",
+      "ending": {
+        "title": "数板",
+        "variants": [],
+        "default": { "text": "城没有没。第十天，水退了一寸。你们还在板上。", "note": "批注：城不没者数板——史书只写城，不写板。这里写板。" }
+      }
+    },
+    {
+      "id": "liaohua", "title": "廖化西还",
+      "blurb": "十天昼伏夜行：诈死、负母、向西。",
+      "unlock": { "kind": "run_ending", "ending": "ceasefire" },
+      "unlockHint": "在主线里活到开城一次后解锁",
+      "days": 10, "roster": ["liaohua", "laomu"],
+      "setup": {
+        "inventory": { "raw": 4, "canned": 1, "water": 4 },
+        "knownLocs": ["frontline", "post", "villas"]
+      },
+      "intro": "城开那天你成了该死的人。你诈死，背起母亲，往西走。昼伏夜行。正史只记你「卒归先主」四个字——这十天是四个字里面的。",
+      "ending": {
+        "title": "西还",
+        "variants": [],
+        "default": { "text": "第十天，山道转过去，是汉中的方向。母亲在你背上睡着了。", "note": "批注：化诈死，携母西行，昼夜不止，卒归先主。" }
+      }
+    },
+    {
+      "id": "changban", "title": "长坂拾遗",
+      "blurb": "五天，十一年前的战场。有些骨头只是骨头。",
+      "unlock": { "kind": "docs", "count": 12 },
+      "unlockHint": "兰台收满 12 份文档后解锁",
+      "days": 5, "roster": ["weng1", "weng2"],
+      "setup": {
+        "inventory": { "raw": 4, "water": 3 },
+        "knownLocs": ["frontline", "villas"]
+      },
+      "intro": "当阳，长坂。十一年前这里溃过一次大军。你们是拾荒者——翻检旧战场的人。野犬、溃兵、和埋得很浅的从前。",
+      "ending": {
+        "title": "拾遗",
+        "variants": [],
+        "default": { "text": "第五天，你们把一具抱着琴的骸骨埋回了土里。它下面什么都没有——没有暗格，没有真相。", "note": "批注：有些骨头只是骨头。" }
+      }
+    }
+  ],
+  "cards": [
+    { "id": "lz_d1", "kind": "timeline", "side": "luzhou", "when": { "dayWindow": [1, 1], "once": true },
+      "title": "第一日 · 装船",
+      "text": "舱底压着券局的货：裹创布、硝石，和一口不问来路的箱。南市的牙人问：这一船，先卸给谁？",
+      "options": [
+        { "key": "army", "label": "军需曹（价高，不问去路）", "effects": { "flags": { "lz_army": true }, "items": { "jewel": 1 }, "text": "军需曹的秤很公道。公道得让人不舒服。" } },
+        { "key": "folk", "label": "平价给里社施粥棚", "effects": { "flags": { "lz_folk": true }, "mood": { "all": 1 }, "text": "守藏吏数也没数，就盖了检。他从不核编号段——你知道为什么，你不知道为什么。" } },
+        { "key": "market", "label": "谁出得起卖给谁", "effects": { "flags": { "lz_market": true }, "items": { "brocade": 1 }, "text": "一天下来舱轻了一半。行情就是活着。" } }
+      ] },
+    { "id": "lz_d2", "kind": "timeline", "side": "luzhou", "when": { "dayWindow": [2, 2], "once": true },
+      "title": "第二日 · 津戍",
+      "text": "津戍的守卒敲了敲舱板：「开箱。」你的符传在怀里，上家的花押在符传上。",
+      "options": [
+        { "key": "pass", "label": "示符传", "effects": { "flags": { "lz_pass": true }, "text": "守卒扫了一眼花押，手都没伸。符传比刀好使——这就是这座城真正的问题。" } },
+        { "key": "bribe", "label": "塞一卷裹创布", "cost": [ { "item": "bandage", "n": 1 } ], "effects": { "flags": { "lz_bribe": true }, "text": "他收了，挥手放行，动作熟得像每天一百次。大概真是每天一百次。" } }
+      ] },
+    { "id": "lz_d3", "kind": "timeline", "side": "luzhou", "when": { "dayWindow": [3, 3], "once": true },
+      "title": "第三日 · 收纸",
+      "text": "上家的纸条只有一行：收纸，价不问。那家宅子的地窖里有一沓旧简——你知道这些纸到了上家手里，会变成什么。",
+      "options": [
+        { "key": "take", "label": "照单收", "effects": { "flags": { "lz_took_docs": true }, "mood": { "all": -2 }, "text": "纸上了船。你没数。你从来都数。" } },
+        { "key": "fake", "label": "仿一卷赝品交差", "effects": { "flags": { "lz_fake": true }, "text": "你熬了半宿。笔迹、编号段、削痕——赌上家读不出区别。" } },
+        { "key": "refuse", "label": "这单不收", "effects": { "flags": { "lz_refused_docs": true }, "mood": { "all": 1 }, "text": "你把纸条烧了。船照样走。有些东西不是货。" } }
+      ] },
+    { "id": "lz_d4", "kind": "timeline", "side": "luzhou", "when": { "dayWindow": [4, 4], "once": true },
+      "title": "第四日 · 江上",
+      "text": "夜里另一条船跟着你，不远不近。水面很黑，桨声很轻。",
+      "options": [
+        { "key": "wait", "label": "停桨，等它", "effects": { "flags": { "lz_shadow": true }, "mood": { "all": -1 }, "text": "它从你船边滑过去了，挂着哪家的灯都没挂。你看清水线——空的。空船最吓人。" } },
+        { "key": "hide", "label": "摇进芦苇荡", "effects": { "flags": { "lz_hide": true }, "text": "你在芦苇里蹲到天亮。露水把船板打透了。" } }
+      ] },
+    { "id": "lz_d5", "kind": "timeline", "side": "luzhou", "when": { "dayWindow": [5, 5], "once": true },
+      "title": "第五日 · 回程",
+      "text": "回程的水很轻。舱空了，账在心里。",
+      "options": [
+        { "key": "end", "label": "靠岸", "effects": { "mood": { "all": 1 }, "text": "缆绳绕上桩子。逢双日，你还在。" } }
+      ] },
+    { "id": "dz_d1", "kind": "timeline", "side": "duzhong", "when": { "dayWindow": [1, 1], "once": true },
+      "title": "第一日 · 两份药",
+      "text": "药瓮见底了。棚里两个重伤：左边是羽军的什长，右边是降卒营捞出来的魏卒。都熬不过今夜。",
+      "options": [
+        { "key": "left", "label": "先救什长", "cost": [ { "item": "meds", "n": 1 } ], "effects": { "flags": { "dz_bent": true }, "mood": { "all": -1 }, "text": "他先来的吗？你不去想。夜里你给右边换了三次水，他天亮还活着——不是你救的，是他自己撑的。" } },
+        { "key": "right", "label": "先救降卒", "cost": [ { "item": "meds", "n": 1 } ], "effects": { "flags": { "dz_fair": true }, "mood": { "all": 1 }, "text": "什长的部下在棚口站了一夜。你当没看见。先来后到，右边先抬进来的。" } }
+      ] },
+    { "id": "dz_d2", "kind": "timeline", "side": "duzhong", "when": { "dayWindow": [2, 2], "once": true },
+      "title": "第二日 · 疫病",
+      "text": "降卒营送来一排发热的。隔离来不及了——疫病已经过了界。",
+      "options": [
+        { "key": "quarantine", "label": "划出半个棚，只收发热", "effects": { "flags": { "dz_fair": true }, "text": "你在地上划了一道线。线那边咳嗽声整夜没停，线这边也是。" } },
+        { "key": "triage", "label": "只看有希望救的", "effects": { "flags": { "dz_bent": true }, "mood": { "all": -2 }, "text": "你说了十一年前别人对你说的那句话。说出口才发现，它一直没离开过你。" } }
+      ] },
+    { "id": "dz_d3", "kind": "timeline", "side": "duzhong", "when": { "dayWindow": [3, 3], "once": true },
+      "title": "第三日 · 军吏的私嘱",
+      "text": "军吏站在棚口，压着声：降卒营的病「不必都治」。他把一小袋五铢放在药柜上。",
+      "options": [
+        { "key": "refuse", "label": "把钱推回去", "effects": { "flags": { "dz_fair": true }, "mood": { "all": 1 }, "text": "「棚里不问军籍。」他走了。钱留在柜上——你明天用它换药，账记在他名下。" } },
+        { "key": "take", "label": "收下（药是要钱的）", "effects": { "flags": { "dz_bent": true }, "mood": { "all": -1 }, "items": { "herbmed": 1 }, "text": "钱收了。药多了。夜里你洗了三遍手。" } }
+      ] },
+    { "id": "dz_d4", "kind": "timeline", "side": "duzhong", "when": { "dayWindow": [4, 4], "once": true },
+      "title": "第四日 · 裹创布尽了",
+      "text": "布用完了。伤还在来。",
+      "options": [
+        { "key": "tear", "label": "拆自己的帐子", "effects": { "flags": { "dz_fair": true }, "text": "帐子拆了。夜里风进来，棚里的人都醒着，没人说话。" } },
+        { "key": "ration", "label": "轻伤的先不换了", "effects": { "flags": { "dz_bent": true }, "mood": { "all": -1 }, "text": "轻伤的看着你，点点头。他们比你懂事，这最难受。" } }
+      ] },
+    { "id": "dz_d5", "kind": "timeline", "side": "duzhong", "when": { "dayWindow": [5, 5], "once": true },
+      "title": "第五日 · 手在抖",
+      "text": "第五天早上，你发现捣药的手在抖。棚外又有脚步声。",
+      "options": [
+        { "key": "go", "label": "起身开棚", "effects": { "mood": { "all": 1 }, "text": "手到药就不抖了。这双手认路。" } }
+      ] },
+    { "id": "sb_d1", "kind": "timeline", "side": "subo", "when": { "dayWindow": [1, 1], "once": true },
+      "title": "第一夜 · 抄更籍的人",
+      "text": "灯下的人不点灯。他出价买的不是米，是你脑子里的东西：沿江屯候的名册与更次。「你妹妹的乐籍，我们办。」",
+      "options": [
+        { "key": "sell", "label": "默写给他", "effects": { "flags": { "sb_sold": true }, "mood": { "all": -2 }, "text": "你写得很慢。每一个名字你都认识，每一处更次你都守过。写完你吹了吹墨。" } },
+        { "key": "refuse", "label": "不卖", "effects": { "flags": { "sb_refused": true }, "mood": { "all": 1 }, "text": "他走的时候没说什么。你知道这种人不会来第二次——会用别的办法。" } }
+      ] },
+    { "id": "sb_d2", "kind": "timeline", "side": "subo", "when": { "dayWindow": [2, 2], "once": true },
+      "title": "第二夜 · 鼓语",
+      "text": "鼓谱压在枕下。《蒿里》的拍子改成放箭的间隔，是你改的。第四小节前偷半口气——只有你知道为什么。",
+      "options": [
+        { "key": "keep", "label": "谱谁也不给", "effects": { "flags": { "sb_keep": true }, "text": "那是你妹妹回家的路标。给了别人，她就再也找不到你了。" } },
+        { "key": "give", "label": "抄一份放在旧垒", "effects": { "flags": { "sb_gave": true }, "mood": { "all": -1 }, "text": "你抄得很工整。抄到换气记号那里，笔停了很久。" } }
+      ] },
+    { "id": "sb_d3", "kind": "timeline", "side": "subo", "when": { "dayWindow": [3, 3], "once": true },
+      "title": "第三夜 · 点卯",
+      "text": "军正到了，名册在案上摊开。更籍外流的事发了。他要一个名字。",
+      "options": [
+        { "key": "bear", "label": "顶下来（你的事，你的名字）", "effects": { "flags": { "sb_bear": true }, "text": "你报了你的名字。军正看了你很久。「阵殁」两个字，他写得很慢。" } },
+        { "key": "tell", "label": "供出灯下的人", "effects": { "flags": { "sb_tell": true }, "mood": { "all": -2 }, "text": "军正记下了，合上名册。他走后你才明白：名册上本来就没有那个人。" } }
+      ] },
+    { "id": "fc_d2", "kind": "timeline", "side": "fancheng", "when": { "dayWindow": [2, 2], "once": true },
+      "title": "水",
+      "text": "夜里水又涨了半寸。垛口外的汉水看不见岸。有人数着城头露出水面的砖：「城不没者数板。」",
+      "options": [
+        { "key": "count", "label": "跟着数", "effects": { "mood": { "all": -1 }, "text": "板还剩几块，人就还在。数到第七遍，大家都睡着了。" } }
+      ] },
+    { "id": "fc_d4", "kind": "timeline", "side": "fancheng", "when": { "dayWindow": [4, 4], "once": true },
+      "title": "沉马",
+      "text": "满宠将军沉了一匹白马，和军人盟誓。水面上翻了个泡，就没了。",
+      "options": [
+        { "key": "watch", "label": "看完", "effects": { "mood": { "all": 1 }, "text": "马是好马。水是好水。你们是好百姓。都沉得住。" } }
+      ] },
+    { "id": "fc_d6", "kind": "timeline", "side": "fancheng", "when": { "dayWindow": [6, 6], "once": true },
+      "title": "援军的旗",
+      "text": "有人说夜里看见北边有旗。有人说那天的水声不对。你们继续搬土。",
+      "options": [
+        { "key": "work", "label": "搬土", "effects": { "text": "土是湿的，比米重。" } }
+      ] },
+    { "id": "fc_d8", "kind": "timeline", "side": "fancheng", "when": { "dayWindow": [8, 8], "once": true },
+      "title": "板",
+      "text": "垛口只剩几板在水上。雨不停。小子和问：板没了怎么办？没人答他。",
+      "options": [
+        { "key": "answer", "label": "答他", "effects": { "mood": { "all": 1 }, "text": "你说：板没了就数人。他点点头，好像真的有用。" } }
+      ] },
+    { "id": "lh_d2", "kind": "timeline", "side": "liaohua", "when": { "dayWindow": [2, 2], "once": true },
+      "title": "昼伏",
+      "text": "白天躲在坟地里。母亲问：化儿，还认得路吗？你点头。其实你已经不认得了——认得的只是方向。",
+      "options": [
+        { "key": "rest", "label": "歇半个时辰", "effects": { "mood": { "all": 1 }, "text": "她睡着了。你数她的呼吸，像数更。" } }
+      ] },
+    { "id": "lh_d5", "kind": "timeline", "side": "liaohua", "when": { "dayWindow": [5, 5], "once": true },
+      "title": "远火",
+      "text": "第五天夜里，东边有追兵的火。母亲醒了，没问。",
+      "options": [
+        { "key": "go", "label": "连夜走", "effects": { "mood": { "all": -1 }, "text": "火没有跟上来。追你的人也在想值不值得。" } }
+      ] },
+    { "id": "lh_d8", "kind": "timeline", "side": "liaohua", "when": { "dayWindow": [8, 8], "once": true },
+      "title": "碑",
+      "text": "山道边有一块旧碑，字磨平了。母亲说：歇歇吧。你把她放下来，她先给你递了水。",
+      "options": [
+        { "key": "water", "label": "喝", "effects": { "mood": { "all": 1 }, "text": "水是温的。她把水囊焐在怀里焐了一夜。" } }
+      ] },
+    { "id": "cb_d2", "kind": "timeline", "side": "changban", "when": { "dayWindow": [2, 2], "once": true },
+      "title": "旧箭镞",
+      "text": "坡上的土一翻就见箭镞。大瓮拈起来看了看：十一年前是曹兵追到这里，今年是新的制式。同一家铸的。",
+      "options": [
+        { "key": "keep", "label": "收了", "effects": { "knowledge": 1, "text": "箭镞入袋。兵器行不认年头，只认斤两。" } }
+      ] },
+    { "id": "cb_d4", "kind": "timeline", "side": "changban", "when": { "dayWindow": [4, 4], "once": true },
+      "title": "抱琴的人",
+      "text": "壕沟底有一具骸骨，怀里抱着琴。小瓮问：他身上有什么值钱的吗？大瓮没答。",
+      "options": [
+        { "key": "bury", "label": "埋回去", "effects": { "mood": { "all": 1 }, "text": "土盖回去的时候，小瓮把手在衣上擦了又擦。" } },
+        { "key": "take", "label": "琴拆了能卖", "effects": { "mood": { "all": -2 }, "items": { "parts": 2 }, "text": "弦已经锈了。琴板拆开的时候，声音很轻。" } }
+      ] }
+  ]
+}

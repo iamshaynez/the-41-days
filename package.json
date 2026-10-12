@@ -1,0 +1,21 @@
+{
+  "name": "that-war-of-mine",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "《第 41 天》— LLM 驱动的网页文字生存冒险（致敬 This War of Mine）",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env packages/server/migrate.js && node --env-file-if-exists=.env packages/server/index.js",
+    "dev": "node --env-file-if-exists=.env --watch packages/server/dev.js",
+    "migrate": "node --env-file-if-exists=.env packages/server/migrate.js",
+    "migrate:status": "node packages/server/migrate.js --status",
+    "backup": "node --env-file-if-exists=.env packages/server/backup.js",
+    "test": "node --test \"test/unit/*.test.js\" \"test/property/*.test.js\" \"test/scenario/*.test.js\" \"test/llm/*.test.js\" \"test/sim/*.test.js\" \"test/e2e/*.test.js\"",
+    "test:core": "node --test \"test/unit/*.test.js\" \"test/property/*.test.js\" \"test/scenario/*.test.js\"",
+    "test:e2e": "node --test \"test/e2e/*.test.js\"",
+    "sim": "node packages/sim/cli.js"
+  }
+}

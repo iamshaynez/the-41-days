@@ -1,0 +1,109 @@
+{
+  "id": "base",
+  "semver": "0.2.0",
+  "name": "第 41 天 · 江陵",
+  "coreVersion": ">=0.1.0",
+  "files": [
+    "items.json",
+    "characters.json",
+    "locations.json",
+    "recipes.json",
+    "events.json",
+    "docs.json",
+    "narrations.json",
+    "kpis.json"
+  ],
+  "prompts": [
+    "referee.md",
+    "narrator.md",
+    "actor.md"
+  ],
+  "startInventory": {
+    "wood": 10,
+    "parts": 12,
+    "comp": 4,
+    "raw": 8,
+    "canned": 4,
+    "water": 4,
+    "bandage": 1,
+    "crowbar": 1,
+    "book": 2,
+    "firewood": 3
+  },
+  "startKnowledgeLocations": [
+    "market",
+    "church",
+    "hospital",
+    "villas"
+  ],
+  "war": {
+    "$comment": "v0.2 正典：交割日固定 D45（正史锚点，不掷骰——内核设计-v0.2 §9 W-01；D45 同时是一局 1.5~3 小时的节奏上限）",
+    "endWindow": [
+      45,
+      45
+    ],
+    "forceEndDay": 45,
+    "telegraphDays": 5
+  },
+  "winter": {
+    "startWindow": [
+      10,
+      35
+    ],
+    "duration": [
+      8,
+      14
+    ]
+  },
+  "franko": {
+    "$comment": "鲁舟泊船：逢双日（正典圣经-v0.2 §6——围城里的准时是特权，破绽即线索）",
+    "firstVisitDay": 2,
+    "cadence": [
+      2,
+      2
+    ],
+    "skuCount": [
+      10,
+      14
+    ],
+    "priceBuy": [
+      1.25,
+      1.5
+    ],
+    "priceSell": [
+      0.55,
+      0.7
+    ]
+  },
+  "nightSlots": 10,
+  "raid": {
+    "baseProb": 0.28,
+    "dayFactor": 150,
+    "notorietyFactor": 0.05,
+    "guardDeter": 0.15,
+    "maxProb": 0.65
+  },
+  "difficulty": {
+    "documentary": {
+      "raidMul": 1.0,
+      "checkMod": 0,
+      "starveSick": 0.5,
+      "tradeMul": 1.0,
+      "notorietyMul": 1.0
+    },
+    "narrative": {
+      "raidMul": 0.7,
+      "checkMod": 1,
+      "starveSick": 0.0,
+      "tradeMul": 1.0,
+      "notorietyMul": 1.0
+    },
+    "historian": {
+      "raidMul": 1.1,
+      "checkMod": 0,
+      "starveSick": 0.6,
+      "tradeMul": 0.9,
+      "notorietyMul": 1.3
+    }
+  }
+}

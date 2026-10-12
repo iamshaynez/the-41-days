@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 41 天 · 江陵</title>
+<link rel="stylesheet" href="/assets/fonts/fonts.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-phase="day" data-fontsize="m">
+<!-- 图标库：炭笔制图风单色线稿（app.js 注入 symbol） -->
+<div id="icon-sprite" hidden></div>
+<!-- 环境层：严冬的霜与雪（UIP-7） -->
+<div id="frost" aria-hidden="true"></div>
+<div id="fx" aria-hidden="true"><div class="snow"></div></div>
+<div id="veil" aria-hidden="true"></div>
+<!-- 更筹：页缘五枝更签，夜越深燃越短；交割前兆乱，交割夜一座座熄灭（UI设计-v0.3 §1） -->
+<div id="watch" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+<div id="app">
+  <!-- ═══ 报头：一行瘦刊头（书名 · 时日 · 菜单） ═══ -->
+  <header id="topbar">
+    <div class="mast">
+      <div class="mast-left">
+        <span class="mast-kicker">江陵 · 建安二十四年 · 生存纪事</span>
+        <span class="brand">第 <em>41</em> 天</span>
+      </div>
+      <span id="clock" class="clock"></span>
+      <div class="mast-right">
+        <span id="mode-badge" class="badge" hidden></span>
+        <button id="btn-menu" class="menu-btn" type="button" aria-label="打开选单">
+          <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg><span class="menu-word">菜单</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ 对局 ═══ -->
+  <main id="view-play" class="view">
+    <!-- 开局页：卷首语 -->
+    <section id="setup" class="panel paper">
+      <p class="kicker">卷首语 · 围城第九日</p>
+      <h1>三个名字，写在门后的墙上</h1>
+      <p class="lede">米价三天翻了一倍，更鼓成了钟表。橘里九号——里坊深处的老屋，堂屋里有一张断弦的琴。三个名字写在了门后的墙上。</p>
+      <div id="resume" class="resume-box" hidden>
+        <h2>还没完的局</h2>
+        <div id="resume-list"></div>
+      </div>
+      <div class="setup-row">
+        <label>难度
+          <select id="difficulty">
+            <option value="documentary">纪实（饿死是常事）</option>
+            <option value="narrative">叙事（轻一点）</option>
+          </select>
+        </label>
+        <button id="btn-start" class="primary">住进去</button>
+      </div>
+      <hr class="setup-rule">
+      <p class="hint">没有要学的指令。每天他们会自己张罗生计；轮到你了，世界会停下来问——
+        你点一个答案，或者随口说说自己的想法。日子就这么过。</p>
+      <p class="hint" id="engine-hint" hidden>管理员还没配置叙事引擎（管理页 → LLM 供应商）。
+        在那之前，游戏以直读模式兜底运行。</p>
+    </section>
+
+    <!-- 对局主界面：一页书（人物行 / 家底行 / 正文流） -->
+    <section id="game" hidden>
+      <div id="vitals">
+        <div id="partyline" class="partyline" aria-label="同住的人"></div>
+        <div id="homeline" class="homeline" aria-label="这个家与家底"></div>
+      </div>
+      <div id="flow" class="paper">
+        <div id="flow-scroll">
+          <div id="narration" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══ 档案馆 ═══ -->
+  <main id="view-archive" class="view" hidden>
+    <section class="panel paper archive-head">
+      <p class="kicker">跨局 · 这座城的记忆</p>
+      <h1>档案馆</h1>
+      <p class="lede" id="archive-progress"></p>
+      <div id="layer-states"></div>
+      <div id="closure-box" hidden></div>
+      <div id="doc-wall" class="doc-wall"></div>
+    </section>
+    <section class="panel paper" id="archive-annals-box">
+      <h2>史册</h2>
+      <div class="annal-cols">
+        <div><h3 class="annal-h">正史</h3><div id="canon-annals"></div></div>
+        <div><h3 class="annal-h">野史</h3><div id="alt-annals"></div></div>
+      </div>
+    </section>
+    <section class="panel paper" id="archive-echoes-box" hidden>
+      <h2>江陵记得</h2>
+      <div id="echoes-wall" class="doc-wall"></div>
+    </section>
+    <section class="panel paper" id="archive-seals-box" hidden>
+      <p class="kicker">显形的真相 · 你挣出来的</p>
+      <h1>这座城的另一面</h1>
+      <div id="seal-wall" class="doc-wall"></div>
+    </section>
+    <section class="panel paper" id="archive-memoirs-box" hidden>
+      <p class="kicker">回忆录 · 每一局都值得被写下来</p>
+      <h1>回忆录书架</h1>
+      <p class="lede">你活过的每一局，都在这里留下了一页。它们按离城的先后倒着排。</p>
+      <div id="memoir-shelf" class="doc-wall"></div>
+    </section>
+  </main>
+
+  <!-- ═══ 管理 ═══ -->
+  <main id="view-admin" class="view" hidden>
+    <section class="panel paper">
+      <p class="kicker">后台 · 只对管理员显形</p>
+      <h1>管理</h1>
+      <div id="admin-login" class="admin-row" hidden>
+        <p class="hint">这里需要管理员账号（ADMIN_USERNAME / ADMIN_PASSWORD 首次登录时自动创建）。<a href="/">回首页登录</a></p>
+      </div>
+      <div id="admin-body" hidden>
+        <h2>用户</h2>
+        <table id="users-table" class="table"></table>
+        <h2>LLM 供应商</h2>
+        <p class="hint">选一个方案，填 Key 就能用。模型已预填默认值，可按需修改。
+          添加成功后自动接入全部用途（裁判/叙事者/演员）并做一次真实连通测试。</p>
+        <div id="preset-cards" class="preset-cards">
+          <button type="button" class="preset-card" data-preset="deepseek">
+            <b>DeepSeek</b>
+            <span class="preset-url">api.deepseek.com · OpenAI 兼容</span>
+            <span class="preset-model-hint">默认模型 deepseek-chat</span>
+          </button>
+          <button type="button" class="preset-card" data-preset="glm_coding">
+            <b>GLM Coding Plan（国内版）</b>
+            <span class="preset-url">open.bigmodel.cn/api/anthropic · Anthropic 兼容</span>
+            <span class="preset-model-hint">默认模型 glm-4.6</span>
+          </button>
+        </div>
+        <div class="admin-row" id="provider-form" hidden>
+          <span id="p-chosen" class="badge"></span>
+          <input id="p-model" placeholder="模型">
+          <input id="p-key" type="password" placeholder="API Key（只写不回显）">
+          <button id="btn-add-provider" class="primary">添加并测试</button>
+        </div>
+        <p class="hint" id="p-add-result" hidden></p>
+        <details class="admin-advanced">
+          <summary>自定义端点（任意 OpenAI / Anthropic 兼容服务）</summary>
+          <div class="admin-row">
+            <input id="c-name" placeholder="名称">
+            <select id="c-adapter">
+              <option value="openai-compat">OpenAI 兼容</option>
+              <option value="anthropic-compat">Anthropic 兼容</option>
+            </select>
+            <input id="c-baseurl" placeholder="Base URL">
+            <input id="c-model" placeholder="模型">
+            <input id="c-key" type="password" placeholder="API Key">
+            <button id="btn-add-custom" class="primary">添加</button>
+          </div>
+        </details>
+        <table id="providers-table" class="table"></table>
+        <details class="admin-advanced">
+          <summary>高级：按用途分配主备（一般不用动——添加供应商时已自动接入全部用途）</summary>
+          <table id="routes-table" class="table"></table>
+        </details>
+        <h2>连通性历史</h2>
+        <div id="health-history"></div>
+        <h2>平衡模拟</h2>
+        <div class="admin-row"><button id="btn-sim" class="primary">跑 20 局冒烟</button><span id="sim-out" class="hint"></span></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ═══ 批注条（反聊天壳的输入；只在对局视图中现身） ═══ -->
+<div id="inputbar" hidden>
+  <div class="inputbar-inner">
+    <div id="chips" class="chips"></div>
+    <div class="input-row">
+      <span id="candle" aria-hidden="true"></span>
+      <input id="input" type="text" placeholder="现在，你想做什么？" autocomplete="off" enterkeyhint="send">
+      <button id="btn-send" class="primary">落笔</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 覆盖层：菜单与家底细目共用一张幕布 ═══ -->
+<div id="overlay-backdrop" aria-hidden="true"></div>
+<section id="menu" class="sheet" hidden aria-label="选单"></section>
+<section id="homebook" class="sheet" hidden aria-label="家底细目"></section>
+<div id="char-pop" hidden></div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

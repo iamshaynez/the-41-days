@@ -1,0 +1,2085 @@
+{
+  "$comment": "内核设计-v0.2 §8 事件系统 v2 牌堆（荆州卷）。effects 为声明式效果白名单（GE-03 精神）：mood/items/flags/reputation/knowledge/riskCheck。{{c1}} 等由内核注入角色名。内部 id/flag 沿用 v0.1。",
+  "cards": [
+    {
+      "id": "p1_water",
+      "kind": "prologue",
+      "seq": 1,
+      "weight": 0,
+      "when": {
+        "chance": 0
+      },
+      "title": "序章 · 降卒进城那天",
+      "text": "这个秋天是从一场大胜开始的。不是征发——是降卒。于禁的七军，三万人，泡发的，走进江陵城门那天，米价翻了一倍。\n前一天夜里，最后一批过江的队伍把渡口堵到了天亮。你们留在了城里：{{names}}。谁也说不清是「没赶上」还是「没想走」。",
+      "options": [
+        {
+          "key": "tried",
+          "label": "「我们试过去渡口。封了。」",
+          "effects": {
+            "flags": {
+              "p_left_tried": true
+            }
+          }
+        },
+        {
+          "key": "stayed",
+          "label": "「我们根本没收拾。这里是家。」",
+          "effects": {
+            "flags": {
+              "p_stayed": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "p2_house",
+      "kind": "prologue",
+      "seq": 2,
+      "weight": 0,
+      "when": {
+        "chance": 0
+      },
+      "title": "序章 · 墙",
+      "text": "橘里九号不是谁的家——里坊深处的老屋，堂屋里有一张断弦的琴。谁先推开这扇门的，后来成了家里唯一的争论。\n{{names}}把名字写在了门后的墙上。约定只有一条：夜里听到动静，先叫名字，再出声。",
+      "options": [
+        {
+          "key": "found",
+          "label": "「是我先找到这地方的。」",
+          "effects": {
+            "flags": {
+              "p_found_house": true
+            }
+          }
+        },
+        {
+          "key": "ours",
+          "label": "「不重要了。墙是我们的了。」",
+          "effects": {
+            "flags": {
+              "p_house_ours": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "p3_shelling",
+      "kind": "prologue",
+      "seq": 3,
+      "weight": 0,
+      "when": {
+        "chance": 0
+      },
+      "title": "序章 · 第一次征发",
+      "actor": "neighbor",
+      "text": "征发是第三天开始的。先是粮，然后是门版。你们把肉脯清点了一遍又一遍，像在数自己能活几天。\n门外有人跑过，有人喊了一个名字，又停了。第四天早上，隔壁的老人来借盐——他家里已经什么都没有了。",
+      "options": [
+        {
+          "key": "share",
+          "label": "分一份吃的给老人",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "reputation": {
+              "neighbor": 1
+            },
+            "flags": {
+              "p_shared": true
+            },
+            "text": "老人捧着那一份糙米，在门口站了很久。他记住的不只是吃的。"
+          }
+        },
+        {
+          "key": "hoard",
+          "label": "把吃的藏进地窖",
+          "effects": {
+            "flags": {
+              "p_hoard": true
+            },
+            "text": "地窖门吱呀一声关上。从那天起，你们清点肉脯的时候都压着声音。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "p4_door",
+      "kind": "prologue",
+      "seq": 4,
+      "weight": 0,
+      "when": {
+        "chance": 0
+      },
+      "title": "序章 · 敲门",
+      "actor": "stranger",
+      "text": "第五天，门环响了。一个不认识的男人站在雨里，怀里抱着个布包。他说可以给钱——布包里是他们家的传家宝。但他要的不是钱，是一晚上的墙。\n隔着门，你们听见他咳嗽，听见雨，听见远处的更鼓。",
+      "options": [
+        {
+          "key": "open",
+          "label": "让他进来",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "p_opened": true
+            },
+            "text": "他在门厅睡了一夜，天亮前走了。灶边留着他没舍得吃的半块麦饼。"
+          }
+        },
+        {
+          "key": "shut",
+          "label": "没开",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "flags": {
+              "p_refused": true
+            },
+            "text": "他在门外坐到天亮，走的时候把布包留在了门口。你们谁也没去碰。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "p5_dawn9",
+      "kind": "prologue",
+      "seq": 5,
+      "weight": 0,
+      "when": {
+        "chance": 0
+      },
+      "title": "序章 · 第九天的早晨",
+      "text": "第九天早上，更鼓在四更乱过一次，霖雨接管了城市。米价又涨了，露布栏的捷报写到了第七篇。\n你们是 {{names}}。墙上三个名字，桌上的账，门后的门闩。从今天起，每一天都是你们的了。",
+      "options": [
+        {
+          "key": "begin",
+          "label": "开始这一天",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "n_meds",
+      "kind": "knock",
+      "weight": 10,
+      "when": {
+        "phase": "any",
+        "chance": 1,
+        "once": false,
+        "cooldown": 8
+      },
+      "title": "敲门：求药",
+      "actor": "neighbor",
+      "text": "门环响了三下。是磨面妪家的儿媳妇，手指关节冻得发紫。\"婆婆的腿在发黑。你们有药吗？任何药。\"柜子里的裹创布和药瓮沉默着，此刻沉得像铅。",
+      "options": [
+        {
+          "key": "give",
+          "label": "给她裹创布或良药",
+          "requires": {
+            "anyItem": [
+              "bandage",
+              "meds",
+              "herbmed"
+            ]
+          },
+          "effects": {
+            "consumeChoice": [
+              "bandage",
+              "meds",
+              "herbmed"
+            ],
+            "mood": {
+              "all": 4
+            },
+            "reputation": {
+              "neighbor": 1
+            },
+            "flags": {
+              "helped_baker": true
+            }
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "抱歉地拒绝",
+          "effects": {
+            "mood": {
+              "softHearted": -3,
+              "default": -1
+            },
+            "reputation": {
+              "neighbor": -1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "n_veteran",
+      "kind": "knock",
+      "weight": 6,
+      "when": {
+        "phase": "any",
+        "minDay": 6,
+        "chance": 1,
+        "cooldown": 14
+      },
+      "title": "敲门：老屯卒的灯",
+      "actor": "neighbor",
+      "text": "街口守义仓的老屯卒来讨半碗油——仓房的灯不能灭，他说，灭了仓里的鼠比兵还凶。他咳了一声：「不白喝你们的。江上的事，我看过十一年。」",
+      "options": [
+        {
+          "key": "give",
+          "label": "给他一碗膏油",
+          "requires": {
+            "item": "fuel"
+          },
+          "effects": {
+            "consumeChoice": [
+              "fuel"
+            ],
+            "mood": {
+              "all": 2
+            },
+            "reputation": {
+              "neighbor": 1
+            },
+            "flags": {
+              "knows_frontline": true
+            },
+            "text": "他临走时往江的方向努了努嘴：「水门渡的旧垒，滩涂上全是没人敢去的东西。十一年的，今年的，都在那儿。」（新地点：水门渡旧垒）"
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "灯油金贵，回绝",
+          "effects": {
+            "mood": {
+              "default": -1
+            },
+            "reputation": {
+              "neighbor": -1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "n_tool",
+      "kind": "knock",
+      "weight": 8,
+      "when": {
+        "phase": "any",
+        "minDay": 4,
+        "chance": 1,
+        "cooldown": 10
+      },
+      "title": "敲门：借工具",
+      "actor": "neighbor",
+      "text": "楼下的老梓匠隔着门缝问：\"锸借我一天。巷口那些塌了的坊墙，我想给孩子们清出条道。\"",
+      "options": [
+        {
+          "key": "lend",
+          "label": "把锸借给他",
+          "requires": {
+            "item": "shovel"
+          },
+          "effects": {
+            "consumeChoice": [
+              "shovel"
+            ],
+            "mood": {
+              "all": 2
+            },
+            "reputation": {
+              "neighbor": 1
+            },
+            "flags": {
+              "lent_shovel": true,
+              "shovel_return_day": "+6"
+            }
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "工具不能借",
+          "effects": {
+            "mood": {
+              "default": -1
+            },
+            "reputation": {
+              "neighbor": -1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "n_thugs",
+      "kind": "knock",
+      "weight": 7,
+      "when": {
+        "phase": "any",
+        "minDay": 6,
+        "chance": 1,
+        "cooldown": 12
+      },
+      "title": "敲门：求援",
+      "actor": "neighbor",
+      "text": "隔壁缉麻的寡妇压着嗓子：\"有三个人在楼下盯了我们两天。今晚会来。我丈夫不在了——求你们，哪怕派个人站在门口。\"",
+      "options": [
+        {
+          "key": "help",
+          "label": "今晚派人协防（今夜不可外出）",
+          "effects": {
+            "flagTonight": "assist_neighbor",
+            "mood": {
+              "all": 2
+            },
+            "reputation": {
+              "neighbor": 1
+            },
+            "riskCheck": {
+              "difficulty": 8,
+              "onFail": {
+                "wound": 1,
+                "text": "混战中有人挨了一棍。"
+              },
+              "onPass": {
+                "mood": {
+                  "all": 3
+                }
+              }
+            }
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "关上门",
+          "effects": {
+            "mood": {
+              "softHearted": -3,
+              "default": -1
+            },
+            "reputation": {
+              "neighbor": -1
+            },
+            "flags": {
+              "widow_robbed": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "v_deserter",
+      "kind": "knock",
+      "weight": 5,
+      "when": {
+        "phase": "any",
+        "minDay": 3,
+        "chance": 1,
+        "once": true
+      },
+      "title": "奇访：逃兵",
+      "actor": "deserter",
+      "text": "一个没佩刀的士卒蜷在门厅角落，麻鞋磨穿了，怀里紧紧揣着什么。\"把我交出去也行。但求让我在屋里睡一夜——外面在抓。\"",
+      "options": [
+        {
+          "key": "shelter",
+          "label": "收留他一夜",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "riskCheck": {
+              "difficulty": 9,
+              "onFail": {
+                "stealValue": 6,
+                "mood": {
+                  "all": -3
+                }
+              },
+              "onPass": {
+                "mood": {
+                  "all": 2
+                },
+                "flags": {
+                  "deserter_thanks": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "让他去别处",
+          "effects": {
+            "mood": {
+              "default": -2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "i_yura_smoke",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "yura",
+        "minDay": 5,
+        "chance": 1,
+        "once": true
+      },
+      "title": "内部：阿禾的酒",
+      "actor": "yura",
+      "text": "阿禾躲在楼梯间，手里攥着半葫芦浊酒。被你撞见时，他没藏——他把葫芦举起来，像举一个问题。",
+      "options": [
+        {
+          "key": "talk",
+          "label": "坐下来跟他聊聊",
+          "effects": {
+            "mood": {
+              "yura": 2
+            },
+            "ap_cost": 1
+          }
+        },
+        {
+          "key": "scold",
+          "label": "没收，训斥",
+          "effects": {
+            "mood": {
+              "yura": -2
+            }
+          }
+        },
+        {
+          "key": "ignore",
+          "label": "装没看见",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "t_ceasefire1",
+      "kind": "timeline",
+      "when": {
+        "dayWindow": [
+          5,
+          8
+        ],
+        "once": true
+      },
+      "title": "市语：魏王要迁都",
+      "text": "市里说，樊城那边于禁都降了，魏王要迁都避将军的锋。酒肆里有人把藏了三周的浊酒拿了出来。白简盯着露布栏看了两遍，眉头没松。",
+      "options": [
+        {
+          "key": "hope",
+          "label": "听听就好",
+          "effects": {
+            "mood": {
+              "all": 2
+            },
+            "flags": {
+              "ceasefire1": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "t_massacre",
+      "kind": "timeline",
+      "when": {
+        "dayWindow": [
+          16,
+          18
+        ],
+        "requiresFlag": "ceasefire1",
+        "once": true
+      },
+      "title": "市语：湘关的米",
+      "text": "将军取了湘关的米——「擅取」，吴侯的使者过境质问，津戍动了刀，死了三个人。昨天还在说「迁都」的人都不出声了。有人把刚拿出来的浊酒又埋了回去。",
+      "options": [
+        {
+          "key": "grieve",
+          "label": "……",
+          "effects": {
+            "mood": {
+              "all": -4
+            },
+            "flags": {
+              "massacre1": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "t_ceasefire2",
+      "kind": "timeline",
+      "when": {
+        "dayWindow": [
+          22,
+          25
+        ],
+        "once": true
+      },
+      "title": "市语：新的调停人",
+      "text": "据说是襄阳来的商团在两边说和。磨面妪把这话传遍了整条里，说得有鼻子有眼。",
+      "options": [
+        {
+          "key": "hope",
+          "label": "但愿吧",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "ceasefire2": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "t_break2",
+      "kind": "timeline",
+      "when": {
+        "dayWindow": [
+          27,
+          30
+        ],
+        "requiresFlag": "ceasefire2",
+        "once": true
+      },
+      "title": "市语：又谈崩了",
+      "text": "这次连理由都没人说得清。黄昏的征发队变得密集，像谁在发脾气。",
+      "options": [
+        {
+          "key": "numb",
+          "label": "……",
+          "effects": {
+            "mood": {
+              "all": -3
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "t_curse41",
+      "kind": "timeline",
+      "when": {
+        "dayWindow": [
+          41,
+          44
+        ],
+        "once": true
+      },
+      "title": "敲门：老人讲古",
+      "text": "楼下最老的住户拄着杖来串门。\"江陵城啊，从来不是被打下来的。\"他浑浊的眼睛看着你们：\"十一年了。门开了两回，回回都是从里面。\"（兰台新词条：「门从里面开」）",
+      "options": [
+        {
+          "key": "listen",
+          "label": "送他到楼梯口",
+          "effects": {
+            "knowledge": 1,
+            "mood": {
+              "all": -1
+            },
+            "flags": {
+              "curse_spoken": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_looter",
+      "kind": "script",
+      "for": "looter_with_knife",
+      "title": "米缸后面的人",
+      "text": "烧塌的铺面后有声响——人，活的，带着刀。军衣不合身，饿得手都在抖。他喊了一句南阳土话：\"出去！这是我的！\"",
+      "options": [
+        {
+          "key": "share",
+          "label": "放下食物，慢慢退开",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            },
+            {
+              "item": "canned",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "actor": 1
+            },
+            "flags": {
+              "knows_post": true
+            },
+            "npcState": {
+              "m_looter": "calmed"
+            },
+            "text": "他盯着你和食物看了很久，掰了半份推回来。\"南市是我的。但——驿亭的死信库，没人翻。我发誓。\""
+          }
+        },
+        {
+          "key": "sneak",
+          "label": "贴着断墙潜行绕过",
+          "riskCheck": {
+            "difficulty": 8,
+            "stealth": true,
+            "onPass": {
+              "text": "他翻他的，你走你的。两种饥饿擦肩而过。"
+            },
+            "onFail": {
+              "combat": "m_looter",
+              "text": "碎陶替你出了声。"
+            }
+          }
+        },
+        {
+          "key": "attack",
+          "label": "先下手",
+          "riskCheck": {
+            "difficulty": 7,
+            "ambush": true,
+            "onPass": {
+              "npcState": {
+                "m_looter": "down"
+              },
+              "text": "他倒下了，刀掉在地上。现在选择权在你手里。"
+            },
+            "onFail": {
+              "combat": "m_looter",
+              "text": "他比你想象的快。"
+            }
+          }
+        },
+        {
+          "key": "retreat",
+          "label": "退出南市",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_priest",
+      "kind": "script",
+      "for": "priest_intro",
+      "title": "守藏吏",
+      "text": "他把最后半袋麸分给了比你们先来的人，然后向你们摊开空空的手。\"里社不藏粮。但——如果你们去驿亭，死信库里，有这座城没说完的话。\"",
+      "options": [
+        {
+          "key": "thanks",
+          "label": "道谢离开",
+          "effects": {
+            "flags": {
+              "knows_post": true
+            },
+            "mood": {
+              "actor": 1
+            }
+          }
+        },
+        {
+          "key": "donate",
+          "label": "留下一些食物",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "all": 2
+            },
+            "reputation": {
+              "church": 1
+            },
+            "flags": {
+              "knows_post": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_tamara",
+      "kind": "script",
+      "for": "tamara_intro",
+      "title": "杜仲",
+      "text": "她扫了一眼你们中间能站直的人，没问军籍。\"我不卖药。但我换——食物，干净的麻布。还有，\"她压低声音，\"别在我的棚里谈樊城的捷报。伤兵的疮口，比露布诚实。\"",
+      "options": [
+        {
+          "key": "donate",
+          "label": "捐出药品",
+          "requires": {
+            "anyItem": [
+              "bandage",
+              "meds"
+            ]
+          },
+          "cost": [
+            {
+              "item": "bandage",
+              "n": 1
+            },
+            {
+              "item": "meds",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "all": 4
+            },
+            "reputation": {
+              "hospital": 1
+            }
+          }
+        },
+        {
+          "key": "trade",
+          "label": "以物易物",
+          "effects": {
+            "openTrade": "hospital"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "离开",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "i_zofia_hum",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "zofia",
+        "minDay": 4,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：她哼的那一段",
+      "actor": "zofia",
+      "text": "深夜，素徽对着那张断弦的琴哼了一段——三短，一长，三短。哼到一半她停住了，像被自己的声音烫到。是《蒿里》。送葬的调子。",
+      "options": [
+        {
+          "key": "listen",
+          "label": "安静地听一会儿",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "zofia_hum": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "不打扰她",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "i_vera_stamps",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "vera",
+        "minDay": 5,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：编号段",
+      "actor": "vera",
+      "text": "薄姑把一道旧符传翻来覆去看了三遍，指尖沿着编号段划。注意到你的目光，她把帛收了起来：\"没什么。格式眼熟而已。\"",
+      "options": [
+        {
+          "key": "ask",
+          "label": "问她眼熟什么",
+          "effects": {
+            "mood": {
+              "vera": -1
+            },
+            "flags": {
+              "vera_ledger_hint": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "不追问",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "i_katya_tape",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "katya",
+        "minDay": 6,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：他不看的那沓底稿",
+      "actor": "katya",
+      "text": "你提起誊抄所存档的旧露布。白简搅蜜水的手停了半秒，换了个话题。那是他学徒生涯里唯一不想核对的东西。",
+      "options": [
+        {
+          "key": "press",
+          "label": "追问",
+          "effects": {
+            "mood": {
+              "katya": -1
+            },
+            "flags": {
+              "katya_guilt": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "算了",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "i_alexey_leg",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "alexey",
+        "minDay": 5,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：阴天先迈哪条腿",
+      "actor": "alexey",
+      "text": "阴天。逄灶揉着左腿，停了半秒才站起来。你注意到他从来不提建安十三年那夜他去了哪里。",
+      "options": [
+        {
+          "key": "tea",
+          "label": "递他一碗热水",
+          "effects": {
+            "mood": {
+              "alexey": 1
+            },
+            "flags": {
+              "alexey_leg": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "装作没看见",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "i_bron_locks",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "bron",
+        "minDay": 4,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：第三遍门闩",
+      "actor": "bron",
+      "text": "夜里第三次，石大起身检查门闩。动作很轻，像怕吵醒谁——也像怕确认什么。",
+      "options": [
+        {
+          "key": "join",
+          "label": "起来陪他查一遍",
+          "effects": {
+            "mood": {
+              "bron": 1
+            },
+            "flags": {
+              "bron_locks": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "翻身装睡",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "i_yura_sugar",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "yura",
+        "minDay": 4,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：鞋边的半块饴",
+      "actor": "yura",
+      "text": "阿禾把半块饴放在今晚守夜人的鞋边，动作熟练得像做过很多次。看见你，他把手背到身后：\"我没偷吃。\"",
+      "options": [
+        {
+          "key": "pat",
+          "label": "摸摸他的头",
+          "effects": {
+            "mood": {
+              "yura": 2
+            },
+            "flags": {
+              "yura_sugar": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "装作没看见",
+          "effects": {
+            "mood": {
+              "yura": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "i_marta_name",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "marta",
+        "minDay": 5,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：药结上的名字",
+      "actor": "marta",
+      "text": "辛夷给裹创布打结，嘴唇无声地动了一下——像念一个名字。察觉到你的视线，她的手没有停，只是结打得更紧了。",
+      "options": [
+        {
+          "key": "ask",
+          "label": "问那是谁",
+          "effects": {
+            "mood": {
+              "marta": -1
+            },
+            "flags": {
+              "marta_ilya": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "不问",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "i_anton_ledger",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "anton",
+        "minDay": 4,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：名单",
+      "actor": "anton",
+      "text": "文简对账对到一半停了笔。那一页写满名字，不是物资，是人名。他察觉到你在看：\"我的学生。\"他说完就合上了本子。",
+      "options": [
+        {
+          "key": "ask",
+          "label": "问他们还活着吗",
+          "effects": {
+            "mood": {
+              "anton": -1
+            },
+            "flags": {
+              "anton_roster": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "不打扰",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "i_pair_doorplank",
+      "kind": "internal",
+      "weight": 8,
+      "when": {
+        "requiresChars": [
+          "vera",
+          "grigory"
+        ],
+        "minDay": 10,
+        "chance": 1,
+        "once": true
+      },
+      "title": "裂缝：门版上的编号",
+      "actor": "vera",
+      "text": "大柯把一块旧门版靠在墙边——背面的征发编号朝外。薄姑经过时站住了，盯着那串编号看了很久。两个人都没说话。屋里的空气结了一层薄冰。",
+      "options": [
+        {
+          "key": "ask",
+          "label": "问那块门版怎么了",
+          "effects": {
+            "mood": {
+              "vera": -1,
+              "grigory": -1
+            },
+            "flags": {
+              "pair_door_seen": true
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "什么都不问",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "r_zofia",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "zofia",
+        "requiresFlag": "zofia_hum",
+        "minDay": 9,
+        "chance": 1,
+        "once": true
+      },
+      "title": "揭示：替名字报到的人",
+      "actor": "zofia",
+      "text": "素徽把门带上，才开口：征发名单上本来是她的名字——乐户征为营伎。哥哥拿着征书去了屯候所，登记官抄没抄错名字，没人知道。\"我哥在江边第三台。不——\"她改口，\"他成了「白翎」。水门渡那个。\"",
+      "options": [
+        {
+          "key": "hear",
+          "label": "听她说完",
+          "effects": {
+            "mood": {
+              "zofia": -2
+            },
+            "knowledge": 1,
+            "flags": {
+              "zofia_brother": true
+            }
+          }
+        },
+        {
+          "key": "hold",
+          "label": "握住她的肩，什么都不问",
+          "effects": {
+            "mood": {
+              "zofia": 1
+            },
+            "flags": {
+              "zofia_brother": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_vera",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "vera",
+        "requiresFlag": "vera_ledger_hint",
+        "minDay": 9,
+        "chance": 1,
+        "once": true
+      },
+      "title": "揭示：第 413 枚检",
+      "actor": "vera",
+      "text": "薄姑把私人簿记推过来：围城前一周她封了 412 枚检署。第 413 枚她停了——那道符传要征走一所乡塾的全部孩子「输运工事」。\"我回头去查。前面 412 道里，有 17 道的编号段根本不属于军需曹。有人用府库的纸、府库的检，发自己的令。\"",
+      "options": [
+        {
+          "key": "hear",
+          "label": "记下这 17 道",
+          "effects": {
+            "mood": {
+              "vera": -2
+            },
+            "knowledge": 1,
+            "flags": {
+              "vera_confessed": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_katya",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "katya",
+        "requiresFlag": "katya_guilt",
+        "minDay": 10,
+        "chance": 1,
+        "once": true
+      },
+      "title": "揭示：进城前誊的那版",
+      "actor": "katya",
+      "text": "\"降卒进城前三天，所里让我誊「降卒营无恙」。我誊了。\"白简把碗放下，\"第二周疫病传开，三百人。我摔了笔——换人继续誊。所以我核对每一个字。我欠的。\"",
+      "options": [
+        {
+          "key": "hear",
+          "label": "你欠的不是他们",
+          "effects": {
+            "mood": {
+              "katya": -2
+            },
+            "knowledge": 1,
+            "flags": {
+              "katya_confessed": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_alexey",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "alexey",
+        "requiresFlag": "alexey_leg",
+        "minDay": 9,
+        "chance": 1,
+        "once": true
+      },
+      "title": "揭示：建安十三年那夜",
+      "actor": "alexey",
+      "text": "逄灶难得开口：十一年前的冬夜，曹仁弃城。他去抢修北津台的烽绳——那堆火要是举起来，全城都会知道城被弃了。自己人按「惑乱军心」打断了他的腿。\"腿没事。\"他说，\"可惜的是那夜的火没举起来。\"",
+      "options": [
+        {
+          "key": "hear",
+          "label": "听完",
+          "effects": {
+            "mood": {
+              "alexey": 1
+            },
+            "knowledge": 1,
+            "flags": {
+              "alexey_confessed": true,
+              "knows_beacon": true
+            },
+            "text": "他想了想，又说：「北津台的鼓架还在。哪天要去，我带路——或者你替我去。」（新地点：北津台）"
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_bron",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "bron",
+        "requiresFlag": "bron_locks",
+        "minDay": 8,
+        "chance": 1,
+        "once": true
+      },
+      "title": "揭示：七人与一人",
+      "actor": "bron",
+      "text": "石大盯着炉火：\"周瑜攻城那年，南市大火。七个，还是一个，我选了七个。\"他把铁撬放下。\"那个一，是我徒弟，第一天当值。\"他不说下去了。门闩他今晚查了第四遍。",
+      "options": [
+        {
+          "key": "hear",
+          "label": "你做的是对的",
+          "effects": {
+            "mood": {
+              "bron": -2
+            },
+            "flags": {
+              "bron_confessed": true
+            }
+          }
+        },
+        {
+          "key": "sit",
+          "label": "陪他坐到天亮",
+          "effects": {
+            "mood": {
+              "bron": 2
+            },
+            "flags": {
+              "bron_confessed": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_yura",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "yura",
+        "requiresFlag": "yura_sugar",
+        "minDay": 8,
+        "chance": 1,
+        "once": true
+      },
+      "title": "揭示：水窦",
+      "actor": "yura",
+      "text": "阿禾的声音很小：队伍在津戍被拦下来的时候，姐姐把他塞进了水窦。\"她说告诉别人我们都很好。\"他顿了顿，\"我等了更鼓敲了两遍。\"他没说父母——他夜里喊的从来是姐。",
+      "options": [
+        {
+          "key": "hear",
+          "label": "抱住他",
+          "effects": {
+            "mood": {
+              "yura": -2,
+              "all": -1
+            },
+            "flags": {
+              "yura_sister": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_marta",
+      "kind": "internal",
+      "weight": 6,
+      "when": {
+        "requiresChar": "marta",
+        "requiresFlag": "marta_ilya",
+        "minDay": 9,
+        "chance": 1,
+        "once": true
+      },
+      "title": "揭示：小满",
+      "actor": "marta",
+      "text": "\"建安十三年，疫营。药只有一份。\"辛夷捣药的手没停，\"我给了更有希望的那个。另一个叫小满。\"她抬眼，\"别安慰我。我救每一个人，是因为不救我会死——不是因为我善良。\"",
+      "options": [
+        {
+          "key": "hear",
+          "label": "那就别安慰",
+          "effects": {
+            "mood": {
+              "marta": -2
+            },
+            "flags": {
+              "marta_confessed": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "i_pair_doorplank_2",
+      "kind": "internal",
+      "weight": 8,
+      "when": {
+        "requiresChars": [
+          "vera",
+          "grigory"
+        ],
+        "requiresFlag": "pair_door_seen",
+        "minDay": 14,
+        "chance": 1,
+        "once": true
+      },
+      "title": "对峙：那块门版",
+      "actor": "vera",
+      "text": "晚饭没人动箸。大柯把那块门版放到桌上，编号朝上，推到薄姑面前。薄姑看了很久，说：\"是我封的。\"大柯没说话。两个人隔着一块木头坐着，等你开口。",
+      "options": [
+        {
+          "key": "mediate",
+          "label": "\"她封的时候不知道是你家。\"——\"她也没问。\"让两人把话说完",
+          "effects": {
+            "mood": {
+              "vera": 1,
+              "grigory": 1
+            },
+            "flags": {
+              "pair_door_peace": true
+            },
+            "text": "那一夜没人睡。天亮时，大柯把薄姑漏风的窗修好了。薄姑把门版上的编号抄进了她的私人簿记。两个人都没道歉，但都记住了。"
+          }
+        },
+        {
+          "key": "silence",
+          "label": "让时间解决",
+          "effects": {
+            "mood": {
+              "vera": -2,
+              "grigory": -2
+            },
+            "flags": {
+              "pair_door_cold": true
+            },
+            "text": "门版回了墙角。窗还是漏风。他们继续在同一张桌上吃饭，只是不再说话。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "i_anton_quest",
+      "kind": "internal",
+      "weight": 7,
+      "when": {
+        "requiresChar": "anton",
+        "requiresFlag": "anton_roster",
+        "minDay": 8,
+        "chance": 1,
+        "once": true
+      },
+      "title": "寻女：旧地址",
+      "actor": "anton",
+      "text": "文简把一片折了四折的帛递给你：公安的旧地址，他女儿的。\"驿亭要是还运转，死信库也许有她的信。\"他的手在抖，\"求你。\"",
+      "options": [
+        {
+          "key": "accept",
+          "label": "答应他去查死信库",
+          "effects": {
+            "flags": {
+              "anton_quest": true
+            },
+            "mood": {
+              "anton": 2
+            }
+          }
+        },
+        {
+          "key": "later",
+          "label": "现在不行",
+          "effects": {
+            "mood": {
+              "anton": -1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "i_anton_choice",
+      "kind": "internal",
+      "weight": 8,
+      "when": {
+        "requiresChar": "anton",
+        "requiresFlag": "anton_letter",
+        "chance": 1,
+        "once": true
+      },
+      "title": "抉择：给不给他看这封信",
+      "actor": "anton",
+      "text": "信在你手里。信封上的地址被雨浸掉了一半。文简看着你，没有伸手——他在等你决定他该不该知道。",
+      "options": [
+        {
+          "key": "truth",
+          "label": "把信给他，让他自己决定",
+          "effects": {
+            "flags": {
+              "anton_truth": true,
+              "anton_return_day": "+3"
+            },
+            "mood": {
+              "anton": -2
+            }
+          }
+        },
+        {
+          "key": "hope",
+          "label": "收下信，告诉他渡口太险",
+          "effects": {
+            "flags": {
+              "anton_hope": true
+            },
+            "mood": {
+              "anton": 1
+            },
+            "text": "文简盯着你袖袋的位置看了很久，点了点头。有些谎是棉被，有些谎是锁链。你选了棉被。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "i_anton_end",
+      "kind": "internal",
+      "weight": 10,
+      "when": {
+        "requiresChar": "anton",
+        "flagDayGte": "anton_return_day",
+        "chance": 1,
+        "once": true
+      },
+      "title": "寻女：他回来了",
+      "actor": "anton",
+      "text": "文简天不亮就走了。第三天黄昏，门口有他的脚步声——你数得出来，那脚步和走时不一样。",
+      "options": [
+        {
+          "key": "face",
+          "label": "迎上去",
+          "riskCheck": {
+            "difficulty": 7,
+            "onPass": {
+              "mood": {
+                "anton": 8,
+                "all": 3
+              },
+              "knowledge": 1,
+              "flags": {
+                "anton_reunited": true
+              },
+              "text": "他身后没人，但他眼睛里有人：公安的土地祠里，她活着，在教十一个孩子认字。她让他带回一沓涂鸦——太阳、房子、和三个手拉手的小人。文简把账本翻开新的一页，写：「今日收入：全部。」"
+            },
+            "onCost": {
+              "mood": {
+                "anton": 8,
+                "all": 3
+              },
+              "knowledge": 1,
+              "flags": {
+                "anton_reunited": true
+              },
+              "text": "他身后没人，但他眼睛里有人：公安的土地祠里，她活着，在教十一个孩子认字。她让他带回一沓涂鸦。文简把账本翻开新的一页，写：「今日收入：全部。」"
+            },
+            "onFail": {
+              "mood": {
+                "anton": -10,
+                "all": -3
+              },
+              "flags": {
+                "anton_lost": true
+              },
+              "text": "他一个人回来的。土地祠在两周前的疫病名录上。文简把账本合上，那页名单从此没有再打开过。——崩溃链随时可能开始，他需要人陪。"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_rhythm_hear",
+      "kind": "script",
+      "for": "loc:frontline",
+      "when": {
+        "requiresChar": "zofia"
+      },
+      "title": "她听出来了",
+      "text": "箭声从渡口箭楼的方向来。素徽忽然按住你的手腕：别动。她侧着头，嘴唇跟着箭声数——三短，一长，三短。她的脸色变了：\"这是《蒿里》。哥哥改过的版本。\"她往前一步又停住，\"可是换气的地方不对。\"",
+      "options": [
+        {
+          "key": "note",
+          "label": "记下节奏，退回掩体",
+          "effects": {
+            "knowledge": 1,
+            "mood": {
+              "zofia": -2
+            },
+            "flags": {
+              "crossing_heard": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_rhythm_face",
+      "kind": "script",
+      "for": "loc:frontline",
+      "when": {
+        "requiresFlag": "crossing_heard",
+        "requiresChar": "zofia"
+      },
+      "title": "箭楼下",
+      "text": "走近了才看清：箭楼上的人很年轻，箭壶空了一半，照着一页抄来的节奏表放箭。素徽在你身后，呼吸没有声音。",
+      "options": [
+        {
+          "key": "fight",
+          "label": "强攻箭楼（让渡口从此安静）",
+          "riskCheck": {
+            "difficulty": 8,
+            "combat": true,
+            "onPass": {
+              "npcState": {
+                "bailing": "down"
+              },
+              "mood": {
+                "zofia": -6
+              },
+              "knowledge": 1,
+              "flags": {
+                "bailing_dead": true
+              },
+              "text": "箭楼安静了。渡口从此能过人。素徽没有看台上，她看着江——她找到的不是哥哥，现在连遗物也没有了。"
+            },
+            "onFail": {
+              "combat": "bailing",
+              "text": "他按拍子放箭，比你想的快。"
+            }
+          }
+        },
+        {
+          "key": "detour",
+          "label": "绕行（渡口的箭继续替别人守着）",
+          "effects": {
+            "flags": {
+              "crossing_detour": true
+            },
+            "text": "你们绕着射界走完了这一夜。身后箭声没有停，三短，一长，像在给谁数更。"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "退回去",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_rhythm_gift",
+      "kind": "script",
+      "for": "loc:frontline",
+      "when": {
+        "requiresChar": "zofia",
+        "requiresFlag": "crossing_heard",
+        "requiresDoc": "#028"
+      },
+      "title": "把鼓谱送过去",
+      "text": "素徽从怀里取出那页鼓谱残页——地窖暗格里的那张。\"照死人鼓谱放箭的人，\"她把鼓谱绑上箭，\"看到原作者的笔迹，会停下来想一想自己在念什么。\"箭楼方向的箭声还在按拍子走。",
+      "options": [
+        {
+          "key": "gift",
+          "label": "射过去",
+          "riskCheck": {
+            "difficulty": 8,
+            "onPass": {
+              "flags": {
+                "crossing_hushed_until": "+1",
+                "crossing_gift": true
+              },
+              "mood": {
+                "zofia": 2
+              },
+              "knowledge": 1,
+              "text": "箭落在射界里。很久，箭楼没有声音。然后你听见了：不是箭声，是一段被埙吹奏的、走调的旋律——他在照着念，第一次念对了换气的地方。今夜，渡口没有箭声。"
+            },
+            "onCost": {
+              "flags": {
+                "crossing_hushed_until": "+1",
+                "crossing_gift": true
+              },
+              "text": "箭擦着墙落进射界。箭声停了半拍——只有半拍，但那半拍里有人犹豫了。今夜渡口大概安全。"
+            },
+            "onFail": {
+              "text": "箭还没离弦，箭声先响了。你把她按回掩体，流矢咬在你们头顶的夯土上，按着《蒿里》的拍子。"
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "把鼓谱收好，今晚先撤",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "t_lighthouse",
+      "kind": "internal",
+      "weight": 10,
+      "when": {
+        "knowledge": 12,
+        "requiresDocs": [
+          "#039",
+          "#045",
+          "#055"
+        ],
+        "requiresChar": "alexey",
+        "requiresFacility": "radio",
+        "minDay": 10,
+        "chance": 1,
+        "once": false,
+        "cooldown": 4
+      },
+      "title": "还师：烽鼓具齐备了",
+      "actor": "alexey",
+      "text": "逄灶把最后一面鼓架上，火篮试了火。三份铁证摊在桌上：魏吴券书抄件、誊抄所底稿、屯候更籍抄件。\"今晚可以把真相送过三道津戍，送上北津台。\"他看着你，\"想清楚——鼓声响出去，就收不回来。\"",
+      "options": [
+        {
+          "key": "launch",
+          "label": "启动《还师》：今夜把铁证送上烽台",
+          "effects": {
+            "flags": {
+              "lighthouse_day": "+3"
+            },
+            "mood": {
+              "all": 5
+            },
+            "text": "逄灶开始整理干薪与艾。白简若在，他会写下露布的第一句话；不在，你自己写。三天后，全城的城门都会贴满。"
+          }
+        },
+        {
+          "key": "wait",
+          "label": "再等等",
+          "effects": {
+            "flags": {
+              "lighthouse_declined": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "t_table_offer",
+      "kind": "internal",
+      "weight": 8,
+      "when": {
+        "requiresAnyDoc": [
+          "#033",
+          "#052"
+        ],
+        "minDay": 20,
+        "chance": 1,
+        "once": false,
+        "cooldown": 5
+      },
+      "title": "鲁舟的非正式拜访",
+      "actor": "franko",
+      "text": "鲁舟收摊没走。黄昏里他压低了斗笠：\"你手里那些纸……有人愿意出大价钱。一条下江的船，三张符传，全家都上得去。条件是沉默。\"他的手在抖，\"我见过接受的人后来去了哪。但我还是得问。\"",
+      "options": [
+        {
+          "key": "accept",
+          "label": "接受：船与符传，代价是沉默",
+          "effects": {
+            "flags": {
+              "join_table": true
+            },
+            "text": "鲁舟没敢看你的眼睛。\"逢双日，\"他说，\"船在江津。\"你活着离开了江陵。江陵没有。"
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "拒绝",
+          "effects": {
+            "flags": {
+              "refused_table": true,
+              "franko_gone": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "鲁舟点点头，像早就知道。他解缆撑船，消失在江雾里——从那以后，再也没人在逢双日泊过这道渡口。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "alt_jiangling",
+      "kind": "internal",
+      "weight": 0,
+      "when": {
+        "chance": 0,
+        "maxDay": 30
+      },
+      "title": "火线：证据交给谁",
+      "actor": "player",
+      "text": "大仓火场的勘验和太守府长史的手令残牍都在你手里——烧军械的火，是守城的人自己下的订单。这种事，报给军正，会死无葬身之地；烧了，一了百了。\n还有第三条路：治中潘濬闭门不出，但他府上收里社渠道递进去的死信。你不放心过文修的手——可全城只有这条渠道，接得住这份纸。",
+      "options": [
+        {
+          "key": "deliver",
+          "label": "通过里社，递进治中府",
+          "effects": {
+            "flags": {
+              "alt_jiangling": true
+            },
+            "knowledge": 2,
+            "mood": {
+              "all": 2
+            },
+            "text": "三天后，军正府的人盯上了太守府的长史。没人被捕，没人喊冤，但纪南大仓再没着过第二把火，北津门的门轴干得发涩。城还在原轨上——只是那扇备好的门，没了。"
+          }
+        },
+        {
+          "key": "burn",
+          "label": "烧了它，这种事不该落在小人物手里",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "flags": {
+              "alt_burned": true
+            },
+            "text": "灰飘出院子的时候，你觉得自己听见有人在很远的地方打算盘。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "alt_maicheng_drum",
+      "kind": "internal",
+      "weight": 0,
+      "when": {
+        "chance": 0,
+        "eveOfWarEnd": true
+      },
+      "title": "交割前夜：北津台的鼓",
+      "actor": "zofia",
+      "text": "明天城就要开了——你们都知道。素徽站在窗边听了很久：「鼓要是从北津台响起来，樊城能早一夜听见。」逄灶在擦火镰，没抬头：「台我能修。鼓她能敲。」他顿了顿，「就一夜。」\n（选了这个，黄昏就把人派去北津台。）",
+      "options": [
+        {
+          "key": "go",
+          "label": "上北津台：修台、举火、照鼓谱击鼓",
+          "effects": {
+            "flags": {
+              "alt_maicheng_attempt": true
+            },
+            "text": "黄昏就去。逄灶午后已经先去看了台基——台上的活计，只有今夜。"
+          }
+        },
+        {
+          "key": "stay",
+          "label": "守在家里",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "text": "那一夜很静。你们都醒着，听塔的方向。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_wish_letter",
+      "kind": "script",
+      "for": "loc:post",
+      "when": {
+        "requiresFlag": "wish_active"
+      },
+      "title": "死信库里熟悉的名字",
+      "text": "麻袋最上面压着一封信，没系绳——{{wish_name}}的笔迹。信封边角被攥得发皱。你不该认得这笔字，但手比记忆先动了一下。",
+      "options": [
+        {
+          "key": "deliver",
+          "label": "替他送到里社去",
+          "effects": {
+            "flags": {
+              "wish_fulfilled": true,
+              "wish_active": false
+            },
+            "mood": {
+              "all": 2
+            },
+            "text": "文修接过信，没问是谁的。他把信压在施粥棚的木牌下——那里人人都看得见。（遗愿已偿）"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "放回麻袋",
+          "effects": {
+            "text": "信沉回纸堆里。有些话说不出，就不该被寄出。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "n_sewer_rat",
+      "kind": "knock",
+      "weight": 6,
+      "when": {
+        "phase": "any",
+        "minDay": 4,
+        "chance": 1,
+        "cooldown": 12
+      },
+      "title": "敲门：濠里的孩子",
+      "actor": "stranger",
+      "text": "门缝里塞进来一只脏手，掌心向上。一个孩子在门外蹲着：「给口吃的。城濠里什么都能换——路、话、还有人扔下去的东西。」",
+      "options": [
+        {
+          "key": "give",
+          "label": "给一份糙米",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "knows_sewer": true
+            },
+            "text": "孩子三口吃完，舔舔掌心：「濠边第三棵柳，夜里有人。」（新地点：城濠水窦）"
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "摆手让他走",
+          "effects": {
+            "mood": {
+              "default": -1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_sewer",
+      "kind": "script",
+      "for": "sewer_intro",
+      "title": "濠鼠中间人",
+      "text": "窝棚里的人数着你带的吃食，不看你的脸。「濠里的规矩：吃的换话。问吧——哪里的水、哪堵墙的洞、哪一夜的事，价不一样。」",
+      "options": [
+        {
+          "key": "intel",
+          "label": "两份糙米换一地消息",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 2
+            }
+          ],
+          "effects": {
+            "knowledge": 1,
+            "flags": {
+              "sewer_intel": true
+            },
+            "text": "他告诉你哪几条水窦通到城里，哪几夜的津戍换得最乱。都是些不要命才有用的路。"
+          }
+        },
+        {
+          "key": "witness",
+          "label": "问大仓失火那夜（需读过 #058）",
+          "requires": {
+            "doc": "#058"
+          },
+          "cost": [
+            {
+              "item": "raw",
+              "n": 2
+            }
+          ],
+          "effects": {
+            "knowledge": 1,
+            "flags": {
+              "fire_witness": true
+            },
+            "text": "他盯着火堆看了很久。「那夜有人在濠边扔东西——一只火折子，一把赏钱。我们的人捡了。点火的从水窦走的，不是从门。」（濠鼠活证：火线勘破的人证齐了）"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "离开",
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "s_beacon_1",
+      "kind": "script",
+      "for": "loc:beacon",
+      "when": {
+        "requiresFlag": "alt_maicheng_attempt"
+      },
+      "title": "台基",
+      "text": "北津台塌了半面，台基的梁歪着。逄灶白天来收拾过——楔子都打好了，只差人把它扶起来。坡下的江声很低。",
+      "options": [
+        {
+          "key": "fix",
+          "label": "扶起台基，架好火盆",
+          "effects": {
+            "flags": {
+              "beacon_step1": true
+            },
+            "text": "梁归位的时候，整座台轻响了一声，像一口很久没发声的乐器。"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "今晚先撤",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_beacon_2",
+      "kind": "script",
+      "for": "loc:beacon",
+      "when": {
+        "requiresFlag": "beacon_step1"
+      },
+      "title": "举火",
+      "text": "火盆里是干薪和艾。火镰擦到第三下，火着了——台顶的视野一下铺开，江上的黑一层一层。",
+      "options": [
+        {
+          "key": "fire",
+          "label": "把火盆端到台顶",
+          "effects": {
+            "flags": {
+              "beacon_step2": true
+            },
+            "text": "火上了台顶。接下来只剩那支曲子。"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "撤",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_beacon_3",
+      "kind": "script",
+      "for": "loc:beacon",
+      "when": {
+        "requiresFlag": "beacon_step2",
+        "requiresChar": "zofia"
+      },
+      "title": "击鼓",
+      "text": "鼓在架上。素徽的手指搭上鼓槌，悬了很久。她说：「我数得出来。哥在哪儿偷气，我都知道。」",
+      "options": [
+        {
+          "key": "drum",
+          "label": "照鼓谱击鼓：《蒿里》，三短一长",
+          "riskCheck": {
+            "difficulty": 10,
+            "onPass": {
+              "flags": {
+                "alt_maicheng": true
+              },
+              "knowledge": 1,
+              "text": "鼓声滚出去了。三短，一长，第四小节前偷半口气——烽燧链一座接一座亮起来，一路亮到樊城方向。"
+            },
+            "onCost": {
+              "flags": {
+                "alt_maicheng": true
+              },
+              "mood": {
+                "zofia": -3
+              },
+              "text": "鼓声滚出去了，只是她回来时没说话，指甲缝里全是灰。够了——链上的台，醒了。"
+            },
+            "onFail": {
+              "mood": {
+                "zofia": -2
+              },
+              "text": "第三遍的时候乱了拍子。下游没有台回应。她放下鼓槌，像放下别的什么。"
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "不敲了，回家",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_beacon_3_fail",
+      "kind": "script",
+      "for": "loc:beacon",
+      "when": {
+        "requiresFlag": "beacon_step2"
+      },
+      "title": "鼓在架上",
+      "text": "鼓在架上，火在烧。但今夜来的人不会那支挽歌——这支曲子认人。",
+      "options": [
+        {
+          "key": "leave",
+          "label": "撤（得让素徽来）",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    }
+  ],
+  "broadcasts": {
+    "$comment": "内核设计-v0.2 §8.5 信息三渠道（本作无收音机：烽鼓具=听更/看榜位）。needRadio=true 对应设施 radio（烽鼓具）。musicMood 限每 3 天一次。",
+    "warNewsPool": [
+      {
+        "id": "bn1",
+        "text": "露布栏新榜：樊城再捷，斩获无算。（夜里渡口的箭却整夜没停）",
+        "katya_note": "白简：上周的榜也是这四个字——削了日期重贴的。"
+      },
+      {
+        "id": "bn2",
+        "text": "露布：吴侯遣使通好，孙刘一家，共讨国贼。",
+        "katya_note": "白简：「通好」两个字，这个月换了三种写法。越描越黑。"
+      },
+      {
+        "id": "bn3",
+        "text": "榜谕：宵禁提前至戌时，米粟凭粢引粜卖。",
+        "katya_note": ""
+      }
+    ],
+    "weather": {
+      "text": "看榜的老者眯着眼读榜角的干支，说明天{{tomorrow_weather}}——他的老寒腿比榜准。"
+    },
+    "music": {
+      "text": "邻里有谁击了一声筑，不成调，有人跟着哼。",
+      "mood": {
+        "all": 1
+      },
+      "cooldownDays": 3
+    },
+    "missing": {
+      "text": "榜尾寻人：……「素伯，屯候鼓手，江边第三台，建安二十四年夏未归」……",
+      "requiresChar": "zofia",
+      "mood": {
+        "zofia": -2
+      },
+      "knowledge": 1,
+      "once": true
+    }
+  }
+}

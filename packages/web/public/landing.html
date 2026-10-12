@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>第 41 天 · 江陵</title>
+<link rel="stylesheet" href="/assets/fonts/fonts.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body data-phase="day">
+<!-- 图标库：炭笔制图风单色线稿（icons.js 注入 symbol） -->
+<div id="icon-sprite" hidden></div>
+<!-- 书脊：竖排的刊名旁注 -->
+<div class="spine" aria-hidden="true">江陵 · 建安二十四年秋 · 生存纪事</div>
+
+<div id="landing">
+  <section class="panel paper cover">
+    <div class="seal" aria-hidden="true">江陵</div>
+    <p class="kicker">江陵 · 水淹七军后的第九日</p>
+    <h1>第 <em>41</em> 天</h1>
+    <p class="subtitle">生 存 纪 事</p>
+    <p class="lede">米价三天翻了一倍，更鼓成了钟表。橘里九号——里坊深处的老屋，堂屋里有一张断弦的琴。三个名字写在了门后的墙上。</p>
+    <p class="hint">写下一个名字，住进去。你的避难所、档案馆与每一步选择，都会记住你。</p>
+
+    <!-- 本期目录：一栏炭笔小图，告诉来客这座城将如何呈现 -->
+    <div class="cover-toc" aria-label="游戏内容一览">
+      <span><svg class="icon"><use href="#i-news"/></svg>晨报纪事</span>
+      <span><svg class="icon"><use href="#i-door"/></svg>庇护所剖面</span>
+      <span><svg class="icon"><use href="#i-moon"/></svg>夜访火柴</span>
+      <span><svg class="icon"><use href="#i-scale"/></svg>以物易物</span>
+      <span><svg class="icon"><use href="#i-archivei"/></svg>跨局档案馆</span>
+    </div>
+
+    <!-- 已登录：直接进 -->
+    <div id="welcome" class="landing-form" hidden>
+      <p id="welcome-text"></p>
+      <div class="landing-row">
+        <button id="btn-enter" class="primary">回到围城</button>
+        <button id="btn-logout" class="ghost">退出这个名字</button>
+      </div>
+    </div>
+
+    <!-- 未登录：登录 / 注册 -->
+    <div id="authbox" class="landing-form" hidden>
+      <div class="landing-tabs">
+        <button id="tab-login" class="tab active">登录</button>
+        <button id="tab-signup" class="tab">注册</button>
+      </div>
+      <form id="auth-form">
+        <label class="field">名字
+          <input id="f-username" name="username" autocomplete="username" required>
+        </label>
+        <label class="field">口令
+          <input id="f-password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <p id="auth-error" class="form-error" hidden></p>
+        <button id="btn-submit" class="primary" type="submit">进入围城</button>
+      </form>
+      <p class="hint" id="auth-hint">还没住进来？点「注册」写下的你的名字。</p>
+    </div>
+
+    <p class="hint foot">白天经营避难所，夜里冒险搜刮——LLM 当裁判，数值内核让你饿、让你冷、让你付出代价。</p>
+  </section>
+</div>
+<script type="module" src="/landing.js"></script>
+</body>
+</html>

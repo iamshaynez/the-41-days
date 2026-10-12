@@ -1,0 +1,12 @@
+{
+  "$comment": "技术架构 §11.2 KPI 门禁 v0 目标带（sim 断言用）。均衡策略=参考运营；门禁读此文件。",
+  "gates": {
+    "median_survival_days": { "min": 18, "max": 62, "desc": "中位局生存天数（标准/均衡；v0.2 交割日固定 D60）" },
+    "any_survivor_to_end": { "min": 0.08, "max": 0.75, "desc": "≥1 人活到交割日比例" },
+    "starve_death_share": { "min": 0.1, "max": 0.5, "desc": "饿死（含转病）占死因" },
+    "raid_wipe_rate": { "max": 0.08, "desc": "袭击致全灭率上限" },
+    "docs_per_run_median": { "min": 1, "max": 9, "desc": "每局文档发现中位数" },
+    "run_length_days_median": { "min": 20, "max": 62, "desc": "中位局时长（交割或全灭）" }
+  },
+  "simDefaults": { "runs": 300, "seed": 41001, "policies": ["balanced", "gambler", "hoarder", "devil"] }
+}
