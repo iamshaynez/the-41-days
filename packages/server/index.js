@@ -382,10 +382,11 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const prologue = body.sidestory ? false : body.prologue !== false; // 玩家局默认带序章（围城头九天）；测试/sim 显式关闭
         // —— 跨周目回响装配（长线体验 EC 系）：档案馆里有什么，新局就从什么里长出来 ——
         const echoes = collectEchoes(db, s.userId);
-        // 首局门（叙事双轴 §2.4 拍板）：账号名下无已收束之局 → 三幕全量不可跳；此后降为单句版。
-        // body.preludeMode 是测试/开发后门，UI 不提供。
-        const hadEnded = db.listRuns(s.userId).some((r) => r.status === 'ended');
-        const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : (hadEnded ? 'short' : 'full');
+        // 首局门（叙事双轴 §2.4 拍板 v2）：账号维度「完全通关」（活到战争收束的结局）才进单句版；
+        // 全灭/超时不算通关——死过的人，还配听一遍完整的开场。body.preludeMode 是测试/开发后门。
+        const WAR_ENDINGS = ['ceasefire', 'contract_end', 'maicheng', 'pyrrhic', 'alt_both', 'lighthouse', 'join_table'];
+        const cleared = db.listRuns(s.userId).some((r) => r.status === 'ended' && WAR_ENDINGS.includes(r.ending_type));
+        const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : (cleared ? 'short' : 'full');
         const state = createRun(pack, { seed: body.seed || Math.floor(Math.random() * 1e9), difficulty: body.difficulty || 'documentary', roster: body.roster, prologue, preludeMode, echoes, sidestory: sideDef?.id || null });
         const { events } = beginRun(state, pack, { prologue });
         db.createRun({ id, userId: s.userId, seed: state.seed, packId, difficulty: state.difficulty, mode, state });
