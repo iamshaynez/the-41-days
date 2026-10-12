@@ -29,6 +29,7 @@ export function validateIntentShape(intent) {
     case 'meta': return typeof intent.query === 'string';
     case 'advance': return true;
     case 'skip_prelude': return true;
+    case 'prelude_full': return true;
     case 'policy': return typeof intent.key === 'string';
     case 'direction': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
     case 'whisper': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
@@ -147,7 +148,7 @@ function applyOne(ctx, intent) {
   // 序章守卫：闪回里"选哪个"与"翻页"合法（PH-03：阶段推进只由内核驱动；
   // 翻页只对文本幕开放——卡拍必须选，选择才有旗标与因果账）
   if (s.phase === 'prologue' && intent.type !== 'event_choice' && intent.type !== 'meta'
-    && intent.type !== 'skip_prelude'
+    && intent.type !== 'skip_prelude' && intent.type !== 'prelude_full'
     && !(intent.type === 'advance' && preludeBeats(ctx.pack, s)[s.prelude?.i ?? 0]?.t !== 'card')) {
     ctx.fact('in_prologue', {});
     return { ok: false, reason: 'IN_PROLOGUE' };
@@ -245,6 +246,19 @@ function applyOne(ctx, intent) {
       endPrologue(ctx, true);
       return { ok: true };
     }
+    case 'prelude_full': {
+      // 翻全卷（叙事双轴 §2.4）：单句版展开为完整三幕——从「天下」重读；
+      // 已作答的卡不重复（旗标与因果账已入册），正展示未作答的卡退回重演。
+      if (s.phase !== 'prologue' || (s.preludeMode || 'full') !== 'short') return { ok: false, reason: 'BAD_PHASE' };
+      if (s.activeEvent?.cardId && s.firedOnce[s.activeEvent.cardId]) {
+        delete s.firedOnce[s.activeEvent.cardId];
+        ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
+      }
+      ctx.setFlag('preludeMode', 'full');
+      ctx.fact('prelude_full', {});
+      firePreludeBeat(ctx, 0);
+      return { ok: true };
+    }
     case 'meta':
       ctx.fact('meta', { query: intent.query });
       return { ok: true };
@@ -271,6 +285,7 @@ function firePreludeBeat(ctx, from) {
     ctx.emit('EVENT_FIRED', { cardId: b.id });
     ctx.fact('prologue_beat', { cardId: b.id, title: ctx.pack.cardMap[b.id]?.title });
   } else {
+    s.activeEvent = null; // 文本幕接管（翻全卷会从卡拍跳回天下，旧卡必须卸下）
     ctx.fact('prelude_beat', { kind: b.t, id: b.id });
   }
 }

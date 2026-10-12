@@ -103,6 +103,22 @@ describe('序章三幕 · 节拍引擎', () => {
     assert.ok(r.facts.some((f) => f.k === 'prologue_skipped'), '跳过入账');
   });
 
+  test('翻全卷：单句版展开为完整三幕，已答的卡不重复', () => {
+    const { state } = newRun({ prologue: true, preludeMode: 'short' });
+    let s = step(state, [{ type: 'advance' }]).state; // heavenLine → p1
+    assert.equal(s.activeEvent?.cardId, 'p1_water');
+    s = step(s, [{ type: 'event_choice', option: 'tried' }]).state; // 答掉 p1 → 下一拍
+    const r = step(s, [{ type: 'prelude_full' }]);
+    s = r.state;
+    assert.equal(s.preludeMode, 'full', '模式翻全');
+    assert.equal(s.prelude.i, 0, '从「天下」重读');
+    assert.ok(!s.activeEvent, '重回文本幕');
+    s = step(s, [{ type: 'advance' }]).state;
+    s = step(s, [{ type: 'advance' }]).state;
+    s = step(s, [{ type: 'advance' }]).state;
+    assert.equal(s.activeEvent?.cardId, 'p3_shelling', '已答的 p1 跳过，p3 接上');
+  });
+
   test('回忆录有序章段（围城那些天）', () => {
     const { state } = newRun({ prologue: true });
     let s = playPrelude(state);

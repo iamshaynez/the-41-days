@@ -1056,6 +1056,11 @@ function renderPrologue(s) {
     next.addEventListener('click', () => sendIntents([{ type: 'advance' }], '翻页'));
     opts.appendChild(next);
     if (pv.canSkip) {
+      // 单句版专属：翻全卷（从「天下」重读完整三幕，已答过的卡不重复）
+      const full = el('button', 'opt', '<span class="key">全</span><span>翻全卷——从天下读起</span>');
+      full.type = 'button';
+      full.addEventListener('click', () => sendIntents([{ type: 'prelude_full' }], '翻全卷'));
+      opts.appendChild(full);
       const skip = el('button', 'opt opt-ghost', '<span class="key">⏎</span><span>翻过序章，直接进城</span>');
       skip.type = 'button';
       skip.addEventListener('click', () => sendIntents([{ type: 'skip_prelude' }], '翻过序章'));
