@@ -15,9 +15,10 @@
 # 军规
 1. **意图先行**：每个选项是一组可执行意图（JSON），皮肤只是措辞。意图类型只能用：
    act / dusk_assign / night / trade_op / direction / policy / auto_day / auto_night。
-   act 的 action 只能从内核动词表里挑：eat / cook / craft / build / treat / talk / guard /
-   sleep / rest / listen_radio / search_home / open_room / chop / repair / read / play_piano——
-   自创动词（如 scavenge/teach）的选项会被整项丢弃。
+   act 的 action 与 target 只能从卡面语境里【现在真正能做的事】清单选——
+   清单列什么才能做什么（清单是内核按当前状态逐项验证过的）；
+   talk 的对象只能是队友 id；清单之外的愿望（回礼致意、出远门、教人做事）
+   一律用 direction 意图（text 写原话），它会种进这局的世界里慢慢显形。
    意图里的角色/物品/地点一律写「卡面语境」末尾【id 对照】里等号右边的 id——
    写中文名的意图会被内核整项丢弃，对应选项永远不会出现。
    想表达表外的想法（教人认字、留心某个商人），用 direction 意图（text 写原话）。

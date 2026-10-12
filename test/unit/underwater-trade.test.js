@@ -55,6 +55,29 @@ describe('feasibleIntent（谋士选项的可行性门）', () => {
     assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'eat', target: 'raw' }));
   });
 
+  test('语义前置（线上教训）：talk 对象必须是队友、家里翻空不搜、门没坏不修、无斧不劈', () => {
+    const { state } = newRun({ seed: 38, roster: ['anton', 'marta', 'bron'] });
+    // talk：地点当对象 → 拒；队友 → 过；自己 → 拒
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'talk', target: 'hospital' }), '地点不是交谈对象');
+    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'talk', target: 'marta' }));
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'talk', target: 'anton' }), '不能跟自己交谈');
+    // search_home：全翻空 → 拒
+    const empty = newRun({ seed: 39, roster: ['anton', 'marta', 'bron'] }).state;
+    for (const r of PACK.locMap.home.rooms) {
+      empty.house.opened[r.id] = true;
+      for (const ct of r.containers || []) { empty.house.searched[ct.id] = true; empty.house.searched[ct.id + ':open'] = true; }
+    }
+    assert.ok(!feasibleIntent(empty, PACK, { type: 'act', actor: 'anton', action: 'search_home' }), '翻空的家不该再出搜家选项');
+    // repair：门没受损 → 拒
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'repair' }), '门没坏');
+    state.doorLevel = 1; state.inventory.wood = 3;
+    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'repair' }));
+    // chop：开局没有斧 → 拒（此前只查了家具余量）
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'chop' }), '没有斧头劈不了');
+    state.inventory.axe = 1;
+    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'chop' }));
+  });
+
   test('act 的设施/耗材前置：无灶不 cook、没书不读、没绷带不治（渲染的选项点得动）', () => {
     const { state } = newRun({ seed: 37, roster: ['anton', 'marta', 'bron'] });
     assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'cook' }), '第 1 天没炉灶');
@@ -63,9 +86,11 @@ describe('feasibleIntent（谋士选项的可行性门）', () => {
     assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'read' }), '开局有两册书');
     delete state.inventory.book;
     assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'read' }));
-    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'marta', action: 'treat', target: 'bandage', patient: 'anton' }), '有绷带即可（伤员细判留给内核）');
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'marta', action: 'treat', target: 'bandage' }), '有绷带但没有伤员——不出这种选项');
+    state.chars[0].wound = 1; // 文简挂了彩
+    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'marta', action: 'treat', target: 'bandage' }));
     delete state.inventory.bandage;
-    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'marta', action: 'treat', target: 'bandage', patient: 'anton' }), '没绷带不治');
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'marta', action: 'treat', target: 'bandage' }), '没绷带不治');
   });
 
   test('dusk_assign：地点必须已知；夜访意图必须真的在夜里', () => {
