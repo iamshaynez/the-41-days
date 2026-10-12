@@ -11,8 +11,9 @@ export function worldBrief(state, pack) {
   const inv = Object.entries(state.inventory).map(([k, v]) => `${pack.itemMap[k]?.name || k}×${v}`).join('、') || '空';
   const locs = state.knownLocs.map((id) => `${pack.locMap[id]?.name || id}(${id})`).join('、');
   const ev = state.activeEvent ? `（门口有未决事件：${pack.cardMap[state.activeEvent.cardId]?.title}）` : '';
+  const nightScav = state.night && !state.night.home ? charById(state, state.night.charId) : null;
   const night = state.night && !state.night.home
-    ? `【夜访中】${pack.locMap[state.night.locId]?.name}·当前房间${pack.locMap[state.night.locId]?.rooms.find((r) => r.id === state.night.room)?.name}·剩余火柴${state.night.slots}根`
+    ? `【夜访中】${nightScav ? `${nightScav.name}独行·` : ''}${pack.locMap[state.night.locId]?.name}·当前房间${pack.locMap[state.night.locId]?.rooms.find((r) => r.id === state.night.room)?.name}·剩余火柴${state.night.slots}根`
     : '';
   const sealNote = (state.seals || []).length ? `【已显形真相 ${state.seals.length} 层】` : '';
   // 念头（v3 命运导演）：玩家种下的方向性意图——裁判/叙事者要认得它们，行文可呼应可推进

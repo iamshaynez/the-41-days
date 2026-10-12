@@ -67,6 +67,7 @@ describe('方略执行（内核侧）', () => {
 });
 
 import { cardBrief, nightMenu } from '../../packages/server/options.js';
+import { worldBrief } from '../../packages/server/narrate.js';
 import { feasibleIntent } from '../../packages/core/index.js';
 
 describe('夜访可行域（夜间选项没词的根因修复）', () => {
@@ -144,5 +145,22 @@ describe('戏文轨（scene 意图 + 微效果）', () => {
     assert.ok(!stage.hint.includes('入黄昏'), '戏文不收卷');
     const act = out.find((o) => !o.stage);
     assert.ok(act.intents.at(-1).type === 'auto_day', '动作选项照常收卷');
+  });
+});
+
+describe('夜访语境的真话：只说今晚在外的人', () => {
+  test('夜间 id 对照只列外出者 + 本地 NPC；卡面明说队友不在', () => {
+    const state = createRun(PACK, { seed: 81, roster: ['anton', 'marta', 'bron'] });
+    beginRun(state, PACK, {});
+    state.phase = 'night';
+    state.night = { locId: 'market', room: 'front', charId: 'anton', slots: 8, noise: 0, gear: [], pack: [], unlocked: {}, cleared: {}, sawed: {}, packSlots: 0, lowSlotsAck: false, observed: {} };
+    const brief = cardBrief(state, PACK, 'night');
+    assert.ok(brief.includes('今晚在外的只有 文简（anton）一人'), '应明说独行');
+    assert.ok(brief.includes('不许出现在这一夜的选项'), '应禁止队友出场');
+    // id 对照的角色段只含 anton，不含队友
+    const roleLine = brief.split('\n').find((l) => l.startsWith('角色：'));
+    assert.ok(roleLine.includes('anton') && !roleLine.includes('marta') && !roleLine.includes('bron'), `角色段应只有外出者：${roleLine}`);
+    // 世界简报也带独行者的名字
+    assert.ok(worldBrief(state, PACK).includes('文简独行'), '简报应写明谁在夜路上');
   });
 });
