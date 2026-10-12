@@ -41,6 +41,8 @@ export function feasibleIntent(state, pack, intent) {
         case 'build': {
           const f = pack.facilityMap ? pack.facilityMap[intent.target] : null;
           if (!f) return false;
+          if ((s.facilities[intent.target] || 0) >= (f.max || 1)) return false; // 已满级（内核会拒 MAX）
+          if (intent.target === 'door' && s.doorLevel >= (pack.doorReinforce?.maxLevel ?? 3)) return false;
           return Object.entries(f.cost || {}).every(([k, n]) => has(s, k, n));
         }
         case 'treat': {

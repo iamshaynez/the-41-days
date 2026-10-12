@@ -63,3 +63,31 @@ describe('方略执行（内核侧）', () => {
     assert.ok(r.facts.some((f) => f.k === 'phase_dusk'), '入黄昏');
   });
 });
+
+import { cardBrief, nightMenu } from '../../packages/server/options.js';
+import { feasibleIntent } from '../../packages/core/index.js';
+
+describe('夜访可行域（夜间选项没词的根因修复）', () => {
+  test('夜访卡面语境给出当前房间的容器/房间/NPC id', () => {
+    const state = createRun(PACK, { seed: 61, roster: ['anton', 'marta', 'bron'] });
+    beginRun(state, PACK, {});
+    // 直接进夜访：villas 第一房
+    state.phase = 'night';
+    state.night = { locId: 'villas', room: 'v_house1', slots: 8, noise: 0, gear: [], pack: [], unlocked: {}, cleared: {}, sawed: {}, packSlots: 0, lowSlotsAck: false, observed: {} };
+    const brief = cardBrief(state, PACK, 'night');
+    assert.ok(brief.includes('【夜访可行域】'), '应带可行域段');
+    const menu = nightMenu(state, PACK);
+    assert.ok(/search@id/.test(menu) || /可去房间/.test(menu), `菜单应给可搜容器或可去房间：${menu}`);
+    assert.ok(/observe|retreat/.test(menu), '无目标动作要列出');
+  });
+
+  test('build 满级被滤（床满 4 张不再出「再建床」——内核会拒 MAX）', () => {
+    const state = createRun(PACK, { seed: 62, roster: ['anton', 'marta', 'bron'] });
+    beginRun(state, PACK, {});
+    state.inventory.wood = 20; state.inventory.parts = 20;
+    state.facilities.bed = 4; // 已满
+    assert.ok(!feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'build', target: 'bed' }), '满级不可建');
+    state.facilities.bed = 2;
+    assert.ok(feasibleIntent(state, PACK, { type: 'act', actor: 'anton', action: 'build', target: 'bed' }));
+  });
+});
