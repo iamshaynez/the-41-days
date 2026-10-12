@@ -63,16 +63,31 @@
         在那之前，游戏以直读模式兜底运行。</p>
     </section>
 
-    <!-- 对局主界面：一页书（人物行 / 家底行 / 正文流） -->
+    <!-- 对局主界面：左轴右翼（叙事流居左，舆图与史卷居右——叙事双轴-v0.1 §8） -->
     <section id="game" hidden>
-      <div id="vitals">
-        <div id="partyline" class="partyline" aria-label="同住的人"></div>
-        <div id="homeline" class="homeline" aria-label="这个家与家底"></div>
-      </div>
-      <div id="flow" class="paper">
-        <div id="flow-scroll">
-          <div id="narration" aria-live="polite"></div>
+      <div id="stage">
+        <div id="stage-left">
+          <div id="vitals">
+            <div id="partyline" class="partyline" aria-label="同住的人"></div>
+            <div id="homeline" class="homeline" aria-label="这个家与家底"></div>
+          </div>
+          <div id="flow" class="paper">
+            <div id="flow-scroll">
+              <div id="narration" aria-live="polite"></div>
+            </div>
+          </div>
         </div>
+        <aside id="wing" aria-label="舆图与史卷">
+          <section id="map-panel" class="wing-card" aria-label="舆图">
+            <div class="wing-head"><span class="wing-kicker">舆图</span><span id="map-act" class="wing-sub"></span></div>
+            <div id="map-box"></div>
+            <p id="map-note" class="wing-note"></p>
+          </section>
+          <section id="chronicle-panel" class="wing-card" aria-label="史卷">
+            <div class="wing-head"><span class="wing-kicker">史卷</span><span class="wing-sub">天下 · 大事</span></div>
+            <div id="chronicle-box"></div>
+          </section>
+        </aside>
       </div>
     </section>
   </main>
