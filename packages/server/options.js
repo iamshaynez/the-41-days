@@ -3,6 +3,18 @@
 // 三关全过才许渲染。纯视图数据：不碰 state、不进事件流，点了才走输入管线。
 import { validateIntentShape, feasibleIntent, normalizeIntent } from '../core/index.js';
 
+/** 防御性截断：在标点处收尾（不放残句——线上教训：「派一个人对折他，」） */
+const cutClean = (text, max) => {
+  const t = String(text || '').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const m = cut.match(/^[^。！？；，、]*[。！？；]/);
+  if (m && m[0].length >= Math.min(8, max - 4)) return m[0]; // 附近有完整句，收在句号
+  const cm = cut.slice(0, max - 1).match(/.*[，、；]/);
+  if (cm) return cm[0] + '……'; // 只有分句点，收在分句并留省略
+  return cut + '……';
+};
+
 /**
  * @param {object} raw 谋士输出 {options: [{label, hint?, intents}]}
  * @param {object} [opts] {card} —— card='day' 时每个选项是闭环方略：
@@ -14,7 +26,7 @@ export function validateOptions(pack, state, raw, { card } = {}) {
   if (!raw || !Array.isArray(raw.options)) return out;
   const banned = pack.ge?.bannedTerms || [];
   for (const o of raw.options) {
-    if (typeof o?.label !== 'string' || !o.label.trim() || o.label.length > 24) continue;
+    if (typeof o?.label !== 'string' || !o.label.trim() || o.label.length > 80) continue; // 长想法截断收尾，不丢弃
     if (banned.some((b) => o.label.includes(b))) continue;
     // 收卷意图（auto_day）是白天方略的专属结尾：模型自带的一律收走，
     // 只有今日卡由我们统一补在最后（黄昏/夜访是世界的提问，不越权收卷）
@@ -24,10 +36,10 @@ export function validateOptions(pack, state, raw, { card } = {}) {
       .filter((it) => validateIntentShape(it) && feasibleIntent(state, pack, it)); // 严出：验证照旧
     if (!intents.length) {
       // 戏文轨：内核没有、但说得出口的事——不过滤，交给舞台导演当场接戏
-      const text = `${o.label.trim()}${o.hint ? '——' + String(o.hint).trim() : ''}`.slice(0, 80);
+      const text = cutClean(`${o.label.trim()}${o.hint ? '——' + String(o.hint).trim() : ''}`, 100);
       out.push({
-        label: o.label.trim().slice(0, 24),
-        hint: (typeof o.hint === 'string' ? o.hint.trim().slice(0, 30) + ' · ' : '') + '戏文：世界会接这一拍',
+        label: cutClean(o.label, 40),
+        hint: (typeof o.hint === 'string' ? cutClean(o.hint, 40) + ' · ' : '') + '戏文：世界会接这一拍',
         intents: [{ type: 'scene', text }],
         stage: true
       });
@@ -36,9 +48,9 @@ export function validateOptions(pack, state, raw, { card } = {}) {
     }
     if (card === 'day') intents.push({ type: 'auto_day' });
     intents = intents.slice(0, 5);
-    const hint = typeof o.hint === 'string' ? o.hint.trim().slice(0, 30) : '';
+    const hint = typeof o.hint === 'string' ? cutClean(o.hint, 50) : '';
     out.push({
-      label: o.label.trim().slice(0, 24),
+      label: cutClean(o.label, 40),
       hint: card === 'day' ? (hint ? `${hint} · 安排完即入黄昏` : '安排完即入黄昏') : hint,
       intents
     });
@@ -129,8 +141,8 @@ export function cardBrief(state, pack, card) {
   if (card === 'night') {
     const loc = pack.locMap[state.night?.locId];
     const who = state.chars.find((c) => c.id === state.night?.charId && c.alive);
-    const solo = who ? `今晚在外的只有 ${who.name}（${who.id}）一人——其余队友都在家里，不许出现在这一夜的选项里。` : '';
-    return `深夜，夜访${loc?.name || ''}，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}（有人听见了）` : ''}。${solo}夜间动作：move/observe/search/open/clear/bars/dialogue/attack/retreat——target 一律写【夜访可行域】里给出的 id；direction 的对象也只准写外出者或此地遇到的人。\n\n【夜访可行域】\n${nightMenu(state, pack)}\n\n${idTable(state, pack, { night: true })}`;
+    const solo = who ? `今晚在外的只有 ${who.name}（${who.id}）一人——其余队友都在家里，不许出现在选项里。` : '';
+    return `深夜，${who ? `${who.name}独行` : '有人独行'}，夜访${loc?.name || ''}，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}（有人听见了）` : ''}。${solo}\n出的是**整夜方针**：一句话定方向（只拿吃的、见人绕行 / 探明虚实就回 / 放手干，值钱都拿走）。内核会按方针自己走完整夜——遇人绕不绕、锁撬不撬、手动不动，都由方针与骰子决定，不会逐件请示玩家。每个选项的 intents 只需一个：{"type":"night_directive","stance":"cautious|normal|bold","text":"方针原话"}。谨慎=不出声见人就撤；照常=看情况；放手=敢动手敢背刺。\n\n【这一夜的现场（供措辞用，不必落到具体目标）】\n${nightMenu(state, pack)}\n\n${idTable(state, pack, { night: true })}`;
   }
   // day：今日卡
   return `白天，今日怎么过。你出的是**今日方略**：2~4 个意图、覆盖至少两个人（act/direction/policy 可混编；direction 种下的念头会在日后显形）。方略之后管家会自动补完日常并进入黄昏——不需要你自己加 auto_day，也不必覆盖每个人。全队休整类方略可以只写一两个意图。${menu}\n\n${ids}`;

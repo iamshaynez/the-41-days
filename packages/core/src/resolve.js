@@ -8,7 +8,7 @@ import { applyDayAction } from './dayActions.js';
 import { startNight, applyNightAction, endNightReturn } from './night.js';
 import { resolveRaid } from './raid.js';
 import { executeTrade } from './trade.js';
-import { chooseEventOption } from './events.js';
+import { chooseEventOption, optionAvailable, optionCostOk } from './events.js';
 import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents } from './vitals.js';
 import { tickAutonomous, tickDirections } from './causality.js';
 import { evaluateSeals } from './seals.js';
@@ -30,6 +30,7 @@ export function validateIntentShape(intent) {
     case 'direction': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
     case 'whisper': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 60;
     case 'scene': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.trim().length <= 80;
+    case 'night_directive': return ['cautious', 'normal', 'bold'].includes(intent.stance) && typeof intent.text === 'string' && !!intent.text.trim() && intent.text.length <= 60;
     case 'auto_day': return true;
     case 'auto_night': return true;
     default: return false;
@@ -60,7 +61,19 @@ export function resolveInput(state, pack, intents) {
       continue;
     }
     if (intent.type === 'auto_night') {
+      if (state.night && !state.night.home) { state.night.micro = true; ctx.emit('NIGHT_PATCH', { micro: true }); }
       runAutoNight(ctx, rejects, intent);
+      continue;
+    }
+    if (intent.type === 'night_directive') {
+      // 夜间方针（宏观模式）：一次决策，整夜自走——岔路按方针立场 + 种子随机自动决策，
+      // 不再逐拍问玩家（这是宏观策略游戏，不是微观 RPG）
+      if (state.phase !== 'night' || !state.night || state.night.home) { rejects.push({ intent, reason: 'NOT_NIGHT' }); continue; }
+      const stance = ['cautious', 'normal', 'bold'].includes(intent.stance) ? intent.stance : 'normal';
+      state.night.directive = { stance, text: String(intent.text).trim().slice(0, 60) };
+      ctx.emit('NIGHT_PATCH', { room: state.night.room, slots: state.night.slots, noise: state.night.noise, pack: [...state.night.pack], packSlots: state.night.packSlots, observed: { ...state.night.observed }, unlocked: { ...state.night.unlocked }, cleared: { ...state.night.cleared }, sawed: { ...state.night.sawed }, lowSlotsAck: !!state.night.lowSlotsAck, micro: false, directive: state.night.directive });
+      ctx.fact('night_directive_set', { stance, text: state.night.directive.text });
+      runDirectiveNight(ctx, rejects, stance);
       continue;
     }
     if (!validateIntentShape(intent)) { rejects.push({ intent, reason: 'BAD_SHAPE' }); continue; }
@@ -152,7 +165,7 @@ function applyOne(ctx, intent) {
       if (s.night?.home) return { ok: false, reason: 'HOME_NIGHT' };
       const r = applyNightAction(ctx, intent);
       if (r.ok && s.night && !s.night.home) {
-        ctx.emit('NIGHT_PATCH', { room: s.night.room, slots: s.night.slots, noise: s.night.noise, pack: [...s.night.pack], packSlots: s.night.packSlots, observed: { ...s.night.observed }, unlocked: { ...s.night.unlocked }, cleared: { ...s.night.cleared }, sawed: { ...s.night.sawed }, lowSlotsAck: !!s.night.lowSlotsAck });
+        ctx.emit('NIGHT_PATCH', { room: s.night.room, slots: s.night.slots, noise: s.night.noise, pack: [...s.night.pack], packSlots: s.night.packSlots, observed: { ...s.night.observed }, unlocked: { ...s.night.unlocked }, cleared: { ...s.night.cleared }, sawed: { ...s.night.sawed }, lowSlotsAck: !!s.night.lowSlotsAck, micro: true, ...(s.night.directive ? { directive: s.night.directive } : {}) });
       }
       return r;
     }
@@ -305,3 +318,74 @@ function toDawn(ctx) {
 }
 
 export { buildEnding };
+
+/** 方针夜循环：auto 探索；岔路与事件不停问，按立场自动应答（种子随机，确定性可回放） */
+function runDirectiveNight(ctx, rejects, stance) {
+  const s = ctx.s;
+  let guard = 0;
+  while (s.phase === 'night' && s.night && !s.night.home && guard++ < 48) {
+    if (s.activeEvent) { // 夜里触发的事件卡：按立场自动应
+      const card = ctx.pack.cardMap[s.activeEvent.cardId] || s.geCards?.[s.activeEvent.cardId];
+      const opt = card ? pickEventOptionByStance(card, ctx, stance) : null;
+      if (!opt) break;
+      ctx.fact('night_choice', { why: stance, label: opt.label });
+      ctx.delegated = true;
+      const r = applyOne(ctx, { type: 'event_choice', option: opt.key, delegated: true });
+      ctx.delegated = false;
+      if (r && r.ok === false) break;
+      continue;
+    }
+    const step = planNightStep(s, ctx.pack, { approach: stance });
+    if (!step) { // 搜尽——回家
+      ctx.delegated = true;
+      applyOne(ctx, { type: 'night', action: 'retreat', delegated: true });
+      ctx.delegated = false;
+      break;
+    }
+    if (step.stop) { // 岔路：不停问，按立场选路
+      if (step.stop.kind === 'event') break;
+      ctx.fact('night_fork', { kind: step.stop.kind, text: step.stop.text, options: step.stop.options.map((o) => o.label) });
+      const opt = pickForkOptionByStance(step.stop.options, stance);
+      ctx.fact('night_choice', { why: stance, label: opt.label });
+      ctx.delegated = true;
+      for (const it of opt.intents) applyOne(ctx, { ...it, delegated: true });
+      ctx.delegated = false;
+      continue;
+    }
+    ctx.delegated = true;
+    const r = applyOne(ctx, { ...step.intent, delegated: true });
+    ctx.delegated = false;
+    if (r && r.ok === false) break;
+  }
+}
+
+/** 岔路选项按立场排序挑选（确定性：平分取先出现者） */
+function pickForkOptionByStance(options, stance) {
+  const PRIORITY = {
+    cautious: ['retreat', 'ignore', 'push_on', 'dialogue', 'attack', 'backstab'],
+    normal: ['dialogue', 'ignore', 'retreat', 'push_on', 'attack', 'backstab'],
+    bold: ['backstab', 'attack', 'push_on', 'dialogue', 'ignore', 'retreat']
+  };
+  const rank = (o) => {
+    let best = 99;
+    for (const it of o.intents || []) {
+      if (it.type !== 'night') continue;
+      const i = PRIORITY[stance].indexOf(it.action);
+      if (i >= 0 && i < best) best = i;
+    }
+    return best === 99 ? 50 : best; // 无夜间动作的选项（如纯撤退包装）居中
+  };
+  return [...options].sort((a, b) => rank(a) - rank(b))[0] || options[0];
+}
+
+/** 事件卡按立场自动应：谨慎挑无代价无风险项，放手挑有收益/敢冒险的项 */
+function pickEventOptionByStance(card, ctx, stance) {
+  const opts = (card.options || []).filter((o) => optionAvailable(ctx, o) && optionCostOk(ctx, o));
+  if (!opts.length) return null;
+  const risk = (o) => (o.riskCheck ? 1 : 0) + (o.cost?.length ? 1 : 0);
+  const gain = (o) => Object.keys(o.effects?.items || {}).length;
+  const pick = stance === 'cautious' ? opts.sort((a, b) => risk(a) - risk(b))[0]
+    : stance === 'bold' ? opts.sort((a, b) => (gain(b) - gain(a)) || (risk(b) - risk(a)))[0]
+    : opts.find((o) => risk(o) === 0) || opts[0];
+  return pick || null;
+}

@@ -49,7 +49,7 @@ describe('今日方略（card=day 闭环）', () => {
 });
 
 import { resolveInput } from '../../packages/core/index.js';
-import { newRun } from '../helpers.js';
+import { newRun, step } from '../helpers.js';
 
 describe('方略执行（内核侧）', () => {
   test('点方略 → 自动收卷 → 相位入夜线（dusk）', () => {
@@ -78,7 +78,8 @@ describe('夜访可行域（夜间选项没词的根因修复）', () => {
     state.phase = 'night';
     state.night = { locId: 'villas', room: 'v_house1', slots: 8, noise: 0, gear: [], pack: [], unlocked: {}, cleared: {}, sawed: {}, packSlots: 0, lowSlotsAck: false, observed: {} };
     const brief = cardBrief(state, PACK, 'night');
-    assert.ok(brief.includes('【夜访可行域】'), '应带可行域段');
+    assert.ok(brief.includes('整夜方针'), '应带方针口径');
+    assert.ok(brief.includes(nightMenu(state, PACK).slice(0, 6)) || /可搜容器|可去房间|无目标/.test(brief), '应带现场信息');
     const menu = nightMenu(state, PACK);
     assert.ok(/search@id/.test(menu) || /可去房间/.test(menu), `菜单应给可搜容器或可去房间：${menu}`);
     assert.ok(/observe|retreat/.test(menu), '无目标动作要列出');
@@ -156,11 +157,43 @@ describe('夜访语境的真话：只说今晚在外的人', () => {
     state.night = { locId: 'market', room: 'front', charId: 'anton', slots: 8, noise: 0, gear: [], pack: [], unlocked: {}, cleared: {}, sawed: {}, packSlots: 0, lowSlotsAck: false, observed: {} };
     const brief = cardBrief(state, PACK, 'night');
     assert.ok(brief.includes('今晚在外的只有 文简（anton）一人'), '应明说独行');
-    assert.ok(brief.includes('不许出现在这一夜的选项'), '应禁止队友出场');
+    assert.ok(brief.includes('不许出现在选项里'), '应禁止队友出场');
     // id 对照的角色段只含 anton，不含队友
     const roleLine = brief.split('\n').find((l) => l.startsWith('角色：'));
     assert.ok(roleLine.includes('anton') && !roleLine.includes('marta') && !roleLine.includes('bron'), `角色段应只有外出者：${roleLine}`);
     // 世界简报也带独行者的名字
     assert.ok(worldBrief(state, PACK).includes('文简独行'), '简报应写明谁在夜路上');
+  });
+});
+
+describe('夜间方针（宏观模式：一次决策，整夜自走）', () => {
+  test('谨慎方针：走完整夜回到天亮，岔路自动决策且确定性', () => {
+    const { state } = newRun({ seed: 91, roster: ['anton', 'marta', 'bron'] });
+    let s = state;
+    s = step(s, [{ type: 'advance' }]).state;
+    s = step(s, [{ type: 'dusk_assign', scavenger: 'anton', location: 'market', gear: ['crowbar'], others: {} }]).state;
+    assert.equal(s.phase, 'night');
+    const r = step(s, [{ type: 'night_directive', stance: 'cautious', text: '不出声，见人就绕' }]);
+    const st = r.state;
+    assert.ok(st.day === 2 || st.phase === 'day' || st.phase === 'dawn', `整夜应走完（实际 第${st.day}天 ${st.phase}）`);
+    assert.ok(r.facts.some((f) => f.k === 'night_directive_set'), '落方针 fact');
+    assert.ok(r.facts.some((f) => f.k === 'night_choice'), '岔路按方针自动决策');
+    assert.ok(!st.night || st.night.home || st.phase === 'day', '夜里的事了结干净');
+    // 确定性：同种子重跑逐字节一致
+    const r2 = step(step(step(state, [{ type: 'advance' }]).state, [{ type: 'dusk_assign', scavenger: 'anton', location: 'market', gear: ['crowbar'], others: {} }]).state, [{ type: 'night_directive', stance: 'cautious', text: '不出声，见人就绕' }]);
+    assert.equal(JSON.stringify(r2.state.night), JSON.stringify(st.night));
+  });
+
+  test('截断收尾：长标签在标点处断，不出残句', async () => {
+    const { validateOptions } = await import('../../packages/server/options.js');
+    const { state } = newRun({ seed: 92, roster: ['anton', 'marta', 'bron'] });
+    const out = validateOptions(PACK, state, { options: [
+      { label: '派一个腿脚利索的人整夜盯着渡口来的生人，看清他跟谁接头、货往哪里去，天亮前回来报个准信', hint: '费一晚的脚力，但能换来一句准话', intents: [] },
+      { label: '让文简守夜', intents: [{ type: 'act', actor: 'anton', action: 'guard' }] }
+    ] }, { card: 'day' });
+    const stage = out.find((o) => o.stage);
+    assert.ok(stage.label.length <= 41);
+    assert.ok(!/[，、]$/.test(stage.label) || stage.label.endsWith('……'), `标签不该以残逗号结尾：${stage.label}`);
+    assert.ok(stage.label.endsWith('。') || stage.label.endsWith('……'), `应在句点或省略号收尾：${stage.label}`);
   });
 });
