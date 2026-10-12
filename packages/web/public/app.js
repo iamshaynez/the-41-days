@@ -741,6 +741,34 @@ function optBtn(label, key, onClick, hint = '') {
   b.addEventListener('click', () => { onClick(); });
   return b;
 }
+/** 出场自动补谋士选项：卡一渲染就后台取一次（auto 免费额度），金色与红色并列；
+ *  失败/为空则静默，只留红色保底（「再想想」仍可手动续）。 */
+function autoOptions(cardKey, optsEl, s, { onClick, beforeEl } = {}) {
+  // 注意不设 busy 守卫：卡在回合处理中（busy=true）渲染，此刻正是要预取的时机；
+  // 点击安全由 send() 的 busy 门与 setCardsEnabled 兜底
+  if (state.mode !== 'llm') return;
+  if (optsEl.dataset.autoed) return; // 一张卡只自动取一次
+  optsEl.dataset.autoed = '1';
+  const slot = el('div', 'opt-auto-slot');
+  slot.appendChild(el('span', 'opt-auto-waiting', '…谋士也在想'));
+  optsEl.insertBefore(slot, beforeEl || null);
+  fetch(`/api/runs/${state.runId}/options`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ card: cardKey, exclude: [...optsEl.querySelectorAll('.opt')].map((x) => x.dataset.label).filter(Boolean).slice(0, 8), auto: true })
+  }).then((r) => r.json()).then((r) => {
+    if (!slot.isConnected) return; // 卡已合上/重建
+    slot.innerHTML = '';
+    for (const o of r.options || []) {
+      const ob = optBtn(o.label, o.stage ? '◈' : '◇', () => (onClick ? onClick(o) : sendIntents(o.intents, o.label)), o.hint || '');
+      ob.classList.add('opt-llm');
+      if (o.stage) ob.classList.add('opt-stage');
+      ob.dataset.label = o.label;
+      slot.appendChild(ob);
+    }
+    if (!slot.children.length) slot.remove(); // 没词：只留红色
+  }).catch(() => { if (slot.isConnected) slot.remove(); });
+}
+
 /** 刷新命运（统一交互面）：让谋士再想几个——只换自谋类卡的选项，世界的问题不重掷 */
 function refreshRow(cardKey, optsEl) {
   if (state.mode !== 'llm') return null;
@@ -838,8 +866,9 @@ function syncAsks(s) {
         opts.appendChild(ob);
       }
       if (!opts.children.length) opts.appendChild(optBtn('让他们自己张罗这一天', '▸', () => sendIntents([{ type: 'auto_day' }], '照常过吧')));
+      autoOptions('day', opts, s);
       node.appendChild(opts);
-      node.appendChild(el('p', 'ask-hint', '点一个方案，这一夜自己走完——慎不谨慎、动不动手，按上面的路子与运气定。'));
+      node.appendChild(el('p', 'ask-hint', '点任何一个选项都会收卷今天——◇ 金色方略一次走完这一天。'));
       const rr = refreshRow('day', opts);
       if (rr) node.appendChild(rr);
       node.appendChild(freeOptRow(s, 'day'));
@@ -899,6 +928,16 @@ function syncAsks(s) {
         };
         opts.appendChild(optBtn(p.label, { a: '甲', b: '乙', stay: '守' }[p.key] || '·', go, p.hint || ''));
       }
+      // 出场自动补谋士方案（金色与保底并列）；点击同样按方针挡位走整夜
+      autoOptions('dusk', opts, s, {
+        onClick: (o) => {
+          const intents = o.intents.filter((i) => i.type !== 'auto_day');
+          if (stance !== 'micro' && intents.some((i) => i.type === 'dusk_assign' && i.scavenger)) {
+            intents.push({ type: 'night_directive', stance, text: o.label });
+          }
+          sendIntents(intents, o.label);
+        }
+      });
       node.appendChild(opts);
       if (s.duskView.fate) {
         const fate = el('div', 'fate-box');
@@ -953,6 +992,7 @@ function syncAsks(s) {
         const micro = optBtn('今夜我自己一步步走', '·', () => sendIntents([{ type: 'auto_night' }], '自己走'));
         micro.dataset.label = micro.textContent;
         opts.appendChild(micro);
+        autoOptions('night', opts, s, { beforeEl: micro });
       } else if (nv.fork) {
         node.appendChild(el('p', 'fork-text', esc(nv.fork.text || '怎么办？')));
         for (const o of nv.fork.options) opts.appendChild(optBtn(o.label, '◆', () => sendIntents(o.intents, o.label)));
