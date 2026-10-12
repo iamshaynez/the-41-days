@@ -93,7 +93,7 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     reputation: { neighbor: 0, church: 0, hospital: 0, market: 0 }, notoriety: 0,
     knowledge: 0, docsSeen: [],
     deeds: [], threeThings: [],
-    causality: { entries: [], pairArcs: {}, charArcs: {} },
+    causality: { entries: [], pairArcs: {}, charArcs: {}, shadowTouched: {} },
     seals: [],
     policy: { ...DEFAULT_POLICY },
     // 念头（v3 命运导演）：玩家种下的方向性意图——登记经 FLAG 回放，显形走自主回声/锚池/叙事
