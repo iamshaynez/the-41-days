@@ -24,6 +24,8 @@ export function preludeBeats(pack, s) {
   const short = (s.preludeMode || 'full') === 'short';
   const beats = [];
   if (short) {
+    // 通关账号的开场选择（拍板 v3）：第一拍二选一——完整三幕 or 精简版
+    if (p.openingChoice) beats.push({ t: 'text', id: p.openingChoice.id || 'openingChoice', source: 'openingChoice', title: p.openingChoice.title || '开场', text: p.openingChoice.text });
     if (p.heavenLine) beats.push({ t: 'text', id: 'heavenLine', source: 'heavenLine', title: '天下', text: p.heavenLine });
   } else {
     for (const h of p.heaven || []) beats.push({ t: 'text', id: h.id, source: 'heaven', title: h.title || '天下', text: h.text });
@@ -34,6 +36,8 @@ export function preludeBeats(pack, s) {
     const q = p.prequels?.[c.id];
     if (q) beats.push({ t: 'prequel', id: c.id });
   }
+  // 入局引：前传毕、合流前——点破"你是三个战乱里的平民，目标是活下去"
+  for (const e of p.entry || []) beats.push({ t: 'text', id: e.id, source: 'entry', title: e.title || '你是谁', text: e.text });
   if (p.confluence) beats.push({ t: 'text', id: 'confluence', source: 'confluence', title: '入局', text: confluenceText(pack, s) });
   for (const id of p.cardsAct3 || []) if (pack.cardMap[id]?.kind === 'prologue') beats.push({ t: 'card', id });
   return beats;
@@ -51,10 +55,13 @@ export function preludeBeatView(pack, s) {
   if (i >= beats.length) return { ...base, kind: 'done', title: '', text: '' };
   const b = beats[i];
   if (b.t === 'card') return { ...base, kind: 'card', title: '', text: '' };
+  // {{names}}：入局引点名"你是谁"——名字来自本局阵容
+  const names = s.chars.map((c) => c.name).join('、');
+  const withNames = (t) => String(t || '').replaceAll('{{names}}', names);
   if (b.t === 'prequel') {
     const q = pack.prelude?.prequels?.[b.id];
     const short = (s.preludeMode || 'full') === 'short';
-    return { ...base, kind: 'prequel', title: q?.title || '', text: short ? (q?.line || '') : (q?.paras || []).join('\n') };
+    return { ...base, kind: 'prequel', id: b.id, title: q?.title || '', text: withNames(short ? (q?.line || '') : (q?.paras || []).join('\n')) };
   }
-  return { ...base, kind: 'text', title: b.title || '', text: b.text || '' };
+  return { ...base, kind: 'text', id: b.id, title: b.title || '', text: withNames(b.text) };
 }

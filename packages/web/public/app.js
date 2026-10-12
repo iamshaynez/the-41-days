@@ -1051,20 +1051,31 @@ function renderPrologue(s) {
       box.appendChild(para);
     }
     const opts = el('div', 'prologue-opts');
-    const next = el('button', 'opt', '<span class="key">▸</span><span>翻页</span>');
-    next.type = 'button';
-    next.addEventListener('click', () => sendIntents([{ type: 'advance' }], '翻页'));
-    opts.appendChild(next);
-    if (pv.canSkip) {
-      // 单句版专属：翻全卷（从「天下」重读完整三幕，已答过的卡不重复）
-      const full = el('button', 'opt', '<span class="key">全</span><span>翻全卷——从天下读起</span>');
+    if (pv.id === 'openingChoice') {
+      // 通关账号的开场二选一（拍板 v3）：完整三幕 or 精简版
+      const full = el('button', 'opt', '<span class="key">全</span><span>完整开场——从天下讲起</span>');
       full.type = 'button';
-      full.addEventListener('click', () => sendIntents([{ type: 'prelude_full' }], '翻全卷'));
-      opts.appendChild(full);
-      const skip = el('button', 'opt opt-ghost', '<span class="key">⏎</span><span>翻过序章，直接进城</span>');
-      skip.type = 'button';
-      skip.addEventListener('click', () => sendIntents([{ type: 'skip_prelude' }], '翻过序章'));
-      opts.appendChild(skip);
+      full.addEventListener('click', () => sendIntents([{ type: 'prelude_full' }], '完整开场'));
+      const brief = el('button', 'opt', '<span class="key">简</span><span>精简开场——单句前传，直入城</span>');
+      brief.type = 'button';
+      brief.addEventListener('click', () => sendIntents([{ type: 'advance' }], '精简开场'));
+      opts.append(full, brief);
+    } else {
+      const next = el('button', 'opt', '<span class="key">▸</span><span>翻页</span>');
+      next.type = 'button';
+      next.addEventListener('click', () => sendIntents([{ type: 'advance' }], '翻页'));
+      opts.appendChild(next);
+      if (pv.canSkip) {
+        // 单句版专属：翻全卷（从「天下」重读完整三幕，已答过的卡不重复）
+        const full = el('button', 'opt', '<span class="key">全</span><span>翻全卷——从天下读起</span>');
+        full.type = 'button';
+        full.addEventListener('click', () => sendIntents([{ type: 'prelude_full' }], '翻全卷'));
+        opts.appendChild(full);
+        const skip = el('button', 'opt opt-ghost', '<span class="key">⏎</span><span>翻过序章，直接进城</span>');
+        skip.type = 'button';
+        skip.addEventListener('click', () => sendIntents([{ type: 'skip_prelude' }], '翻过序章'));
+        opts.appendChild(skip);
+      }
     }
     box.appendChild(opts);
     $('narration').appendChild(box);

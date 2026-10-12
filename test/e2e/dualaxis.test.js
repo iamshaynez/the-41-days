@@ -75,6 +75,26 @@ describe('序章三幕 · HTTP 全链', () => {
     assert.equal(s.chronicle.entries[0]?.title, '大胜之秋');
   });
 
+  test('首局门（拍板 v2）：全灭不算通关，活到战争收束才进单句版', async () => {
+    // 局一：人为收束为全灭（wiped）——账号仍算没通关
+    const r1 = await api('POST', '/api/runs', { mode: 'direct', seed: 11, prologue: false, roster: ['anton', 'marta', 'bron'] });
+    const st1 = app.db.getRun(r1.body.id).state;
+    st1.over = true; st1.ending = { type: 'wiped' };
+    app.db.finishRun(r1.body.id, st1, st1.ending);
+    const r2 = await api('POST', '/api/runs', { mode: 'direct', seed: 12, roster: ['anton', 'marta', 'bron'] });
+    assert.equal(r2.body.state.preludeView.canSkip, false, '全灭之后仍是完整三幕');
+    assert.ok(r2.body.state.preludeView.total >= 12, '全量拍数');
+    // 局二：活到开城（ceasefire）——账号通关，此后续局进单句版
+    const st2 = app.db.getRun(r2.body.id).state;
+    st2.over = true; st2.ending = { type: 'ceasefire' };
+    app.db.finishRun(r2.body.id, st2, st2.ending);
+    const r3 = await api('POST', '/api/runs', { mode: 'direct', seed: 13, roster: ['anton', 'marta', 'bron'] });
+    assert.equal(r3.body.state.preludeView.canSkip, true, '通关之后进单句版');
+    assert.ok(r3.body.state.preludeView.total < r2.body.state.preludeView.total, '单句版拍数更少');
+    // 入局引在线上也在卷（{{names}} 已插值）
+    assert.ok(r3.body.state.chronicle, '史卷在卷');
+  });
+
   test('史卷随日翻新（留白日无笔是设计）；GET 视图带舆图与史卷', async () => {
     const r = await api('POST', '/api/runs', { mode: 'direct', seed: 9, prologue: false, roster: ['anton', 'marta', 'bron'] });
     const id = r.body.id;

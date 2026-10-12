@@ -2,7 +2,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRun, step, PACK } from '../helpers.js';
-import { fold, preludeBeats } from '../../packages/core/index.js';
+import { fold, preludeBeats, preludeBeatView } from '../../packages/core/index.js';
 
 const PICK = { p1_water: 'tried', p3_shelling: 'share', p4_door: 'open', p2_house: 'ours', p5_dawn9: 'begin' };
 
@@ -36,13 +36,13 @@ describe('序章三幕 · 节拍引擎', () => {
       if (!s.activeEvent) break; // 进入前传文本幕
     }
     assert.deepEqual(order, ['p1_water', 'p3_shelling', 'p4_door']);
-    // 前传×3 + 合流：四翻（阵容三人）
+    // 前传×3 + 入局引 + 合流：五翻（阵容三人）
     let textBeats = 0;
-    while (!s.activeEvent && s.phase === 'prologue' && textBeats < 5) {
+    while (!s.activeEvent && s.phase === 'prologue' && textBeats < 6) {
       s = step(s, [{ type: 'advance' }]).state;
       textBeats++;
     }
-    assert.equal(textBeats, 4, '三段前传 + 一段合流');
+    assert.equal(textBeats, 5, '三段前传 + 入局引 + 一段合流');
     assert.equal(s.activeEvent?.cardId, 'p2_house', '合流后写名上墙');
     s = step(s, [{ type: 'event_choice', option: 'ours' }]).state;
     assert.equal(s.activeEvent?.cardId, 'p5_dawn9');
@@ -87,12 +87,28 @@ describe('序章三幕 · 节拍引擎', () => {
     assert.ok(pt.includes('三条路'), '无变体组合走通用合流');
   });
 
+  test('入局引：前传毕、合流前——点破三个平民与活下去的目标（{{names}} 插值）', () => {
+    const { state } = newRun({ prologue: true, roster: ['anton', 'marta', 'bron'] });
+    const beats = preludeBeats(PACK, state);
+    const eIdx = beats.findIndex((b) => b.source === 'entry');
+    const cIdx = beats.findIndex((b) => b.id === 'confluence');
+    const lastPreq = Math.max(...beats.map((b, i) => (b.t === 'prequel' ? i : -1)));
+    assert.ok(eIdx > lastPreq && eIdx < cIdx, '入局引夹在前传与合流之间');
+    const view = preludeBeatView(PACK, { ...state, prelude: { i: eIdx } });
+    assert.ok(view.text.includes('文简、辛夷、石大'), '点名三人: ' + view.text.slice(0, 40));
+    assert.ok(view.text.includes('活过这个秋天'), '目标：活下去');
+    // 单句版同样有入局引（名字来得更突然，更需要这一拍）
+    const short = newRun({ prologue: true, preludeMode: 'short', roster: ['bron', 'katya', 'pavel'] }).state;
+    assert.ok(preludeBeats(PACK, short).some((b) => b.source === 'entry'));
+  });
+
   test('单句版（二周目）：天下一行、前传用 line、可跳过', () => {
     const { state } = newRun({ prologue: true, preludeMode: 'short' });
     const beats = preludeBeats(PACK, state);
     const full = preludeBeats(PACK, newRun({ prologue: true }).state);
     assert.ok(beats.length < full.length, '单句版节拍更少');
-    assert.equal(beats[0].id, 'heavenLine');
+    assert.equal(beats[0].id, 'openingChoice', '通关账号第一拍是开场二选一');
+    assert.equal(beats[1]?.id, 'heavenLine', '第二拍才是单句天下');
     assert.equal(beats.filter((b) => b.t === 'text' && b.source === 'heaven').length, 0, '长天下不进单句版');
     const preq = beats.find((b) => b.t === 'prequel');
     assert.ok(preq, '前传拍仍在（单句）');
@@ -105,7 +121,8 @@ describe('序章三幕 · 节拍引擎', () => {
 
   test('翻全卷：单句版展开为完整三幕，已答的卡不重复', () => {
     const { state } = newRun({ prologue: true, preludeMode: 'short' });
-    let s = step(state, [{ type: 'advance' }]).state; // heavenLine → p1
+    let s = step(state, [{ type: 'advance' }]).state; // 开场选择 → 单句天下
+    s = step(s, [{ type: 'advance' }]).state; // 单句天下 → p1
     assert.equal(s.activeEvent?.cardId, 'p1_water');
     s = step(s, [{ type: 'event_choice', option: 'tried' }]).state; // 答掉 p1 → 下一拍
     const r = step(s, [{ type: 'prelude_full' }]);
