@@ -29,6 +29,9 @@
   // "教辛夷认字"、"鼓励文简把账写完"、"盼着这个家有个读书声"。
   // 判据：带明确的引导/期望语气、不指向当下某个可执行动作，才是 direction；
   // "今晚/现在/先去做某事"是具体意图，不要误判。
+- {"type":"night_directive","stance":"cautious|normal|bold","text":"方针原话"}
+  // 夜访方针卡上的**方向性**话语："今晚只拿吃的，见人就绕"→cautious，"放手干"→bold。
+  // 具体的单步动作（"搜这个柜子""去隔壁"）仍用 night 意图，不要拔高成方针。
 - {"type":"meta","query":"status|inventory|help"}
 - {"type":"advance"}   // 进入下一阶段（白天结束→黄昏 等）
 
