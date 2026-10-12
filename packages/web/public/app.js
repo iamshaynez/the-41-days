@@ -1212,13 +1212,16 @@ async function openMenu() {
   }
   html += `</section>`;
 
-  // 没写完的局
+  // 没写完的局（每行：翻回去 + 删掉——删是真删，两步确认）
   html += `<section class="m-sec"><p class="m-kicker">没写完的局</p>`;
   if (runs.length) {
     html += `<div class="m-runs">` + runs.map((run) =>
-      `<button class="m-run" type="button" data-run="${run.id}" ${run.id === state.runId ? 'disabled' : ''}>
-        <b>第 ${run.day ?? '?'} 日</b><span class="m-run-meta">${run.mode === 'llm' ? 'LLM' : '直读'} · ${run.difficulty === 'narrative' ? '叙事' : '纪实'} · ${String(run.started_at || '').slice(5, 10)}${run.id === state.runId ? ' · 手头这本' : ''}</span>
-      </button>`).join('') + `</div>`;
+      `<div class="m-run-row">
+        <button class="m-run" type="button" data-run="${run.id}" ${run.id === state.runId ? 'disabled' : ''}>
+          <b>第 ${run.day ?? '?'} 日</b><span class="m-run-meta">${run.mode === 'llm' ? 'LLM' : '直读'} · ${run.difficulty === 'narrative' ? '叙事' : '纪实'} · ${String(run.started_at || '').slice(5, 10)}${run.id === state.runId ? ' · 手头这本' : ''}</span>
+        </button>
+        <button class="m-del" type="button" data-del="${run.id}" title="删掉这份存档（档案馆的收录保留）">删</button>
+      </div>`).join('') + `</div>`;
   } else {
     html += `<p class="hint">没有没写完的局。</p>`;
   }
@@ -1291,6 +1294,28 @@ async function openMenu() {
     closeSheets();
     if (id !== state.runId) resumeRun(id);
     else switchView('play');
+  }));
+  // 删掉存档：两步确认；删的是手头这本 → 回卷首（删是真删，档案馆的收录保留）
+  sheet.querySelectorAll('.m-del').forEach((b) => b.addEventListener('click', async () => {
+    const id = b.dataset.del;
+    if (state.busy) return;
+    if (!b.dataset.armed) {
+      b.dataset.armed = '1';
+      b.textContent = '真删？';
+      b.classList.add('armed');
+      setTimeout(() => { if (b.isConnected) { b.dataset.armed = ''; b.textContent = '删'; b.classList.remove('armed'); } }, 3500);
+      return;
+    }
+    b.disabled = true;
+    const res = await fetch(`/api/runs/${id}`, { method: 'DELETE' });
+    if (!res.ok) { b.disabled = false; b.textContent = '删'; b.classList.remove('armed'); return; }
+    if (id === state.runId) { closeSheets(); backToSetup(); return; }
+    const row = b.closest('.m-run-row');
+    if (row) {
+      row.remove();
+      const box = sheet.querySelector('.m-runs');
+      if (box && !box.querySelectorAll('.m-run-row').length) box.innerHTML = '<p class="hint">没有没写完的局。</p>';
+    }
   }));
   sheet.querySelector('#m-new').addEventListener('click', () => {
     const d = sheet.querySelector('#m-difficulty').value;
@@ -1566,6 +1591,25 @@ async function loadArchive() {
     card.innerHTML = `<span class="doc-id">${esc(ENDING_NAME[run.ending] || run.ending || '终局')}</span><b>${run.day} 天的一局</b>
       <p class="mem-meta">${esc(who || '没有人走出来')}</p>
       <details><summary>读复盘</summary><div class="mem-text">${String(run.memoir).split('\n').filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join('')}</div></details>`;
+    // 删掉这一局：复盘随局走（档案馆其余收录保留），两步确认
+    if (run.runId) {
+      const del = el('button', 'memoir-del', '删掉这一局');
+      del.type = 'button';
+      del.addEventListener('click', async () => {
+        if (!del.dataset.armed) {
+          del.dataset.armed = '1';
+          del.textContent = '再按一次：复盘与存档一并删去';
+          del.classList.add('armed');
+          setTimeout(() => { if (del.isConnected) { del.dataset.armed = ''; del.textContent = '删掉这一局'; del.classList.remove('armed'); } }, 3500);
+          return;
+        }
+        del.disabled = true;
+        const res = await fetch(`/api/runs/${run.runId}`, { method: 'DELETE' });
+        if (res.ok) loadArchive();
+        else { del.disabled = false; del.textContent = '删掉这一局'; del.classList.remove('armed'); }
+      });
+      card.appendChild(del);
+    }
     shelf.appendChild(card);
   }
 }

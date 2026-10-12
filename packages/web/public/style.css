@@ -1255,6 +1255,25 @@ button:focus-visible, .opt:focus-visible { outline: none; box-shadow: 0 0 0 3px 
 body.motion-off *, body.motion-off *::before, body.motion-off *::after { animation: none !important; transition: none !important; }
 body.motion-off { scroll-behavior: auto; }
 
+/* —— 删除存档：菜单行内删 + 回忆录书架删（两步确认，armed 态朱砂） —— */
+.m-run-row { display: flex; gap: 7px; align-items: stretch; }
+.m-run-row .m-run { flex: 1; min-width: 0; }
+.m-del {
+  flex: none; font: inherit; font-size: 12px; letter-spacing: .18em;
+  color: var(--ink-3); background: var(--paper-hi); border: 1px solid var(--rule);
+  padding: 0 13px; cursor: pointer; transition: color .25s, border-color .25s, background .25s;
+}
+.m-del:hover { color: var(--accent); border-color: var(--accent); }
+.m-del.armed { color: var(--accent-2); border-color: var(--accent); background: var(--accent-wash); letter-spacing: .08em; }
+.m-del:disabled { opacity: .5; cursor: default; }
+.memoir-del {
+  font: inherit; font-size: 11px; letter-spacing: .14em; margin-top: 8px;
+  color: var(--ink-3); background: none; border: 1px solid var(--rule); padding: 3px 12px; cursor: pointer;
+  transition: color .25s, border-color .25s;
+}
+.memoir-del:hover { color: var(--accent); border-color: var(--accent); }
+.memoir-del.armed { color: var(--accent-2); border-color: var(--accent); background: var(--accent-wash); }
+.memoir-del:disabled { opacity: .5; cursor: default; }
 /* ════════════════════════════════════════════════════════════════
    叙事双轴（叙事双轴-v0.1）：左轴右翼布局 · 舆图 · 史卷 · 高亮标注
    ════════════════════════════════════════════════════════════════ */

@@ -97,6 +97,15 @@ export class Db {
     return this.db.prepare("UPDATE run SET status='abandoned' WHERE id=? AND status='active'").run(runId).changes > 0;
   }
 
+  /** 删除对局（真删）：run + 事件 + 书页 + 该局的复盘档案（run_memory）随局走；
+   *  档案馆的文件、封印、野史保留——线索属于城市，不属于某一局。返回是否删到了。 */
+  deleteRun(runId) {
+    this.db.prepare('DELETE FROM run_event WHERE run_id=?').run(runId);
+    this.db.prepare('DELETE FROM run_narration WHERE run_id=?').run(runId);
+    this.db.prepare("DELETE FROM archive_entry WHERE kind='run_memory' AND key=?").run(runId);
+    return this.db.prepare('DELETE FROM run WHERE id=?').run(runId).changes > 0;
+  }
+
   // —— 档案馆（跨局，玩家域） ——
   archivePut(userId, kind, key, data, firstRunId) {
     const ex = this.db.prepare('SELECT data_json FROM archive_entry WHERE user_id=? AND kind=? AND key=?').get(userId, kind, key);
