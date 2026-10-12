@@ -81,7 +81,7 @@
   <main id="view-archive" class="view" hidden>
     <section class="panel paper archive-head">
       <p class="kicker">跨局 · 这座城的记忆</p>
-      <h1>档案馆</h1>
+      <h1>档案馆 <button class="ghost view-back" id="back-from-archive" type="button">← 回到对局</button></h1>
       <p class="lede" id="archive-progress"></p>
       <div id="layer-states"></div>
       <div id="closure-box" hidden></div>
@@ -115,7 +115,7 @@
   <main id="view-admin" class="view" hidden>
     <section class="panel paper">
       <p class="kicker">后台 · 只对管理员显形</p>
-      <h1>管理</h1>
+      <h1>管理 <button class="ghost view-back" id="back-from-admin" type="button">← 回到对局</button></h1>
       <div id="admin-login" class="admin-row" hidden>
         <p class="hint">这里需要管理员账号（ADMIN_USERNAME / ADMIN_PASSWORD 首次登录时自动创建）。<a href="/">回首页登录</a></p>
       </div>
@@ -172,17 +172,7 @@
   </main>
 </div>
 
-<!-- ═══ 批注条（反聊天壳的输入；只在对局视图中现身） ═══ -->
-<div id="inputbar" hidden>
-  <div class="inputbar-inner">
-    <div id="chips" class="chips"></div>
-    <div class="input-row">
-      <span id="candle" aria-hidden="true"></span>
-      <input id="input" type="text" placeholder="现在，你想做什么？" autocomplete="off" enterkeyhint="send">
-      <button id="btn-send" class="primary">落笔</button>
-    </div>
-  </div>
-</div>
+<!-- ═══ 输入已并入停问卡（统一交互面）：每张卡 = 选项 + 输入行 + 再想想 ═══ -->
 
 <!-- ═══ 覆盖层：菜单与家底细目共用一张幕布 ═══ -->
 <div id="overlay-backdrop" aria-hidden="true"></div>

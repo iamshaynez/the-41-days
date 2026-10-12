@@ -2,10 +2,72 @@
 // 三个规划器产出与裁判/直读解析器完全相同的意图对象，走同一条 resolve 管线——
 // 自动化不发明第二条状态通道。bots.js 是这些策略的对抗性参考，本文件是游戏内正式版。
 import { aliveChars, apMaxOf, policyOf } from './state.js';
+import { DAY_ACTIONS, AP_COST } from './dayActions.js';
 
 const itemName = (pack, id) => pack.itemMap[id]?.name || id;
 const has = (s, id, n = 1) => (s.inventory[id] || 0) >= n;
 const delegated = (i) => ({ ...i, delegated: true });
+
+/** 谋士选项的意图类型白名单：玩家的"方案"只有这些；meta/whisper/event_choice/advance 不是方案 */
+export const OPTION_INTENT_TYPES = new Set(['act', 'dusk_assign', 'night', 'trade_op', 'direction', 'policy', 'auto_day', 'auto_night']);
+
+/** 意图可行性（只读检查，不碰状态）：谋士生成的选项必须点得动——
+ *  渲染出来的选项不允许点了落空。粗门：人在不在、阶段对不对、货有没有；
+ *  细账（价格带、材料够不够）仍由 resolve 在执行时裁决。 */
+export function feasibleIntent(state, pack, intent) {
+  const s = state;
+  if (!intent || typeof intent !== 'object' || !OPTION_INTENT_TYPES.has(intent.type)) return false;
+  switch (intent.type) {
+    case 'act': {
+      if (s.phase !== 'day') return false;
+      if (!DAY_ACTIONS.includes(intent.action)) return false; // 谋士会发明动作——只认内核动词表
+      const c = intent.actor ? s.chars.find((x) => x.id === intent.actor) : null;
+      if (!c || !c.alive || c.ap < Math.max(1, AP_COST[intent.action] ?? 1)) return false;
+      if (intent.action === 'eat') return ['meal', 'canned', 'raw', 'meat'].some((i) => (s.inventory[i] || 0) > 0);
+      // 设施/耗材前置：渲染出来的选项不允许点了落空（线上教训：无灶 cook）
+      if (intent.action === 'cook') return !!s.facilities.stove;
+      if (intent.action === 'listen_radio') return !!s.facilities.radio;
+      if (intent.action === 'read') return (s.inventory.book || 0) > 0;
+      if (intent.action === 'treat') return ['bandage', 'meds', 'herbmed'].includes(intent.target) && has(s, intent.target);
+      if (intent.action === 'craft') return pack.recipes.some((r) => r.id === intent.target);
+      if (intent.action === 'build') return pack.facilityMap ? !!pack.facilityMap[intent.target] : true;
+      if (intent.action === 'chop') return (s.homeFurniture || 0) > 0;
+      return true;
+    }
+    case 'dusk_assign': {
+      if (s.phase !== 'dusk') return false;
+      if (intent.scavenger) {
+        const c = s.chars.find((x) => x.id === intent.scavenger);
+        if (!c || !c.alive || c.wound >= 3 || c.sick >= 3) return false;
+      }
+      if (intent.location && !s.knownLocs.includes(intent.location)) return false;
+      return true;
+    }
+    case 'night': {
+      if (s.phase !== 'night' || !s.night || s.night.home) return false;
+      const loc = pack.locMap[s.night.locId];
+      if (!loc) return false;
+      if (['move', 'open', 'clear', 'bars'].includes(intent.action)) return loc.rooms.some((r) => r.id === intent.target);
+      if (intent.action === 'search') return intent.target == null || loc.rooms.some((r) => (r.containers || []).some((c) => c.id === intent.target));
+      if (['dialogue', 'attack', 'backstab', 'ignore'].includes(intent.action)) return (loc.npcs || []).some((n) => n.id === intent.target);
+      return ['observe', 'retreat', 'push_on'].includes(intent.action);
+    }
+    case 'trade_op': {
+      if (s.phase !== 'day' || !s.franko) return false;
+      for (const [id, n] of Object.entries(intent.give || {})) if ((s.inventory[id] || 0) < n) return false;
+      for (const [id, n] of Object.entries(intent.get || {})) {
+        const sku = s.franko.stock.find((x) => x.item === id);
+        if (!sku || sku.n < n) return false;
+      }
+      return !!intent.give && !!intent.get;
+    }
+    case 'direction': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.length <= 60;
+    case 'policy': return typeof intent.key === 'string' && ['feeding', 'rationing', 'nightApproach'].includes(intent.key);
+    case 'auto_day': return s.phase === 'day';
+    case 'auto_night': return s.phase === 'night' && !!s.night && !s.night.home;
+    default: return false;
+  }
+}
 
 /** 角色一句话画像（决策卡里给玩家看的判断依据，不现编，全是状态事实） */
 export function charDigest(pack, id) {
@@ -32,6 +94,12 @@ export function planDay(state, pack) {
   const free = (pred = () => true) => aliveChars(s).find((c) => c.ap > 0 && !busy.has(c.id) && pred(c));
   const use = (id) => busy.add(id);
 
+  // —— 交易（水下）：商人在门口，管家自取一笔建议成交——价目卡已退场，
+  //    想干预的玩家用自由文本开价（trade_op），或种下念头让世界长出回应 ——
+  if (s.franko && s.phase === 'day') {
+    const deal = tradeDeals(s, pack)[0];
+    if (deal) intents.push(delegated({ type: 'trade_op', give: deal.give, get: deal.get }));
+  }
   // —— 吃（feeding=auto 时）：熟食优先；省粮策略只喂真正饿的 ——
   if (pol.feeding === 'auto') {
     const threshold = pol.rationing ? 1 : 2;
@@ -118,7 +186,7 @@ export function dawnProblems(state, pack) {
   }
   const fuel = (s.inventory.firewood || 0) + (s.inventory.fuel || 0);
   if (s.winterActive && fuel < 2 && (s.facilities.heater || s.facilities.heater_iron)) out.push({ sev: 2, text: '取暖的柴快烧完了。' });
-  if (s.franko) out.push({ sev: 0, text: '鲁舟在渡口边摆摊，今天可以交易。' });
+  if (s.franko) out.push({ sev: 0, text: '鲁舟的船靠在渡口边。' });
   if (s.war?.telegraphed) out.push({ sev: 0, text: '炮声稀了——懂行的人说，可能快了。' });
   return out.sort((a, b) => b.sev - a.sev);
 }
@@ -324,6 +392,25 @@ export function tradeDeals(state, pack) {
   return deals;
 }
 
+/* ════════════════════════ 自由输入示例：freeExamples ════════════════════════
+   停问卡末位输入行的语境化示例（命运导演 P0b）：教玩家"能说什么"。
+   状态现算、按天轮换；示例优先选直读解析器也认得的说法——不说系统做不到的话。 */
+export function freeExamples(state, pack) {
+  const s = state;
+  const out = { day: [], dusk: [], night: [], trade: [], event: [] };
+  if (s.over || s.phase === 'prologue') return out;
+  const alive = aliveChars(s);
+  if (!alive.length) return out;
+  const name = (i) => alive[Math.min(i, alive.length - 1)]?.name || '有人';
+  const known = (s.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]);
+  const locName = (i) => pack.locMap[known[Math.min(i, Math.max(known.length - 1, 0))]]?.name || '南市';
+  out.day = ['照常过吧', '以后省着吃', `鼓励${name(0)}把想做的事做完`];
+  out.dusk = [`今晚${name(0)}去${locName(0)}，带铁撬`, '今晚谁都不出门', `今晚${name(1)}守夜`];
+  out.night = ['先观察一下这间屋', '再搜最后一点，就回去', '撤退'];
+  out.trade = ['用2木板换1生食', '这价太黑了，便宜点'];
+  out.event = ['先问清楚他是谁，再说', '隔着门回话，不开门'];
+  return out;
+}
 /* ════════════════════════ 情境建议：suggests ════════════════════════
    取代静态 chips：由状态驱动的"你可能想说"（文本经由直读/裁判解析，管线唯一）。 */
 export function suggests(state, pack) {
@@ -336,7 +423,6 @@ export function suggests(state, pack) {
     const foodTotal = ['meal', 'canned', 'raw', 'meat'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
     if (foodTotal <= 3 && foodTotal > 0) out.push({ label: '省着吃', text: '以后省着吃' });
     if (policyOf(s).rationing && foodTotal > 3) out.push({ label: '恢复正常吃饭', text: '正常吃饭，别饿着' });
-    if (s.franko) out.push({ label: '看看鲁舟的摊子', focus: 'trade-card' });
     if (s.facilities.radio) out.push({ label: '听听广播', text: '听广播' });
     if (s.day <= 2) out.push({ label: '我能做什么？', text: '帮助' });
   } else if (s.phase === 'dusk') {

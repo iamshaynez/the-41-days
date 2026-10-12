@@ -1,5 +1,5 @@
 {
-  "$comment": "C 层生成事件守卫（内核设计-v0.2 §8.8 GE-01~13）：编剧 LLM 的提案只在白名单内有效；校验不过即拒。正典防火墙=暗线词表+正史锚点词表，提案含即拒。",
+  "$comment": "C 层生成事件守卫（内核设计-v0.2 §8.8 GE-01~13）：编剧 LLM 的提案只在白名单内有效；校验不过即拒。正典防火墙=暗线词表+正史锚点词表，提案含即拒。v3 命运导演：flagKeys=旗标注册表（LLM 只能点菜），arcs=命运弧（随进度解锁的生成方向，皮肤自由、包络住数据）。",
   "budget": { "perDayMax": 1, "maxShareOfEvents": 0.25 },
   "cooldownDays": 7,
   "themeWheel": ["稀缺", "病痛", "孩子", "士兵", "天气", "失物", "交易", "艺术", "沉默日"],
@@ -10,6 +10,29 @@
     "reputation": [-1, 1],
     "riskWoundMax": 1
   },
+  "flagKeys": ["fate_paper_chased", "fate_paper_ignored", "fate_children_fed"],
+  "arcs": [
+    {
+      "id": "late_paper",
+      "tier": 2,
+      "at": "dusk",
+      "oncePerRun": true,
+      "when": { "dayWindow": [34, 42] },
+      "theme": "失物",
+      "brief": "炮声稀了的那些天里的一个黄昏：一页写着你家名字的纸（欠据、名录或家书）落在了别人手里，今晚不去取，它就永远取不回来。用锚池里的事实交代这页纸的来路，不发明大事。给三个方向：冒险去取（risk，旗标 fate_paper_chased）、付出代价赎回（item_cost）、由它去（旗标 fate_paper_ignored）。禁词一个不许出现。",
+      "flags": ["fate_paper_chased", "fate_paper_ignored"]
+    },
+    {
+      "id": "two_children",
+      "tier": 1,
+      "at": "day",
+      "oncePerRun": true,
+      "when": { "minDay": 14 },
+      "theme": "孩子",
+      "brief": "两个半大孩子站在你家门口的分岔。他们讨的不只是吃的——用锚池里你们最近的处境把这件事写疼。给与不给之外，至少再给一个出乎意料但合理的应对面（旗标 fate_children_fed 表示你给了）。",
+      "flags": ["fate_children_fed"]
+    }
+  ],
   "bannedTerms": [
     "券局", "更籍", "鼓谱", "誊抄", "守藏", "文修", "老纪", "鲁舟", "濠鼠", "白翎", "交割", "券书", "长桌",
     "湘水之盟", "展期", "编号段", "火种",

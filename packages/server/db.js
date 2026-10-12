@@ -18,7 +18,11 @@ export class Db {
     const sha = (s) => createHash('sha256').update(s).digest('hex').slice(0, 16);
     const manifestJson = JSON.stringify(pack.manifest);
     const existing = this.db.prepare('SELECT id FROM content_pack ORDER BY id DESC LIMIT 1').get();
-    const manifestSha = sha(manifestJson + JSON.stringify(pack.items.length + pack.characters.length + pack.locations.length + pack.docs.length + pack.cards.length));
+    // 提示词全文纳入 sha：改提示词必须触发重种子——否则服务端一直用 DB 里的旧版
+    //（线上教训：optionsmith 加了动作词表/id 对照，DB 旧版让全部选项被验证器吃掉）
+    const promptSha = sha(['referee', 'narrator', 'actor', 'memoirist', 'playwright', 'optionsmith']
+      .map((n) => { try { return loadPrompt(n, packDir); } catch { return ''; } }).join('\u0000'));
+    const manifestSha = sha(manifestJson + promptSha + JSON.stringify(pack.items.length + pack.characters.length + pack.locations.length + pack.docs.length + pack.cards.length));
     const curSha = existing ? this.db.prepare("SELECT sha FROM content_entity WHERE pack_id=? AND kind='manifest'").get(existing.id)?.sha : null;
     if (curSha === manifestSha) return existing.id;
     const ins = this.db.prepare('INSERT INTO content_pack (semver, manifest_json, imported_at) VALUES (?,?,?)');
@@ -36,7 +40,7 @@ export class Db {
     for (const d of pack.docs) put('doc', d.id, d);
     put('kpi', 'kpis', pack.kpis);
     put('narration', 'narrations', pack.narrations);
-    for (const name of ['referee', 'narrator', 'actor', 'memoirist', 'playwright']) put('prompt', name, { text: loadPrompt(name, packDir) });
+    for (const name of ['referee', 'narrator', 'actor', 'memoirist', 'playwright', 'optionsmith']) put('prompt', name, { text: loadPrompt(name, packDir) });
     return packId;
   }
   currentPackId() { return this.db.prepare('SELECT id FROM content_pack ORDER BY id DESC LIMIT 1').get()?.id; }

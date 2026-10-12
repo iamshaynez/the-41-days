@@ -223,6 +223,34 @@ export function tickAutonomous(ctx) {
   // 尤拉目击账：什么都不用做——他什么都记得（永不衰减，storyline 直接读 entries）
 }
 
+/**
+ * 念头晨间结算（v3 命运导演）：种下的事，世界替你记着。
+ * - 枯萎：满 10 天没人再提 → 淡出（无惩罚，只有文学后果）
+ * - 回声：种下至少一天后，每 3 天在晨间轻轻响一声（fact，零状态副作用）
+ * 全程确定性（无随机数）：回声时机 = (day - day0) % 3 === 1，一天至多一声。
+ */
+export function tickDirections(ctx) {
+  const s = ctx.s;
+  const all = Object.values(s.directions || {});
+  if (!all.length) return;
+  let dirty = false;
+  for (const d of all) {
+    if (d.alive && s.day - d.lastDay > 10) {
+      d.alive = false; dirty = true;
+      ctx.fact('direction_faded', { id: d.id, subject: d.subject, text: d.text });
+    }
+  }
+  for (const d of all.filter((x) => x.alive)) {
+    if (s.day <= d.day) continue;
+    if ((s.day - d.day) % 3 !== 1 || d.echoDay === s.day) continue;
+    if (d.subject && !charById(s, d.subject)) continue; // 人不在了，念头无处落
+    d.echoDay = s.day; dirty = true;
+    ctx.fact('direction_echo', { id: d.id, char: d.subject, text: d.text });
+    break; // 一天至多一声回响
+  }
+  if (dirty) ctx.setFlag('directions', structuredClone(s.directions));
+}
+
 /** 袭击睡岗判定（CY-32）：被长期克扣的守夜人可能"没听见"。返回睡着的守卫（至多一人） */
 export function slumberGuard(ctx, guards) {
   for (const g of guards) {
