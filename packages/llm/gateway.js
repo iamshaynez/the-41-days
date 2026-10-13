@@ -145,6 +145,16 @@ export async function ensemble({ provider, prompts }, brief) {
   return extractJson(r.text);
 }
 
+/** 史官列传（人物血肉计划 PR3）：内核 timeline/direction → 每人一段史书列传。
+ *  输出经 biographyLint 逐人校验（长度/日数/节拍引用/禁词），不过即直读模板。 */
+export async function biographer({ provider, prompts }, brief) {
+  const system = prompts.biographer
+    .replace('{{bios}}', JSON.stringify(brief.bios, null, 1))
+    .replace('{{ending}}', JSON.stringify(brief.ending));
+  const r = await provider.call({ system, user: '为每个人写列传。只输出 JSON。', json: true, temperature: 0.85, maxTokens: 5000, thinking: THINKING_LOW });
+  return extractJson(r.text);
+}
+
 export function makeGateway({ providers, log = () => {} }) {
   async function call(purpose, fn) {
     const primary = providers[purpose];

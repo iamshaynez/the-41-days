@@ -1160,6 +1160,27 @@ function renderEnding(s) {
     box.appendChild(acc);
   }
   for (const c of s.ending.chars) box.appendChild(el('p', 'fate', `<b>${esc(c.name)}</b>　${esc(c.fate)}`));
+  // 列传（人物血肉计划 PR3）：每人一段史书小传 + 个人大事时间线 + 盖棺方向
+  const bios = s.ending.biographies || [];
+  if (bios.length) {
+    const DIR_BADGE = { fallen: '殁', haunted: '恸', honored: '誉', survived: '存' };
+    const bd = el('div', 'three-things bios');
+    bd.appendChild(el('span', 'kicker', '列传'));
+    for (const b of bios) {
+      const card = el('div', 'bio-card');
+      card.appendChild(el('h4', 'bio-name', esc(b.name)));
+      const ep = (story?.epilogues || []).find((x) => x.id === b.id);
+      if (ep?.direction) card.appendChild(el('span', `bio-dir bio-${ep.direction}`, DIR_BADGE[ep.direction] || ''));
+      for (const para of String(b.text).split(/(?=后日谈：)/).filter(Boolean)) card.appendChild(el('p', '', esc(para)));
+      if (ep?.timeline?.length) {
+        const tl = el('ul', 'bio-timeline');
+        for (const t of ep.timeline) tl.appendChild(el('li', '', `第${t.day}天　${esc(t.text)}`));
+        card.appendChild(tl);
+      }
+      bd.appendChild(card);
+    }
+    box.appendChild(bd);
+  }
   // 时间胶囊（EC-02）：埋一件物品 + 一句留话，后续周目后院可挖
   renderCapsuleForm(box, s);
   box.appendChild(el('p', 'sys', '（档案馆已收录本局与这篇复盘。从菜单翻开新的一页，城市会记得。）'));

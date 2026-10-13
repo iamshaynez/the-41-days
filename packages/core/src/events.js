@@ -198,20 +198,16 @@ export function buildEnding(state, pack) {
   const s = state;
   const alive = s.chars.filter((c) => c.alive);
   const dead = s.chars.filter((c) => !c.alive);
+  const story = buildStoryline(s, pack); // 单一源：chars[].fate 消费 storyline.direction（口径统一）
+  const epById = Object.fromEntries(story.epilogues.map((e) => [e.id, e]));
   const chars = [...alive, ...dead].map((c) => {
-    const deeds = s.deeds.filter((d) => d.actor === c.id);
-    let good = 0, bad = 0;
-    for (const d of deeds) {
-      const t = DEED_TIERS[d.type];
-      if (!t) continue;
-      if (t.good) good += t.weight; if (t.bad) bad += t.weight;
-    }
-    const fate = !c.alive
+    const ep = epById[c.id] || {};
+    const fate = ep.direction === 'fallen'
       ? `没能撑过去。第 ${deathsDay(s, c.id)} 天，橘里的墙上多了一个名字。`
-      : bad > good + 4 ? '活下来了，但有些夜晚会突然惊醒，手先于他摸向不存在的刀。'
-      : good > bad + 4 ? '活下来了。战争结束后很久，还有人敲他家的门——为了道谢，不是为了讨债。'
+      : ep.direction === 'haunted' ? '活下来了，但有些夜晚会突然惊醒，手先于他摸向不存在的刀。'
+      : ep.direction === 'honored' ? '活下来了。战争结束后很久，还有人敲他家的门——为了道谢，不是为了讨债。'
       : '活下来了。就是活下来了。在这个年头，这四个字已经够写一整页。';
-    return { id: c.id, name: c.name, alive: c.alive, fate };
+    return { id: c.id, name: c.name, alive: c.alive, fate, direction: ep.direction || 'survived' };
   });
   // 三件事（EX-02）：戏剧分 top3
   const drama = [];
@@ -225,6 +221,7 @@ export function buildEnding(state, pack) {
     const def = pack.sideMap[s.sidestory.id];
     const variant = (def.ending.variants || []).find((v) => (v.whenFlags || []).every((f) => s.eventFlags[f]));
     const chosen = variant || def.ending.default;
+    const sideStory = { ...story, title: `${def.title} · ${chosen.title}`, annals: [{ text: chosen.text, note: chosen.note, ending: 'side_' + def.id }] };
     const ending = {
       type: 'sidestory',
       day: s.day,
@@ -233,7 +230,7 @@ export function buildEnding(state, pack) {
       threeThings: three,
       docs: s.docsSeen,
       knowledge: s.knowledge,
-      storyline: (() => { const st2 = buildStoryline(s, pack); st2.title = `${def.title} · ${chosen.title}`; st2.annals = [{ text: chosen.text, note: chosen.note, ending: 'side_' + def.id }]; return st2; })()
+      storyline: sideStory
     };
     return ending;
   }
@@ -245,7 +242,7 @@ export function buildEnding(state, pack) {
     docs: s.docsSeen,
     knowledge: s.knowledge,
     // 因果引擎：这一局的完整故事线与人的账（CY-33/EPI-01）
-    storyline: buildStoryline(s, pack)
+    storyline: story
   };
 }
 function deathsDay(s, id) {

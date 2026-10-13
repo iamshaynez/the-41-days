@@ -14,9 +14,9 @@ import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect } from './narrate.js';
 import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
-import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole } from '../llm/index.js';
+import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
-import { applySceneEffects, validateEnsemble, renderEnsembleDirect } from '../core/index.js';
+import { applySceneEffects, validateEnsemble, renderEnsembleDirect, renderBiographiesDirect, biographyLint } from '../core/index.js';
 import { anchorPool } from '../core/src/ge.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from './echoes.js';
 import { createGeDirector } from './ge.js';
@@ -63,7 +63,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     // 老库缺条目（如新加的 optionsmith）时兜底读内容包原文件——提示词永远不允许是空的
     const fromDisk = (n) => { try { return loadPrompt(n, PACK_DIR); } catch { return ''; } };
     const pick = (n) => ents[n]?.text || fromDisk(n);
-    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith'), stage: pick('stage'), annalist: pick('annalist'), ensemble: pick('ensemble') };
+    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith'), stage: pick('stage'), annalist: pick('annalist'), ensemble: pick('ensemble'), biographer: pick('biographer') };
   }
 
   // —— C 层导演（GE：LLM 在配才在场；离线即关，游戏完整可玩） ——
@@ -164,8 +164,50 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       st.ending.memoir = memoir || renderMemoirDirect(storyline, pack);
       st.ending.memoirVia = memoir ? 'llm' : 'direct';
     }
+    // 列传（人物血肉计划 PR3）：每人一段史书列传——内核 timeline/direction 定事实，
+    // LLM 只执笔；biographyLint 逐人验，不过即该人回退直读模板（不连坐）
+    if (storyline?.epilogues?.length && !st.ending.biographies) {
+      const directs = renderBiographiesDirect(storyline, pack);
+      let llm = null;
+      if (gw) {
+        try {
+          const raw = await biographerRole({ provider: gw.providers.biographer || gw.providers.narrator || gw.providers.referee, prompts: promptsCache }, buildBioBrief(st, pack));
+          if (Array.isArray(raw?.bios)) llm = raw.bios;
+        } catch (e) {
+          log.warn('biographer failed', { runId, error: String(e?.message || e).slice(0, 120) });
+        }
+      }
+      st.ending.biographies = directs.map((d) => {
+        const ep = storyline.epilogues.find((x) => x.id === d.id);
+        const hit = llm?.find((b) => b?.id === d.id || b?.name === d.name);
+        const text = hit ? String(hit.text || '').trim() : null;
+        if (text && biographyLint(text, ep, storyline)) return { id: d.id, name: d.name, text, via: 'llm' };
+        return d;
+      });
+    }
     db.finishRun(runId, st, st.ending);
     archiveRun(userId, runId, st);
+  }
+
+  /** 列传事实底稿（人物血肉计划 PR3）：只装当局的账与内核判定的方向——
+   *  LLM 执笔的每个字都要能在这里找到出处 */
+  function buildBioBrief(st, pack) {
+    const story = st.ending?.storyline;
+    return {
+      bios: (story?.epilogues || []).map((ep) => {
+        const def = pack.charMap[ep.id] || {};
+        return {
+          id: ep.id, name: ep.name, role: def.role || null, direction: ep.direction,
+          deathDay: ep.deathDay, epithet: ep.epithet, knot: ep.knot, topChain: ep.topChain,
+          shadow: def.persona?.shadow ? {
+            grade: def.persona.shadow.grade, stain: def.persona.shadow.stain,
+            redemption: def.persona.shadow.redemption || []
+          } : null,
+          timeline: ep.timeline || []
+        };
+      }),
+      ending: { type: st.ending?.type, title: story?.title, days: story?.days }
+    };
   }
 
   /** 堂屋台词本（人物血肉计划 PR2）：只装角色自己知道的东西——
@@ -845,7 +887,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (!b.name || !b.adapter || !b.baseUrl || !b.model) return json(res, 400, { error: '缺字段' });
         const id = db.upsertProvider(b);
         // 添加即上线：没配路由的用途自动接入新供应商（已有路由不劫持）
-        for (const purpose of ['referee', 'narrator', 'actor', 'ensemble']) {
+        for (const purpose of ['referee', 'narrator', 'actor', 'ensemble', 'biographer']) {
           const cur = db.routes().find((r) => r.purpose === purpose);
           if (!cur || !cur.provider_id) db.setRoute(purpose, Number(id), cur?.fallback_provider_id || null);
         }
