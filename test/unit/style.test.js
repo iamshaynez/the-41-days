@@ -21,7 +21,7 @@ const walk = (node, where) => {
   else if (Array.isArray(node)) node.forEach((x, i) => walk(x, `${where}[${i}]`));
   else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) walk(v, `${where}.${k}`);
 };
-for (const f of ['prelude.json', 'mainline.json', 'historia.json', 'narrations.json', 'events.json', 'characters.json']) {
+for (const f of ['prelude.json', 'mainline.json', 'historia.json', 'narrations.json', 'events.json', 'characters.json', 'docs.json', 'seals.json', 'sidestories.json']) {
   walk(JSON.parse(readFileSync(join(PACK_DIR, f), 'utf8')), f);
 }
 
@@ -36,10 +36,11 @@ describe('文风圣经 · 新叙事文本', () => {
     assert.deepEqual(hits, [], '禁词命中: ' + hits.join('、'));
   });
 
-  test('史书体步文句短（fallback ≤ 40 字净文）', () => {
+  test('史卷步文白话丰满（fallback ≤ 140 字净文，体例放开拍板 2026-10）', () => {
     for (const st of JSON.parse(readFileSync(join(PACK_DIR, 'mainline.json'), 'utf8')).steps) {
       const plain = stripMarkers(st.fallback || '').replace(/[\s，。；、——]/g, '');
-      assert.ok(plain.length <= 40, `步 ${st.id} 的 fallback 过长（${plain.length} 字）`);
+      assert.ok(plain.length <= 140, `步 ${st.id} 的 fallback 过长（${plain.length} 字）`);
+      assert.ok(plain.length >= 20, `步 ${st.id} 的 fallback 过短（${plain.length} 字）——说清楚`);
     }
   });
 });

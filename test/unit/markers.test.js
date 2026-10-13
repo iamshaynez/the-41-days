@@ -35,6 +35,10 @@ describe('标注协议 · 内容包全量合法', () => {
   walk(PACK.historia, 'historia');
   walk(PACK.narrations, 'narrations');
   walk(PACK.events, 'events');
+  walk(PACK.docs, 'docs');
+  walk(PACK.seals, 'seals');
+  walk(PACK.sidestories, 'sidestories');
+  walk(PACK.items, 'items');
 
   test('全部手作文本的标记都在 registry 内', () => {
     const bad = [];

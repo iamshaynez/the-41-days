@@ -687,7 +687,7 @@ function renderInvGrid(box, inv) {
     if (!cats.has(cat)) continue;
     grid.appendChild(el('div', 'inv-cat', cat));
     for (const it of cats.get(cat)) {
-      grid.appendChild(el('div', 'item', `${svgUse(it.id)}<span class="item-name">${esc(it.name)}</span><b class="item-qty">×${it.n}</b>`));
+      grid.appendChild(el('div', 'item', `${svgUse(it.id)}<span class="item-name">${esc(it.name)}</span><b class="item-qty">×${it.n}</b>`)).title = (state.s?.itemFlavors || {})[it.id] || '';
     }
   }
   box.appendChild(grid);
@@ -1495,7 +1495,7 @@ function nounIntel(entry) {
     const [name, cat] = ITEM_META[entry.id] || [];
     if (!name) return null;
     const n = (s.inventory || {})[entry.id] || 0;
-    return { kicker: '物', title: name + (n ? ` ×${n}` : ''), lines: [cat, CAT_LINE[cat] || ''] };
+    return { kicker: '物', title: name + (n ? ` ×${n}` : ''), lines: [cat, (state.s.itemFlavors || {})[entry.id] || CAT_LINE[cat] || ''] };
   }
   if (entry.kind === 'loc') {
     const known = (s.knownLocs || []).includes(entry.id);

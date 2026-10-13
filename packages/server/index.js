@@ -246,6 +246,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   function enrich(state, annalsByDay = null) {
     const view = { ...state };
     view.itemNames = Object.fromEntries(pack.items.map((i) => [i.id, i.name]));
+    view.itemFlavors = Object.fromEntries(pack.items.filter((i) => i.flavor).map((i) => [i.id, i.flavor]));
     // 叙事双轴三视图（叙事双轴-v0.1）：序章节拍 / 舆图（三态+走向+留痕）/ 史卷（步+闲笔+digest）
     if (state.phase === 'prologue' && !state.over) view.preludeView = preludeBeatView(pack, state);
     view.mapView = mapView(state, pack);
