@@ -491,6 +491,14 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 }
 #narration .clarify { color: var(--ink-3); font-style: italic; }
 
+/* 堂屋（人物血肉计划 PR2）：晨间对话块——场记小标、台词缩进、结局拍收束 */
+#narration .ensemble-head {
+  margin: 1.2em 0 .3em; text-align: center; font-size: .82em; letter-spacing: .35em;
+  color: var(--ink-3);
+}
+#narration p.ensemble { padding-left: 1.2em; }
+#narration p.ensemble-beat { margin-top: .2em; text-align: right; color: var(--ink-3); font-style: italic; font-size: .92em; }
+
 /* 首字下沉：每一天开篇的仪式（泥金） */
 #narration p.dropcap::first-letter {
   float: left; font-size: 3.1em; line-height: .88; padding: 4px 10px 0 0;

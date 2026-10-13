@@ -351,6 +351,7 @@ function handleSse(block) {
   if (ev === 'clarify') narrateRaw('……' + data.text, { cls: 'clarify' });
   if (ev === 'echo') narrateRaw(data.text, { cls: 'clarify' }); // 世界接住狂语的一笔（零状态变化）
   if (ev === 'stage') narrateRaw(data.text); // 戏文轨：舞台导演接的一拍，落进正文
+  if (ev === 'ensemble') narrateEnsemble(data); // 堂屋：晨间对话块（内核先裁决，台词是演出）
   if (ev === 'state-patch') applyState(data.state);
   if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' }); }
   if (ev === 'error') narrateRaw('（出错：' + esc(data.error) + '）', { cls: 'sys' });
@@ -366,6 +367,16 @@ function makePara(cls = '') {
 /** 流式增量：整块交给 Typist，段落边界入队不打断节奏 */
 function streamNarrate(delta) { typist.feed(delta); }
 function closePara() { typist.flush(); }
+/** 堂屋对话块（人物血肉计划 PR2）：场记一行 → 逐人台词 → 结局拍收束 */
+const ENS_KIND_TXT = { comment: '评史', idle: '闲话', bond: '交心', friction: '争执', shadow: '翻旧账' };
+function narrateEnsemble(data) {
+  closePara();
+  const head = el('div', 'ensemble-head', `— 堂屋 · ${ENS_KIND_TXT[data.kind] || '晨话'} —`);
+  $('narration').appendChild(head);
+  const nameOf = (id) => state.s?.charView?.find((c) => c.id === id)?.name || id;
+  narrateRaw(data.lines.map((l) => `${nameOf(l.char)}：${l.text}`).join('\n'), { cls: 'ensemble' });
+  if (data.beat) narrateRaw('——' + data.beat, { cls: 'ensemble-beat' });
+}
 function narrateRaw(text, { cls = '', dropcap = false, telegraph = false } = {}) {
   closePara();
   for (const p of String(text).split('\n')) {

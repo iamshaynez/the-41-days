@@ -29,6 +29,9 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
   const sj = readJson(dir, 'seals.json');
   let ge = null;
   try { ge = readJson(dir, 'ge.json'); } catch { /* C 层守卫可选 */ }
+  // 堂屋直读模板（人物血肉计划 PR2，可选）：LLM 离线时评史/互动照常开演
+  let ensembleTemplates = null;
+  try { ensembleTemplates = readJson(dir, 'ensemble.json'); } catch { /* 无堂屋模板包 */ }
   // 叙事双轴（叙事双轴-v0.1）：序章三幕 / 舆图 / 主线日步 / 历史轴（全部可选，缺包退老行为）
   let prelude = null, map = null, mainline = null, historia = null;
   try { prelude = readJson(dir, 'prelude.json'); } catch { /* 无序章文本包 */ }
@@ -150,7 +153,7 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     events: ej, cards: allCards, cardMap, broadcasts: ej.broadcasts,
     docs: dj.docs, docMap, layerGates: dj.layerGates, canonAnnals: dj.canonAnnals || [], narrations, kpis,
     sidestories: side.stories || [], sideMap: Object.fromEntries((side.stories || []).map((s) => [s.id, s])),
-    ge,
+    ge, ensembleTemplates,
     seals: sj.seals || [], sealMap,
     prelude, map, mainline, historia
   };

@@ -135,6 +135,16 @@ export async function stagedirector({ provider, prompts }, brief) {
   return extractJson(r.text);
 }
 
+/** 堂屋导演（人物血肉计划 PR2）：内核已定的话题+结局拍 → 角色台词。
+ *  输出经服务端 validateEnsemble 校验（归属/句数/封印禁词），越界走 persona 直读拼装。 */
+export async function ensemble({ provider, prompts }, brief) {
+  const system = prompts.ensemble
+    .replace('{{scene}}', JSON.stringify(brief.scene, null, 1))
+    .replace('{{world}}', brief.worldBrief || '');
+  const r = await provider.call({ system, user: '写这场堂屋戏。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 2500, thinking: THINKING_LOW });
+  return extractJson(r.text);
+}
+
 export function makeGateway({ providers, log = () => {} }) {
   async function call(purpose, fn) {
     const primary = providers[purpose];
