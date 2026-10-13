@@ -5,7 +5,7 @@
       "id": "anton", "name": "文简", "role": "退休塾师", "backpack": 8, "combat": -1,
       "traits": { "negotiate": 0.05, "craftAdv": true },
       "ethics": { "stealCiv": 1.2, "killCiv": 1.5, "killEnemy": 1.2, "help": 0.8 },
-      "frail": true, "desc": "教了一辈子书，现在算的是还剩几顿饭。",
+      "frail": true, "desc": "教了一辈子书，账本上记过谁家欠半匹布的束脩。现在他记的是另一本账：还剩几顿饭，女儿还在不在江那边。",
       "persona": {
         "epithet": "用秩序对抗崩塌",
         "knot": "女儿在公安，等他去找",
@@ -51,7 +51,7 @@
       "id": "marta", "name": "辛夷", "role": "药婆", "backpack": 10, "combat": 0,
       "traits": { "healer": true },
       "ethics": { "stealCiv": 1.2, "killCiv": 1.5, "killEnemy": 1.0, "help": 1.5 },
-      "softHearted": true, "desc": "见过太多不该发生的死。她不允许眼前再发生一次。",
+      "softHearted": true, "desc": "见过太多不该发生的死，她不允许眼前再发生一次。规矩是那一夜立的：先来后到，不问来路。",
       "persona": {
         "epithet": "用忙碌压住记忆",
         "knot": "建安十三年疫营那场分诊，和那个名字",
@@ -97,7 +97,7 @@
       "id": "bron", "name": "石大", "role": "火铺卒", "backpack": 14, "combat": 1,
       "traits": { "breach": true },
       "ethics": { "stealCiv": 1.0, "killCiv": 1.3, "killEnemy": 0.8, "help": 1.0 },
-      "desc": "从火里背出来过七个人。他的肩膀比门框结实。",
+      "desc": "从火里背出来过七个人，肩膀比门框结实。夜里他总在查门闩——查的不是门，是当年那扇没推开的门。",
       "persona": {
         "epithet": "用肩膀抵债",
         "knot": "那次大火，第七个和第一个之间",
@@ -142,7 +142,7 @@
       "traits": { "negotiate": 0.15, "radioTruth": true },
       "addiction": "coffee",
       "ethics": { "stealCiv": 0.8, "killCiv": 1.2, "killEnemy": 0.8, "help": 1.0 },
-      "canonKey": true, "desc": "职业本能是追问。这座城不想回答的那些问题，他都记在心里。",
+      "canonKey": true, "desc": "职业本能是核对。这座城不想回答的问题，他都记在心里——包括他自己誊过的那六个字。",
       "persona": {
         "epithet": "用追问赎罪",
         "knot": "降卒进城前，他誊过的那版榜",
@@ -189,7 +189,7 @@
       "id": "pavel", "name": "阿走", "role": "驿卒", "backpack": 10, "combat": 0,
       "traits": { "sprint": true, "stealthy": 2 },
       "ethics": { "stealCiv": 1.0, "killCiv": 1.3, "killEnemy": 1.0, "help": 0.8 },
-      "desc": "跑赢过所有人。现在他只想跑赢流矢。",
+      "desc": "跑赢过所有人，现在只想跑赢流矢。腿上的劲还在，心里的事没人问过。",
       "persona": {
         "epithet": "用玩笑包裹恐惧",
         "knot": "逃难那一夜，他跑得最快的一次",
@@ -233,7 +233,7 @@
       "id": "emil", "name": "老甑", "role": "邸舍庖厨", "backpack": 10, "combat": 0,
       "traits": { "cook": true },
       "ethics": { "stealCiv": 1.0, "killCiv": 1.5, "killEnemy": 1.0, "help": 1.0 },
-      "desc": "他能把三样破烂做成一顿像样的晚饭，也能闻出仓米里掺了几成沙。",
+      "desc": "能把三样破烂做成一顿像样的晚饭，也能闻出仓米里掺了几成沙。他的鼻子，是这个家的账房。",
       "persona": {
         "epithet": "用一口热饭对抗非人化",
         "knot": "大仓的掺法，和他留下的徒弟",
@@ -279,7 +279,7 @@
       "id": "zofia", "name": "素徽", "role": "乐户琴师", "backpack": 8, "combat": -1,
       "traits": { "piano": true },
       "ethics": { "stealCiv": 1.3, "killCiv": 1.5, "killEnemy": 1.3, "help": 1.2 },
-      "canonKey": true, "desc": "哥哥被征走的那天，琴弦断了一根。她一直在听，听所有像箭声又不像箭声的声音。",
+      "canonKey": true, "desc": "哥哥被征走那天，琴弦断了一根。她一直在听——听所有像箭声又不像箭声的声音，等一个熟悉的换气。",
       "persona": {
         "epithet": "用倾听代替存在",
         "knot": "三短一长的箭声，和这栋房子",
@@ -324,7 +324,7 @@
       "id": "grigory", "name": "大柯", "role": "梓匠", "backpack": 12, "combat": 1,
       "traits": { "craftDisc": 0.2 },
       "ethics": { "stealCiv": 1.0, "killCiv": 1.2, "killEnemy": 0.8, "help": 1.0 },
-      "desc": "想给家里人打一口像样的棺。木料一直没凑够。",
+      "desc": "想给家里人打一口像样的棺，木料一直没凑够。他家的门板被征走那天，他记下了编号。",
       "persona": {
         "epithet": "用手说话",
         "knot": "被「征发」的门版，和那个寒夜",
@@ -371,7 +371,7 @@
       "id": "yura", "name": "阿禾", "role": "15 岁屯候火夫", "backpack": 8, "combat": 0,
       "traits": { "growth": true }, "student": true,
       "ethics": { "stealCiv": 1.5, "killCiv": 2.0, "killEnemy": 1.5, "help": 1.2 },
-      "desc": "大人们以为他不懂。他什么都懂，只是装不懂，这样他们能好受一点。",
+      "desc": "15 岁，屯候火夫。大人们以为他不懂；他什么都懂，只是装不懂——这样他们能好受一点。",
       "persona": {
         "epithet": "全队的镜子",
         "knot": "津戍、水窦，和姐姐",
@@ -385,7 +385,7 @@
           "descent": [
             "大人都骗人。我也可以骗——我骗起来比你们像。",
             "（把饴扔进灶膛）甜的东西，烧起来最快。",
-            "我不怕。（这句学得太熟，已经不走心了）"
+            "我不怕。（这句学得太熟，早不走心了）"
           ],
           "redemption": [
             "我迟到了。是我迟到了——这句话我练了很久。",
@@ -416,7 +416,7 @@
       "id": "vera", "name": "薄姑", "role": "仓曹女史", "backpack": 10, "combat": 0,
       "traits": { "bookkeep": 0.1, "ledgerEye": true },
       "ethics": { "stealCiv": 0.8, "killCiv": 1.0, "killEnemy": 0.8, "help": 1.3 },
-      "canonKey": true, "desc": "围城前一周，她封过四百多枚检署。她认得那种符传的编号段——不管它换什么抬头。",
+      "canonKey": true, "desc": "围城前一周封过四百多枚检署，认得每种符传的编号段——不管它换什么抬头。她的私人簿记里，压着 17 道说不清来路的检。",
       "persona": {
         "epithet": "用精确赎罪",
         "knot": "412 枚检署，和第 413 枚",
@@ -463,7 +463,7 @@
       "id": "danilo", "name": "江鳅", "role": "私枭", "backpack": 12, "combat": 1,
       "traits": { "blackmarket": true }, "addiction": "moonshine",
       "ethics": { "stealCiv": 0.5, "killCiv": 0.8, "killEnemy": 0.5, "help": 0.5 },
-      "wanted": true, "desc": "军法队的通缉令上是他十年前的画像。他不担心——他担心的是画像越来越像了。",
+      "wanted": true, "desc": "军法队的通缉令是他十年前的画像。他不担心被抓——他担心的是画像一年比一年像了。",
       "persona": {
         "epithet": "用玩世不恭执行纪律",
         "knot": "那船药，和降卒营的冬天",
@@ -511,7 +511,7 @@
       "id": "alexey", "name": "逄灶", "role": "老烽燧卒", "backpack": 10, "combat": 0,
       "traits": { "radioFix": true }, "legWound": true,
       "ethics": { "stealCiv": 1.0, "killCiv": 1.3, "killEnemy": 1.0, "help": 1.0 },
-      "canonKey": true, "desc": "话少。修东西的时候比说话多。旧伤在阴天提醒他哪条腿先迈。",
+      "canonKey": true, "desc": "话少，修东西的时候比说话多。旧伤在阴天提醒他哪条腿先迈——那条腿，记得建安十三年的火。",
       "persona": {
         "epithet": "用手代替嘴",
         "knot": "建安十三年那夜，北津台，和那一棍",
