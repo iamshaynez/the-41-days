@@ -101,7 +101,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           worldBrief: worldBrief(state, pack),
           dayActions: 'eat/cook/craft/build/treat/talk/guard/sleep/rest/listen_radio/search_home/open_room/chop/repair/read/play_piano',
           duskActions: 'dusk_assign( scavenger/location/gear/others )',
-          nightScene: state.night && !state.night.home ? 'move/observe/search/open/clear/bars/dialogue/attack/backstab/retreat' : '',
+          nightScene: state.night && !state.night.home ? 'move/observe/search/open/clear/bars/dialogue/attack/backstab/ignore/push_on/retreat' : '',
           merchant: state.franko ? `${state.franko.merchant} 摊位在售：${state.franko.stock.filter((s) => s.n > 0).map((s) => `${s.item}×${s.n}@${s.buy}`).join(' ')}` : ''
         }, input, (text) => parseDirect(state, pack, text));
         db.logCall({ purpose: 'referee', provider: r?.via || 'llm', latencyMs: Date.now() - t0, runId, ok: r.ok });
@@ -308,7 +308,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           { stance: 'bold', label: '放手干：值钱的都拿，挡路的敢动手', hint: '收获大，动静也大' }
         ];
       } else if (!state.activeEvent) {
-        const step = planNightStep(state, pack, {});
+        // 岔路重算带上现行立场（方针 stance / 政策挡位）——空 approach 会算出
+        // 另一套选项，按钮答的可能不是叙事里那个岔子
+        const step = planNightStep(state, pack, { approach: state.night.directive?.stance });
         if (step?.stop && step.stop.kind !== 'event') view.nightView.fork = { kind: step.stop.kind, text: step.stop.text, options: step.stop.options };
       }
     }
@@ -592,15 +594,17 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           const r = await gw.parse(input, state);
           if (r.ok && !r.degraded) { intents = r.intents; clarify = r.clarify; say = r.say; echo = r.echo || null; }
           else degraded = true;
-          // 直读兜底只在降级或真的一无所获时跑——echo 是合法的完整回应，不许被 clarify 抢走
-          if (degraded || (!intents.length && !clarify && !echo)) { const fb = parseDirect(state, pack, input); intents = intents.concat(fb.intents); clarify = clarify || fb.clarify || null; }
+          // 直读兜底只在降级或真的一无所获时跑——echo/say 都是合法的完整回应，
+          // 不许被 clarify 抢走，更不许把玩家对 NPC 说的话再当命令解析一遍（夜间正则误中=答非所问）
+          if (degraded || (!intents.length && !clarify && !echo && !say)) { const fb = parseDirect(state, pack, input); intents = intents.concat(fb.intents); clarify = clarify || fb.clarify || null; }
         } else {
           const fb = parseDirect(state, pack, input);
           intents = fb.intents; clarify = fb.clarify || null;
         }
-        // 未被接住的话（v3）：echo 演出世界如何接住它，素材环收存原文——
-        // 两天后命运导演可能长出一张回应卡（离谱输入的兜底不是拒绝，是消化）
-        if (!intents.length && !clarify && input.trim()) {
+        // 未被接住的话（v3）：echo/say 演出世界如何接住它，素材环收存原文——
+        // 两天后命运导演可能长出一张回应卡（离谱输入的兜底不是拒绝，是消化）；
+        // say 已是"有人接住了话"，不再降格成 whisper 素材
+        if (!intents.length && !clarify && !say && input.trim()) {
           intents = [{ type: 'whisper', text: input.slice(0, 60) }];
         }
 
