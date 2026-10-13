@@ -23,6 +23,12 @@ before(async () => {
       const user = payload.messages?.at(-1)?.content || '';
       if (payload.response_format?.type === 'json_object') {
         const isRepair = user.includes('无法解析');
+        // say 管线（夜间双模修复批次）：玩家对 NPC 说话时裁判只回世界代答，不带意图
+        const isSay = user.includes('隔着门问');
+        if (isSay) {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ intents: [], clarify: null, say: '守藏吏隔着门板回了话：夜里路不好，走城墙根。' }) } }] }));
+        }
         const intents = isRepair ? [] : [{ type: 'act', actor: 'bron', action: 'eat' }];
         res.writeHead(200, { 'content-type': 'application/json' });
         return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ intents, clarify: null, say: null }) } }] }));
@@ -396,5 +402,22 @@ describe('游戏主流程（LLM 模式 + SSE，按用户隔离）', () => {
     const r = await api('POST', '/api/admin/sim/smoke', {}, admin.token);
     assert.equal(r.status, 200);
     assert.ok(r.kpis.balanced);
+  });
+});
+
+describe('say 管线：对 NPC 说话不该被误解析（夜间双模修复批次）', () => {
+  test('裁判只回 say：done.say 带回、无意图、无 whisper、状态不动', async () => {
+    const run = await api('POST', '/api/runs', { mode: 'llm', seed: 77, roster: ['anton', 'marta', 'bron'], prologue: false }, player.token);
+    assert.ok(run.id, `建局应成功：${JSON.stringify(run).slice(0, 120)}`);
+    const before = await api('GET', `/api/runs/${run.id}`, null, player.token);
+
+    const events = await input(run.id, '隔着门问一声：今晚能过去吗');
+    const done = events.find((e) => e.ev === 'done');
+    assert.ok(done, '应收到 done');
+    assert.equal(done.data.say, '守藏吏隔着门板回了话：夜里路不好，走城墙根。', 'say 要带回前端（修前前端根本不渲染，话凭空消失）');
+    assert.equal(done.data.rejects?.length ?? 0, 0, `不该有拒绝（修前会拿玩家的话跑直读兜底吃出误动作）：${JSON.stringify(done.data.rejects)}`);
+    const after = await api('GET', `/api/runs/${run.id}`, null, player.token);
+    assert.equal(after.state.day, before.state.day, '说话不动时间');
+    assert.deepEqual(after.state.whispers || [], [], '对 NPC 说话不降格成 whisper 素材');
   });
 });

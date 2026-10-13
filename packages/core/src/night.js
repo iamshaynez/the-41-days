@@ -413,7 +413,7 @@ function maybeFireNpcScript(ctx, loc, npcForce) {
   for (const npc of npcs) {
     if (npc.firstScript && !st.scriptsFired[npc.firstScript]) {
       const card = ctx.pack.cards.find((c) => c.for === npc.firstScript);
-      if (!card) return;
+      if (!card) continue; // 一张对不上不能挡住后面的 NPC（continue，不是 return）
       st.scriptsFired[npc.firstScript] = true;
       ctx.emit('SCRIPT_FIRED', { loc: n.locId, script: npc.firstScript });
       s.activeEvent = { cardId: card.id, night: true, actorId: n.charId };
