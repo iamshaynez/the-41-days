@@ -270,7 +270,7 @@ describe('或然结局（正典圣经-v0.2 §8 / 内核 W-04：满足即触发�
       if (has) {
         flagged++;
         assert.equal(s.ending.type, 'maicheng', '鼓响了：交割照来、麦城得脱');
-        assert.equal(s.ending.storyline.title, '开城 · 麦城得脱');
+        assert.equal(s.ending.storyline.title, '麦城得脱');
         assert.match(s.ending.storyline.annals[0]?.text || '', /走房陵/);
       } else {
         assert.equal(s.ending.type, 'ceasefire', '鼓没响则史实结局');
