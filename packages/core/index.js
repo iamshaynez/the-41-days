@@ -24,9 +24,11 @@ export {
   VERBS, recordCausal, addPrivateNote, eventVerb, tickAutonomous, tickDirections, slumberGuard, denyFoodCount,
   valenceOf, charArc, pairKey, pairStage, bondStage, alienated, stageOf, STAGE_NAMES
 } from './src/causality.js';
-export { buildStoryline, renderMemoirDirect, memoirLint } from './src/storyline.js';
+export { buildStoryline, renderMemoirDirect, memoirLint, renderBiographiesDirect, biographyLint } from './src/storyline.js';
 export { evaluateSeals, sealMet, unlockedSealTexts } from './src/seals.js';
 export { preludeBeats, preludeBeatView } from './src/prelude.js';
 export { mainlineTick, buildChronicle, dayDigest } from './src/mainline.js';
+export { ensembleTick, validateEnsemble, renderEnsembleDirect, ENS_CANON_BAN } from './src/ensemble.js';
+export { bumpPairArc } from './src/causality.js';
 export { mapView } from './src/map.js';
 export { parseMarkers, stripMarkers, markerRegistry, validateTextMarkers } from './src/markers.js';

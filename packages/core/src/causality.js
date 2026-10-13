@@ -153,7 +153,19 @@ export function recordCausal(ctx, verb, o = {}) {
     bumpPair(actor, entry.target, Math.max(0.2, valenceOf(ctx.pack, ctx.pack.charMap[entry.target], entry)) * mag);
   }
 
-  ctx.emit('CAUSAL', { entry, charUpd, pairUpd });
+  // —— 暗面扳机（人物血肉计划 PR1）：见证自己 shadow.trigger 的动词 → 暗账翻一页
+  //    只记数不改心情/伦理——暗面 v1 是叙事层，供堂屋选场与列传取材
+  const shadowUpd = {};
+  for (const w of entry.witnesses) {
+    const trg = ctx.pack.charMap[w]?.persona?.shadow?.trigger?.verbs;
+    if (trg?.includes(verb)) {
+      cz.shadowTouched = cz.shadowTouched || {};
+      cz.shadowTouched[w] = (cz.shadowTouched[w] || 0) + 1;
+      shadowUpd[w] = cz.shadowTouched[w];
+    }
+  }
+
+  ctx.emit('CAUSAL', { entry, charUpd, pairUpd, shadowUpd });
 
   // —— 坚持即机制（P-03）：抗议事件 ——
   for (const w of entry.witnesses) {
@@ -174,6 +186,15 @@ export function addPrivateNote(ctx, charId, note) {
   const arc = s.causality.charArcs[charId] || (s.causality.charArcs[charId] = { pos: 0, neg: 0, privateLedger: [] });
   arc.privateLedger.push(note);
   ctx.emit('CAUSAL_NOTE', { charId, note });
+}
+
+/** 信任弧直接微调（堂屋结局拍等演出外通道用）：PAIR_ARC 事件镜像，fold 可回放 */
+export function bumpPairArc(ctx, a, b, w) {
+  if (a === b || !w) return;
+  const cz = ctx.s.causality || (ctx.s.causality = { entries: [], pairArcs: {}, charArcs: {}, shadowTouched: {} });
+  const arc = cz.pairArcs[pairKey(a, b)] || (cz.pairArcs[pairKey(a, b)] = emptyArc());
+  if (w > 0) arc.pos += w; else arc.neg += -w;
+  ctx.emit('PAIR_ARC', { key: pairKey(a, b), pos: arc.pos, neg: arc.neg });
 }
 
 /** 近 lastDays 天针对某角色的 deny_food 次数（袭击睡岗 CY-32 用） */

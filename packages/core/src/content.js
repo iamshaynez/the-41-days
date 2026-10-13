@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { VERBS } from './causality.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_PACK_DIR = join(here, '..', '..', '..', 'content', 'base');
@@ -28,6 +29,9 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
   const sj = readJson(dir, 'seals.json');
   let ge = null;
   try { ge = readJson(dir, 'ge.json'); } catch { /* C 层守卫可选 */ }
+  // 堂屋直读模板（人物血肉计划 PR2，可选）：LLM 离线时评史/互动照常开演
+  let ensembleTemplates = null;
+  try { ensembleTemplates = readJson(dir, 'ensemble.json'); } catch { /* 无堂屋模板包 */ }
   // 叙事双轴（叙事双轴-v0.1）：序章三幕 / 舆图 / 主线日步 / 历史轴（全部可选，缺包退老行为）
   let prelude = null, map = null, mainline = null, historia = null;
   try { prelude = readJson(dir, 'prelude.json'); } catch { /* 无序章文本包 */ }
@@ -77,7 +81,23 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     for (const n of r.need || []) needItem(n.item, `配方 ${r.id}`);
   }
   for (const f of rj.facilities) for (const k of Object.keys(f.cost)) needItem(k, `设施 ${f.id}`);
-  for (const c of characters) if (!c.ethics) errs.push(`角色 ${c.id} 缺伦理向量`);
+  // 人物血肉计划 PR1：主池全员必须有暗面与五幕立场（旁传角色不受此约束）
+  const shadowActIds = new Set((mainline?.acts || []).map((a) => a.id));
+  for (const c of characters) {
+    if (!c.ethics) errs.push(`角色 ${c.id} 缺伦理向量`);
+    const p = c.persona || {};
+    const sh = p.shadow;
+    if (!sh?.stain) errs.push(`角色 ${c.id} 缺暗面 shadow.stain`);
+    if (!['heavy', 'mid', 'soft'].includes(sh?.grade)) errs.push(`角色 ${c.id} 暗面 shadow.grade 必须是 heavy/mid/soft`);
+    if (!Array.isArray(sh?.trigger?.verbs) || !sh.trigger.verbs.length) errs.push(`角色 ${c.id} 缺暗面扳机动词 shadow.trigger.verbs`);
+    else for (const v of sh.trigger.verbs) if (!VERBS[v]) errs.push(`角色 ${c.id} 扳机动词 ${v} 不在因果动词表`);
+    if (sh?.trigger?.act && !shadowActIds.has(sh.trigger.act)) errs.push(`角色 ${c.id} 扳机幕 ${sh.trigger.act} 不在主线幕表`);
+    if ((sh?.descent || []).length < 2) errs.push(`角色 ${c.id} 缺堕落台词 shadow.descent（至少两句）`);
+    if ((sh?.redemption || []).length < 1) errs.push(`角色 ${c.id} 缺救赎种子 shadow.redemption`);
+    if (!p.stances) errs.push(`角色 ${c.id} 缺五幕立场 stances`);
+    else for (const a of shadowActIds) if (!p.stances[a]) errs.push(`角色 ${c.id} 缺 ${a} 立场`);
+    if ((p.voice || []).length < 8) errs.push(`角色 ${c.id} voice 不足八句（直读对话的原料）`);
+  }
   // 叙事双轴引用校验（叙事双轴-v0.1 §9：标不出即不存在）
   if (prelude) {
     for (const cid of Object.keys(prelude.prequels || {})) if (!charMap[cid]) errs.push(`前传引用未知角色 ${cid}`);
@@ -133,7 +153,7 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     events: ej, cards: allCards, cardMap, broadcasts: ej.broadcasts,
     docs: dj.docs, docMap, layerGates: dj.layerGates, canonAnnals: dj.canonAnnals || [], narrations, kpis,
     sidestories: side.stories || [], sideMap: Object.fromEntries((side.stories || []).map((s) => [s.id, s])),
-    ge,
+    ge, ensembleTemplates,
     seals: sj.seals || [], sealMap,
     prelude, map, mainline, historia
   };

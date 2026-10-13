@@ -491,6 +491,14 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 }
 #narration .clarify { color: var(--ink-3); font-style: italic; }
 
+/* 堂屋（人物血肉计划 PR2）：晨间对话块——场记小标、台词缩进、结局拍收束 */
+#narration .ensemble-head {
+  margin: 1.2em 0 .3em; text-align: center; font-size: .82em; letter-spacing: .35em;
+  color: var(--ink-3);
+}
+#narration p.ensemble { padding-left: 1.2em; }
+#narration p.ensemble-beat { margin-top: .2em; text-align: right; color: var(--ink-3); font-style: italic; font-size: .92em; }
+
 /* 首字下沉：每一天开篇的仪式（泥金） */
 #narration p.dropcap::first-letter {
   float: left; font-size: 3.1em; line-height: .88; padding: 4px 10px 0 0;
@@ -1156,6 +1164,19 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .three-things { margin: 20px auto 0; text-align: left; max-width: 40em; }
 .three-things .kicker { display: block; text-align: center; margin-bottom: 10px; }
 .three-things.ledger { margin-top: 26px; border-top: 1px solid var(--rule); padding-top: 14px; }
+
+/* 列传（人物血肉计划 PR3）：每人一张小传卡——名字、盖棺徽、正文、大事时间线 */
+.bios .bio-card { margin: 0 0 22px; padding: 14px 16px 12px; border: 1px solid var(--rule); background: rgba(0,0,0,.02); }
+.bios .bio-name { display: inline-block; margin: 0 8px 0 0; font-size: 1.05em; letter-spacing: .2em; }
+.bio-dir { display: inline-block; font-size: .78em; padding: 1px 8px; border: 1px solid currentColor; border-radius: 2em; opacity: .8; }
+.bio-dir.bio-fallen { color: #7a4a4a; }
+.bio-dir.bio-haunted { color: #6b5a7a; }
+.bio-dir.bio-honored { color: #7a6a3a; }
+.bio-dir.bio-survived { color: #4a6a55; }
+.bios .bio-card p { margin: 10px 0 0; }
+.bios .bio-card p:last-of-type { color: var(--ink-3); font-style: italic; }
+.bio-timeline { margin: 12px 0 0; padding: 8px 0 0 18px; border-top: 1px dashed var(--rule); list-style: none; }
+.bio-timeline li { font-size: .86em; color: var(--ink-3); line-height: 1.9; }
 .memoir { max-width: 40em; margin: 26px auto 0; animation: fadeUp 1.2s ease both; }
 .memoir p { margin: 0 0 14px; line-height: 2.05; text-align: justify; }
 .memoir p:first-of-type::first-letter {

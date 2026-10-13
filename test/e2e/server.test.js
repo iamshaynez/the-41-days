@@ -185,8 +185,8 @@ describe('管理面：LLM 配置 + 连通性测试（§7.4）', () => {
     assert.equal(r.status, 200);
     const p = r.providers.find((x) => x.id === admin.providerId);
     assert.ok(p && p.hasKey && p.api_key_enc === undefined);
-    // 添加即上线：空用途自动接入新供应商（裁判/叙事者/演员三路全通）
-    assert.deepEqual(r.routes.map((x) => x.purpose).sort(), ['actor', 'narrator', 'referee']);
+    // 添加即上线：空用途自动接入新供应商（裁判/叙事者/演员/堂屋/列传五路全通）
+    assert.deepEqual(r.routes.map((x) => x.purpose).sort(), ['actor', 'biographer', 'ensemble', 'narrator', 'referee']);
   });
   test('用户清单：含玩家与管理员及其对局数', async () => {
     const r = await api('GET', '/api/admin/users', null, admin.token);

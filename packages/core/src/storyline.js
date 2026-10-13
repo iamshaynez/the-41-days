@@ -3,6 +3,7 @@
 // 铁律（N-02）：这里的每个字都必须能在 entries/deeds 里找到出处——内核只整理事实。
 import { aliveChars, charById } from './state.js';
 import { VERBS, valenceOf, charArc, pairStage, stageOf, alienated, STAGE_NAMES } from './causality.js';
+import { ENS_CANON_BAN } from './ensemble.js';
 
 const NPC_NAMES = {
   neighbor: '门口的人', deserter: '那个逃兵', priest: '守藏吏', tamara: '杜仲',
@@ -204,7 +205,10 @@ export function buildStoryline(state, pack) {
       id: c.id, name: c.name, alive: c.alive, direction: dir,
       epithet: c.persona?.epithet || '', knot: c.persona?.knot || '',
       topChain: top ? `第 ${top.day} 天，${top.text}` : null,
-      deathDay: !c.alive ? (s.deeds.find((d) => d.actor === c.id && d.type === 'died')?.day ?? s.day) : null
+      deathDay: !c.alive ? (s.deeds.find((d) => d.actor === c.id && d.type === 'died')?.day ?? s.day) : null,
+      // 列传时间线（人物血肉计划 PR3）：他做过什么、遭了什么、堂屋里说过什么——每个字出自账本
+      timeline: buildTimeline(s, pack, c),
+      shadowTouched: cz.shadowTouched?.[c.id] || 0
     };
   });
 
@@ -295,5 +299,90 @@ export function memoirLint(text, story, pack) {
   // 至少写到两名队员（防跑题）
   const names = story.epilogues.map((e) => e.name);
   if (names.filter((n) => t.includes(n)).length < Math.min(2, names.length)) return false;
+  return true;
+}
+
+// —— 列传（人物血肉计划 PR3）：时间线 → 史书体小传 → LLM 润色的底线闸 ——
+
+/** 一人的时间线：因果账（他做的/落在头上的）＋堂屋场次＋死亡拍；同动词去重（复发由"第 n 次"措辞承载） */
+function buildTimeline(s, pack, c) {
+  const cz = s.causality || { entries: [] };
+  const nth = new Map();
+  const mine = [];
+  for (const e of cz.entries) {
+    if (!(e.actor === c.id || e.via === c.id || e.target === c.id) || e.weight < 1) continue;
+    const key = `${e.verb}|${e.target}`;
+    nth.set(key, (nth.get(key) || 0) + 1);
+    const text = beatText(s, pack, e, nth.get(key));
+    if (!text) continue;
+    mine.push({ day: e.day, text, weight: e.weight, verb: e.verb });
+  }
+  const KIND_TXT = { comment: '评史', idle: '闲话', bond: '交心', friction: '争执', shadow: '翻旧账' };
+  for (const sc of s.ensemble?.scenes || []) {
+    if (!sc.participants.includes(c.id)) continue;
+    const other = sc.participants.filter((x) => x !== c.id).map((id) => nameOf(s, pack, id)).join('、');
+    mine.push({ day: sc.day, text: `堂屋${KIND_TXT[sc.kind] || '晨话'}${other ? `，与${other}` : ''}。`, weight: 1, ensemble: true });
+  }
+  // 选拍：重量优先、动词去重、保时序；死亡拍必收且垫底
+  const picked = [];
+  const seenVerb = new Set();
+  for (const m of [...mine].sort((a, b) => b.weight - a.weight || a.day - b.day)) {
+    if (seenVerb.has(m.verb)) continue;
+    seenVerb.add(m.verb);
+    picked.push(m);
+    if (picked.length >= 7) break;
+  }
+  picked.sort((a, b) => a.day - b.day);
+  if (!c.alive) picked.push({ day: s.deeds.find((d) => d.actor === c.id && d.type === 'died')?.day ?? s.day, text: '账停在了这一天。', death: true });
+  return picked.slice(0, 8);
+}
+
+const DIR_TXT = {
+  fallen: '没能撑过去。',
+  haunted: '活下来的人，有些夜里会突然惊醒。',
+  honored: '活下来了。战争结束后很久，还有人敲他家的门——为了道谢。',
+  survived: '活下来了。在这个年头，这四个字够写一整页。'
+};
+const AFTER_TXT = {
+  fallen: '橘里九号的墙上，他的名字旁边没有注。',
+  haunted: '后来他离开了江陵。没人知道去了哪，他自己也不说。',
+  honored: '后来他留在了江陵。米价平稳之后，有人专程回来找他。',
+  survived: '后来他跟着渡口的人潮走了。江陵没有留住他，他也没有回头。'
+};
+
+/** 直读列传（LLM 离线/幻觉时的兜底）：史书体开篇 → 时间线节拍 → 方向收束 → 后日谈 */
+export function renderBiographiesDirect(story, pack) {
+  return story.epilogues.map((ep) => {
+    const def = pack.charMap[ep.id] || {};
+    const red = def.persona?.shadow?.redemption?.[0] || null;
+    const beats = (ep.timeline || []).slice(0, 4).map((t) => `第 ${t.day} 天，${t.text}`).join('');
+    const close = ep.direction === 'fallen'
+      ? `${DIR_TXT.fallen}${ep.knot ? `没放下的：${ep.knot}。` : ''}`
+      : ep.direction === 'haunted'
+        ? `${DIR_TXT.haunted}${ep.knot ? `压在心上的：${ep.knot}。` : ''}`
+        : DIR_TXT[ep.direction];
+    return {
+      id: ep.id, name: ep.name, via: 'direct',
+      text: `${ep.name}者，江陵人也，${def.role || '里坊中人'}。${beats}${close}后日谈：${red || AFTER_TXT[ep.direction]}`
+    };
+  });
+}
+
+/** 列传 lint（LLM 输出的底线闸）：长度/日数幻觉/未引节拍/封印禁词/人名缺失 */
+export function biographyLint(text, ep, story) {
+  if (!text || typeof text !== 'string') return false;
+  const t = text.trim();
+  if (t.length < 60 || t.length > 800) return false;
+  if (t.includes('{{') || t.includes('}}')) return false;
+  if (!t.includes(ep.name)) return false;
+  const days = new Set((ep.timeline || []).map((x) => x.day));
+  let cited = false;
+  for (const m of t.matchAll(/第\s*(\d+)\s*天/g)) {
+    const n = Number(m[1]);
+    if (n > story.days) return false;
+    if (days.has(n)) cited = true;
+  }
+  if (days.size && !cited) return false; // 通篇不落地任何一件真事，即为跑题
+  if (ENS_CANON_BAN.some((w) => t.includes(w))) return false;
   return true;
 }

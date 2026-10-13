@@ -117,19 +117,36 @@ function apply(s, ev) {
     case 'WAR_TELEGRAPH': s.war.telegraphed = true; break;
     case 'RUN_ENDED': s.over = true; s.ending = clone(d.ending); s.threeThings = clone(d.ending?.threeThings || []); break;
     case 'CAUSAL': {
-      if (!s.causality) s.causality = { entries: [], pairArcs: {}, charArcs: {} };
+      if (!s.causality) s.causality = { entries: [], pairArcs: {}, charArcs: {}, shadowTouched: {} };
       s.causality.entries.push(clone(d.entry));
       for (const [k, v] of Object.entries(d.charUpd || {})) s.causality.charArcs[k] = clone(v);
       for (const [k, v] of Object.entries(d.pairUpd || {})) s.causality.pairArcs[k] = clone(v);
+      for (const [k, v] of Object.entries(d.shadowUpd || {})) {
+        if (!s.causality.shadowTouched) s.causality.shadowTouched = {};
+        s.causality.shadowTouched[k] = v;
+      }
       break;
     }
     case 'CAUSAL_NOTE': {
-      if (!s.causality) s.causality = { entries: [], pairArcs: {}, charArcs: {} };
+      if (!s.causality) s.causality = { entries: [], pairArcs: {}, charArcs: {}, shadowTouched: {} };
       const arc = s.causality.charArcs[d.charId] || (s.causality.charArcs[d.charId] = { pos: 0, neg: 0, privateLedger: [] });
       arc.privateLedger.push(clone(d.note));
       break;
     }
     case 'SEAL_UNLOCKED': { if (!s.seals) s.seals = []; if (!s.seals.includes(d.id)) s.seals.push(d.id); break; }
+    case 'PAIR_ARC': {
+      if (!s.causality) s.causality = { entries: [], pairArcs: {}, charArcs: {}, shadowTouched: {} };
+      s.causality.pairArcs[d.key] = { pos: d.pos, neg: d.neg };
+      break;
+    }
+    case 'ENSEMBLE_SCENE': {
+      if (!s.ensemble) s.ensemble = { scenes: [], coveredSteps: [], pairLast: {} };
+      s.ensemble.scenes.push(clone(d.scene));
+      if (d.scene.topic?.stepId && !s.ensemble.coveredSteps.includes(d.scene.topic.stepId)) s.ensemble.coveredSteps.push(d.scene.topic.stepId);
+      const ids = d.scene.participants || [];
+      if (ids.length >= 2) s.ensemble.pairLast[[ids[0], ids[1]].sort().join('|')] = d.scene.day;
+      break;
+    }
     case 'PRELUDE_BEAT': s.prelude = { i: d.i }; break;
     case 'MAINLINE_STEP': {
       if (!s.mainline) s.mainline = [];

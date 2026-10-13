@@ -351,6 +351,7 @@ function handleSse(block) {
   if (ev === 'clarify') narrateRaw('……' + data.text, { cls: 'clarify' });
   if (ev === 'echo') narrateRaw(data.text, { cls: 'clarify' }); // 世界接住狂语的一笔（零状态变化）
   if (ev === 'stage') narrateRaw(data.text); // 戏文轨：舞台导演接的一拍，落进正文
+  if (ev === 'ensemble') narrateEnsemble(data); // 堂屋：晨间对话块（内核先裁决，台词是演出）
   if (ev === 'state-patch') applyState(data.state);
   if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' }); }
   if (ev === 'error') narrateRaw('（出错：' + esc(data.error) + '）', { cls: 'sys' });
@@ -366,6 +367,16 @@ function makePara(cls = '') {
 /** 流式增量：整块交给 Typist，段落边界入队不打断节奏 */
 function streamNarrate(delta) { typist.feed(delta); }
 function closePara() { typist.flush(); }
+/** 堂屋对话块（人物血肉计划 PR2）：场记一行 → 逐人台词 → 结局拍收束 */
+const ENS_KIND_TXT = { comment: '评史', idle: '闲话', bond: '交心', friction: '争执', shadow: '翻旧账' };
+function narrateEnsemble(data) {
+  closePara();
+  const head = el('div', 'ensemble-head', `— 堂屋 · ${ENS_KIND_TXT[data.kind] || '晨话'} —`);
+  $('narration').appendChild(head);
+  const nameOf = (id) => state.s?.charView?.find((c) => c.id === id)?.name || id;
+  narrateRaw(data.lines.map((l) => `${nameOf(l.char)}：${l.text}`).join('\n'), { cls: 'ensemble' });
+  if (data.beat) narrateRaw('——' + data.beat, { cls: 'ensemble-beat' });
+}
 function narrateRaw(text, { cls = '', dropcap = false, telegraph = false } = {}) {
   closePara();
   for (const p of String(text).split('\n')) {
@@ -1149,6 +1160,27 @@ function renderEnding(s) {
     box.appendChild(acc);
   }
   for (const c of s.ending.chars) box.appendChild(el('p', 'fate', `<b>${esc(c.name)}</b>　${esc(c.fate)}`));
+  // 列传（人物血肉计划 PR3）：每人一段史书小传 + 个人大事时间线 + 盖棺方向
+  const bios = s.ending.biographies || [];
+  if (bios.length) {
+    const DIR_BADGE = { fallen: '殁', haunted: '恸', honored: '誉', survived: '存' };
+    const bd = el('div', 'three-things bios');
+    bd.appendChild(el('span', 'kicker', '列传'));
+    for (const b of bios) {
+      const card = el('div', 'bio-card');
+      card.appendChild(el('h4', 'bio-name', esc(b.name)));
+      const ep = (story?.epilogues || []).find((x) => x.id === b.id);
+      if (ep?.direction) card.appendChild(el('span', `bio-dir bio-${ep.direction}`, DIR_BADGE[ep.direction] || ''));
+      for (const para of String(b.text).split(/(?=后日谈：)/).filter(Boolean)) card.appendChild(el('p', '', esc(para)));
+      if (ep?.timeline?.length) {
+        const tl = el('ul', 'bio-timeline');
+        for (const t of ep.timeline) tl.appendChild(el('li', '', `第${t.day}天　${esc(t.text)}`));
+        card.appendChild(tl);
+      }
+      bd.appendChild(card);
+    }
+    box.appendChild(bd);
+  }
   // 时间胶囊（EC-02）：埋一件物品 + 一句留话，后续周目后院可挖
   renderCapsuleForm(box, s);
   box.appendChild(el('p', 'sys', '（档案馆已收录本局与这篇复盘。从菜单翻开新的一页，城市会记得。）'));
