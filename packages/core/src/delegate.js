@@ -1,7 +1,7 @@
 // 管家层（决断意志模型）：玩家只做决断与表达，日常由内核按策略自动张罗。
 // 三个规划器产出与裁判/直读解析器完全相同的意图对象，走同一条 resolve 管线——
 // 自动化不发明第二条状态通道。bots.js 是这些策略的对抗性参考，本文件是游戏内正式版。
-import { aliveChars, apMaxOf, policyOf } from './state.js';
+import { aliveChars, apMaxOf, policyOf, moodLevel } from './state.js';
 import { DAY_ACTIONS, AP_COST } from './dayActions.js';
 
 const itemName = (pack, id) => pack.itemMap[id]?.name || id;
@@ -168,17 +168,23 @@ export function planDay(state, pack) {
   for (const c of aliveChars(s)) {
     if ((c.wound >= 2 || c.sick >= 2) && !c.bedRest) intents.push(delegated({ type: 'act', actor: c.id, action: 'rest' }));
   }
-  // —— 建造序：炉灶 → 门 → 冬前取暖 → 捕鼠笼 → 床 → 升级（参照 sim 均衡策略） ——
+  // —— 建造序：炉灶 → 门 → 冬前取暖 → 捕鼠笼 → 床 → 升级（参照 sim 均衡策略）——
+  //    材料账预检：目标选出来先核 cost（一周目实测：没木板还天天提议捕鼠笼，
+  //    35 天"安排了→做不到"的墙纸式噪音）；材料不足就跳过，建材缺口交给交易建议补
   {
     const builder = aliveChars(s).find((c) => c.ap >= 2 && c.apMax >= 2 && !busy.has(c.id));
+    const canAfford = (target) => {
+      const f = pack.facilityMap?.[target];
+      return !!f && Object.entries(f.cost || {}).every(([k, n]) => has(s, k, n));
+    };
     if (builder) {
       const winterSoon = s.winterActive || s.day >= s.winterStart - 4;
       let target = null;
-      if (!s.facilities.stove) target = 'stove';
-      else if (s.doorLevel < 1) target = 'door';
-      else if (winterSoon && !s.facilities.heater) target = 'heater';
-      else if (!s.facilities.trap) target = 'trap';
-      else if ((s.facilities.bed || 0) < 2) target = 'bed';
+      if (!s.facilities.stove && canAfford('stove')) target = 'stove';
+      else if (s.doorLevel < 1 && canAfford('door')) target = 'door';
+      else if (winterSoon && !s.facilities.heater && canAfford('heater')) target = 'heater';
+      else if (!s.facilities.trap && canAfford('trap')) target = 'trap';
+      else if ((s.facilities.bed || 0) < 2 && canAfford('bed')) target = 'bed';
       else if (!s.facilities.stove_eco && has(s, 'wood', 4) && has(s, 'parts', 8)) target = 'stove_eco';
       else if (!s.facilities.heater_iron && has(s, 'comp', 5)) target = 'heater_iron';
       else if (!s.facilities.garden && has(s, 'comp', 6)) target = 'garden';
@@ -227,6 +233,8 @@ export function dawnProblems(state, pack) {
     if (c.wound === 3 || c.sick === 3) out.push({ sev: 3, text: `${c.name}病危，拖不过几天。` });
     else if ((c.wound === 2 || c.sick === 2) && !has(s, 'bandage') && !has(s, 'meds') && !has(s, 'herbmed')) out.push({ sev: 2, text: `${c.name}伤病在身，家里却没有药。` });
     if (c.breakdown) out.push({ sev: 3, text: `${c.name}崩溃了——需要有人陪他说话，别让他一个人待着。` });
+    // 心情的滑坡要趁还能拉的时候看见（一周目实测：连环崩溃当天才见警讯，已无力回天）
+    else if (moodLevel(c.moodPts).key === 'depressed') out.push({ sev: 2, text: `${c.name}情绪很低落——多陪他说说话，别让他一个人撑。` });
   }
   const fuel = (s.inventory.firewood || 0) + (s.inventory.fuel || 0);
   if (s.winterActive && fuel < 2 && (s.facilities.heater || s.facilities.heater_iron)) out.push({ sev: 2, text: '取暖的柴快烧完了。' });
@@ -249,9 +257,11 @@ export function planDusk(state, pack) {
   if (!alive.length) return { plans: [] };
   const known = (s.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]);
 
-  // 外出候选：危重出不了门（startNight 会拒），排序 = 背包 > 战斗
+  // 外出候选：危重出不了门（startNight 会拒），排序 = 心态可出门 > 背包 > 战斗。
+  // 抑郁者 50% 拒绝出门（startNight 掷骰）——方案卡不预检心情就等于让玩家点哑炮
+  const lowMind = (c) => ['depressed', 'breakdown'].includes(moodLevel(c.moodPts).key);
   const fit = alive.filter((c) => c.wound < 3 && c.sick < 3)
-    .sort((a, b) => (b.backpack - a.backpack) || ((b.combat || 0) - (a.combat || 0)));
+    .sort((a, b) => (Number(lowMind(a)) - Number(lowMind(b))) || (b.backpack - a.backpack) || ((b.combat || 0) - (a.combat || 0)));
   const scav = fit[0] || null;
   const guardOf = (excludeId) => {
     const rest = alive.filter((c) => c.id !== excludeId);
@@ -275,7 +285,10 @@ export function planDusk(state, pack) {
     const lines = [`${scavName}去${pack.locMap[locId].name}`];
     if (gear.length) lines.push(`带${gear.map((g) => itemName(pack, g)).join('、')}`);
     lines.push(guard ? `${guard.name}守夜` : '其余人都睡');
-    return { key, label: lines.join('，'), hint: `${LOC_BLURB[locId] || ''}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
+    // 情绪风险前置：抑郁者今晚可能不肯动身（50%）——玩家点卡之前就该看见
+    const scavChar = s.chars.find((c) => c.id === scavId);
+    const mindWarn = scavChar && lowMind(scavChar) ? `；${scavName}情绪很低，今晚可能不肯出门` : '';
+    return { key, label: lines.join('，'), hint: `${LOC_BLURB[locId] || ''}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
   };
 
   const plans = [];
@@ -422,7 +435,11 @@ export function tradeDeals(state, pack) {
     { item: 'meds', when: () => !has(s, 'meds') },
     { item: 'canned', when: () => (s.inventory.canned || 0) + (s.inventory.raw || 0) + (s.inventory.meal || 0) < 4 },
     { item: 'raw', when: () => (s.inventory.canned || 0) + (s.inventory.raw || 0) + (s.inventory.meal || 0) < 4 },
-    { item: 'firewood', when: () => (s.inventory.firewood || 0) < 3 }
+    { item: 'firewood', when: () => (s.inventory.firewood || 0) < 3 },
+    // 建材（一周目实测：没有斧子的家永远凑不齐捕鼠笼的 3 木板——管家不会劈柴时，
+    // 商路就是唯一来路；把缺口摆上建议单，而不是天天提一个做不到的建造）
+    { item: 'wood', when: () => (s.inventory.wood || 0) < 4 && !has(s, 'axe') },
+    { item: 'parts', when: () => (s.inventory.parts || 0) < 4 }
   ];
   for (const w of want) {
     const sku = stock.find((x) => x.item === w.item);
@@ -464,6 +481,12 @@ export function suggests(state, pack) {
   if (s.phase === 'prologue') return out;
   if (s.phase === 'day') {
     // 宏观节奏（一次选择走完今天）：白天建议全部收卷——单效诉求（省粮/听更）也并入当天方略
+    // 商人在门口：把管家的建议成交摆上建议行（水下交易也要有上岸的入口——
+    // 一周目实测鲁舟到访 22 次玩家只看见 2 笔，商路存在感近于零）
+    if (s.franko) {
+      const deal = tradeDeals(s, pack)[0];
+      if (deal) out.push({ label: `跟鲁舟换：${deal.label}`, intents: [{ type: 'trade_op', give: deal.give, get: deal.get }] });
+    }
     const close = { type: 'auto_day' };
     if (!s.activeEvent) out.push({ label: '让他们自己张罗这一天', intents: [close] });
     const foodTotal = ['meal', 'canned', 'raw', 'meat'].reduce((a, i) => a + (s.inventory[i] || 0), 0);

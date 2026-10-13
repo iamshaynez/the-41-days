@@ -61,8 +61,10 @@ export function resolveInput(state, pack, intents) {
       ctx.fact('auto_day_start', {});
       const planned = planDay(state, pack);
       queue.unshift(...planned);
-      // 门口有未决事件时不自动收工——留给玩家先应门
-      if (!state.activeEvent && planned.length) queue.push({ type: 'advance', delegated: true });
+      // 门口有未决事件时不自动收工——留给玩家先应门。
+      // 计划为空也要收卷（材料账预检后 planDay 可能无一事可提——
+      // 托管的日子不能因为"今天没事干"就永远停在白天）
+      if (!state.activeEvent) queue.push({ type: 'advance', delegated: true });
       continue;
     }
     if (intent.type === 'auto_night') {

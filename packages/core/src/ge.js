@@ -23,6 +23,26 @@ const effectSignature = (o) => {
   return keys.sort().join('|') || 'none';
 };
 
+/** 提案规范化（GE-03 的宽容面）：LLM 常把物品 id 写成中文名（"水"而非 water）——
+ *  中文名→id 就地归一；归一不了的原样保留，交给 validateProposal 以"未知物品"拒绝。
+ *  纯函数：返回新对象，不改入参。 */
+export function normalizeProposal(pack, p) {
+  if (!p || typeof p !== 'object' || !Array.isArray(p.options)) return p;
+  const byName = new Map((pack.items || []).map((i) => [i.name, i.id]));
+  const normItems = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    const out = {};
+    for (const [k, n] of Object.entries(obj)) out[pack.itemMap[k] ? k : (byName.get(k) || k)] = n;
+    return out;
+  };
+  return {
+    ...p,
+    options: p.options.map((o) => (o && typeof o === 'object'
+      ? { ...o, items_gain: normItems(o.items_gain), item_cost: normItems(o.item_cost) }
+      : o))
+  };
+}
+
 /** 校验提案。返回 {ok, reasons[]}。opts.arc：当前指派的命运弧（null = 普通微光卡） */
 export function validateProposal(pack, state, p, { anchors, arc = null } = {}) {
   const g = pack.ge;
@@ -104,16 +124,15 @@ export function validateProposal(pack, state, p, { anchors, arc = null } = {}) {
   const fp = geFingerprint(p);
   const seenDay = state.geFingers?.[fp];
   if (seenDay && state.day - seenDay < g.cooldownDays) reasons.push('指纹冷却期内');
-  // 预算（GE-02）：每日 ≤1、全局占比 ≤25%
+  // 预算（GE-02）：全局占比 ≤25%。每日 ≤1 的配额只在注入侧裁决（server/ge.js）——
+  // 生成是为明日备卡：今天的配额用掉不该拒明天的卡（预取在配额日用掉的时刻会被误杀）
   const shown = state.geShown || 0;
-  if (shown >= 1 && state.day - (state.geLastDay || 0) < 1) reasons.push('今日配额已用');
   const totalFired = Object.keys(state.firedOnce || {}).length + shown;
   if (shown + 1 > Math.max(1, Math.floor(Math.max(totalFired, 1) * g.budget.maxShareOfEvents))) reasons.push('全局占比超 25%');
   return { ok: reasons.length === 0, reasons, fingerprint: fp };
 }
 
-/** 提案 → 事件卡（入 run 级卡册，不进内容包）。opts.arc：命运弧（卡片带上 at=arc.at 供导演黄昏驻场） */
-export function proposalToCard(pack, state, p, { arc = null } = {}) {
+/** 提案 → 事件卡（入 run 级卡册，不进内容包）。opts.arc：命运弧（卡片带上 at=arc.at 供导演黄昏驻场） */export function proposalToCard(pack, state, p, { arc = null } = {}) {
   const card = {
     id: `ge_${state.day}_${geFingerprint(p)}`,
     kind: 'internal', generated: true, weight: 0,
@@ -147,8 +166,9 @@ export function proposalToCard(pack, state, p, { arc = null } = {}) {
   return card;
 }
 
-/** 事迹锚短语表（因果动词 → 玩家语言）：只收有分量的动词，短语避开全部禁词 */
-const DEED_PHRASES = {
+/** 事迹锚短语表（因果动词 → 玩家语言）：只收有分量的动词，短语避开全部禁词。
+ *  结局「三件事」（events.js）与锚池共用同一张短语表——账只有一份。 */
+export const DEED_PHRASES = {
   feed: '喂过饭', deny_food: '克扣过饭食', burn_book: '烧过书',
   heal: '治过伤', comfort: '安抚过人', help: '帮过人', donate: '分过东西',
   refuse_help: '拒过援手', steal_civ: '偷过人家', kill_civ: '杀过平民', kill_enemy: '杀过敌卒',
@@ -173,7 +193,10 @@ export function anchorPool(pack, state) {
     if (c.sick >= 1) pool.add(`带病:${c.name}`);
   }
   for (const id of state.knownLocs) if (pack.locMap[id]) pool.add(`地点:${pack.locMap[id].name}`);
-  for (const [f, v] of Object.entries(state.facilities)) if (v > 0) pool.add(`设施:${f}`);
+  // 设施锚用中文名：裸 id（设施:stove）会被编剧照抄进卡面（验证局实测泄漏）
+  for (const [f, v] of Object.entries(state.facilities)) {
+    if (v > 0) pool.add(`设施:${pack.facilityMap?.[f]?.name || f}`);
+  }
   // —— 近期事迹（七天内，至多三条；旧事进回忆录，不进选题）——
   const deeds = (state.causality?.entries || [])
     .filter((e) => e.day >= state.day - 7 && DEED_PHRASES[e.verb])

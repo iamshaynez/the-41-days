@@ -35,3 +35,18 @@ export function validateTextMarkers(text, pack) {
   const reg = markerRegistry(pack);
   return parseMarkers(text).filter((m) => m.type !== '要' && !reg[m.type]?.has(m.name)).map((m) => ({ type: m.type, name: m.name }));
 }
+
+/** 语法级校验：文本里一切 [[……]] 必须是七类标记之一。LLM 史笔会仿写出
+ *  [[江陵|江陵]] 这类"名词|名词"的野标记——parseMarkers 的类别正则根本不认它，
+ *  于是它既过 validateTextMarkers 又以裸括号漏进 UI（一周目实测 D28 起史卷成片）。
+ *  返回野标记原文列表（空=过）。 */
+export function markerSyntaxErrors(text) {
+  // MK_RE 带 /g（matchAll 用），.test 会走 lastIndex——这里用锚定的非全局副本
+  const MK_ONE = /^\[\[[人地物事决伏要]\|[^\]|]+\]\]$/;
+  const out = [];
+  const seen = new Set();
+  for (const m of String(text || '').matchAll(/\[\[[^\]]*\]\]/g)) {
+    if (!MK_ONE.test(m[0]) && !seen.has(m[0])) { seen.add(m[0]); out.push(m[0]); }
+  }
+  return out;
+}
