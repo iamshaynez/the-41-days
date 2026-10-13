@@ -22,7 +22,7 @@ function setMode(m) {
   $('tab-signup').classList.toggle('active', m === 'signup');
   $('btn-submit').textContent = m === 'login' ? '进入围城' : '写下名字，住进去';
   $('f-password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
-  $('auth-hint').textContent = m === 'login' ? '还没住进来？点「注册」写下你的名字。' : '名字 2–24 个字母或汉字；口令至少 6 位。';
+  $('auth-hint').textContent = m === 'login' ? '还没有名字？点「注册」——一个名字，就是一局的开始。' : '名字 2–24 个字母或汉字；口令至少 6 位。';
   $('auth-error').hidden = true;
 }
 $('tab-login').addEventListener('click', () => setMode('login'));
