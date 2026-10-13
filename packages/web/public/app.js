@@ -91,7 +91,7 @@ async function startRun(_difficulty, sidestory) {
     wall.appendChild(n);
   });
   $('narration').appendChild(wall);
-  scrollFlow(true);
+  revealFlow();
   setTimeout(() => {
     narrateRaw(`——${['', '一个名字', '两个名字', '三个名字', '四个名字'][living.length] || '几个名字'}，写在了门后的墙上。`);
     narrateRaw(r.mode === 'llm'
@@ -119,6 +119,7 @@ function clearBook() {
   state.lastAlive = null; state.lastDay = null; state.lastPhase = null;
   state.lastPrologueCard = null;
   state.pendingDropcap = false; state.follow = true;
+  hideFlowPing();
   hideCharPop();
 }
 
@@ -133,7 +134,7 @@ function renderObituary(c, day) {
     <div class="obit-role">${esc(c.role)}${c.desc ? '。' + esc(c.desc) : ''}</div>
     <div class="obit-date">殁于围城第 ${day} 日</div>`;
   $('narration').appendChild(box);
-  scrollFlow(true);
+  revealFlow();
 }
 
 function enterGame(mode, s) {
@@ -305,7 +306,7 @@ async function send(payload, displayText) {
   hideCharPop();
   typist.flush(); // 新落笔前，把上一段一口气写完
   const line = el('p', 'player-line fresh', esc(displayText));
-  $('narration').appendChild(line); closePara(); scrollFlow(true);
+  $('narration').appendChild(line); closePara(); revealFlow();
   try {
     const res = await fetch(`/api/runs/${state.runId}/input`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -394,19 +395,35 @@ function dayDivider(day, suffix = '') {
   const d = el('div', 'day-divider', `<b>第 ${day} 日</b>${suffix ? ' · ' + suffix : ''}`);
   $('narration').appendChild(d);
   state.pendingDropcap = true;
-  scrollFlow(true);
+  revealFlow();
 }
 // 用户往上翻阅时暂停跟随（已读回滚，UI 设计 §5）——监听的是正文栏的内部滚动
 const flowScroll = () => $('flow-scroll');
 flowScroll().addEventListener('scroll', () => {
   const f = flowScroll();
   state.follow = f.scrollTop + f.clientHeight >= f.scrollHeight - 90;
+  if (state.follow) hideFlowPing();
 }, { passive: true });
 function scrollFlow(force = false) {
   if (!force && !state.follow) return;
   const f = flowScroll();
   if (f) f.scrollTo({ top: f.scrollHeight, behavior: state.busy || wantRM() ? 'auto' : 'smooth' });
 }
+/* 新的一拍落位（卡片/落笔/日分界/讣告）：跟着用户的屏幕走——
+   在底部追更的人平滑送下去；还在读上文的人视口不动，只在纸面下缘
+   浮一枚提示，读完了自己下来（点它即到）。强制滚底只留给恢复对局与终局。 */
+function revealFlow() {
+  if (state.follow) { scrollFlow(true); hideFlowPing(); }
+  else showFlowPing();
+}
+const flowPing = el('button', 'flow-ping');
+flowPing.type = 'button';
+flowPing.hidden = true;
+flowPing.textContent = '新的一拍 ↓';
+flowPing.addEventListener('click', () => { state.follow = true; scrollFlow(true); hideFlowPing(); });
+$('flow').appendChild(flowPing);
+function showFlowPing() { flowPing.hidden = false; }
+function hideFlowPing() { flowPing.hidden = true; }
 /** 静默重绘：签名未变时不重播入场动画（状态补丁频繁到达，浓缩行不许每次闪一遍） */
 function quietSwap(box, sig) {
   const same = box.dataset.sig === String(sig);
@@ -742,7 +759,7 @@ function syncAsk(key, present, sig, build) {
   state.asks[key] = { sig, el: node };
   node.classList.add('flash');
   setTimeout(() => node.classList.remove('flash'), 1200);
-  scrollFlow(true);
+  revealFlow();
 }
 function askHead(kicker, title, icon) {
   return `<div class="ask-head"><span class="kicker">${esc(kicker)}</span>${icon ? svgUse(icon, 'card-ic') : ''}<b class="ask-title">${esc(title)}</b></div>`;
@@ -1095,7 +1112,7 @@ function renderPrologue(s) {
     }
     box.appendChild(opts);
     $('narration').appendChild(box);
-    scrollFlow(true);
+    revealFlow();
     return;
   }
   if (!s.eventView) return;
@@ -1112,7 +1129,7 @@ function renderPrologue(s) {
   });
   box.appendChild(opts);
   $('narration').appendChild(box);
-  scrollFlow(true);
+  revealFlow();
 }
 
 
