@@ -67,11 +67,12 @@ function updateWatch(s) {
 }
 
 // ——— 开局 / 续局 ———
-async function startRun(difficulty, sidestory) {
+async function startRun(_difficulty, sidestory) {
   // 模式不由玩家选：服务端按 LLM 路由配置决定（直读是测试与降级通道，不作为游戏模式提供）
+  // 难度也不由玩家选：单一难度（低门槛进入，残酷由江陵自己负责）
   const res = await fetch('/api/runs', {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(sidestory ? { sidestory } : { difficulty })
+    body: JSON.stringify(sidestory ? { sidestory } : {})
   });
   const r = await res.json();
   state.runId = r.id;
@@ -98,7 +99,7 @@ async function startRun(difficulty, sidestory) {
       : '（日子他们会自己张罗；轮到你时，世界会停下来问。直读模式认得大白话，比如「照常过吧」「省着吃」。）', { cls: 'sys' });
   }, wantRM() ? 0 : 400 + living.length * 550 + 500);
 }
-$('btn-start').addEventListener('click', () => startRun($('difficulty').value));
+$('btn-start').addEventListener('click', () => startRun());
 
 /** 合上当前这本书：回到卷首（对局都留在「没写完的局」里） */
 function backToSetup() {
@@ -752,9 +753,10 @@ function setCardsEnabled(on) {
     .forEach((x) => { if (!x.dataset.done) x.disabled = !on; });
 }
 
-function optBtn(label, key, onClick, hint = '') {
-  const b = el('button', 'opt', `<span class="key">${esc(key)}</span><span>${esc(label)}${hint ? `<span class="plan-hint">${esc(hint)}</span>` : ''}</span>`);
+function optBtn(label, key, onClick, hint = '', disabledWhy = '') {
+  const b = el('button', 'opt', `<span class="key">${esc(key)}</span><span>${esc(label)}${hint ? `<span class="plan-hint">${esc(hint)}${disabledWhy ? `（${esc(disabledWhy)}）` : ''}</span>` : (disabledWhy ? `<span class="plan-hint">（${esc(disabledWhy)}）</span>` : '')}</span>`);
   b.type = 'button';
+  if (disabledWhy) { b.disabled = true; b.title = disabledWhy; return b; }
   b.addEventListener('click', () => { onClick(); });
   return b;
 }
@@ -913,7 +915,7 @@ function syncAsks(s) {
       for (const p of String(v.text).split('\n').filter(Boolean)) body.appendChild(el('p', '', esc(p)));
       node.appendChild(body);
       const opts = el('div', 'ask-opts');
-      v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendIntents([{ type: 'event_choice', option: o.key }], o.label))));
+      v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendIntents([{ type: 'event_choice', option: o.key }], o.label), '', o.ok === false ? (o.why || '条件不够') : '')));
       node.appendChild(opts);
       node.appendChild(freeOptRow(s, 'event'));
     });
@@ -970,7 +972,7 @@ function syncAsks(s) {
         fate.appendChild(el('p', 'fate-title', esc(s.duskView.fate.title)));
         for (const p of String(s.duskView.fate.text).split('\n').filter(Boolean)) fate.appendChild(el('p', '', esc(p)));
         const fopts = el('div', 'ask-opts');
-        s.duskView.fate.options.forEach((o) => fopts.appendChild(optBtn(o.label, '◆', () => sendIntents([{ type: 'event_choice', option: o.key }], o.label))));
+        s.duskView.fate.options.forEach((o) => fopts.appendChild(optBtn(o.label, '◆', () => sendIntents([{ type: 'event_choice', option: o.key }], o.label), '', o.ok === false ? (o.why || '条件不够') : '')));
         fate.appendChild(fopts);
         fate.appendChild(el('p', 'ask-hint', '不答也行——出了门，这件事就过去了。'));
         node.appendChild(fate);
@@ -1261,7 +1263,7 @@ async function openMenu() {
     html += `<div class="m-runs">` + runs.map((run) =>
       `<div class="m-run-row">
         <button class="m-run" type="button" data-run="${run.id}" ${run.id === state.runId ? 'disabled' : ''}>
-          <b>第 ${run.day ?? '?'} 日</b><span class="m-run-meta">${run.mode === 'llm' ? 'LLM' : '直读'} · ${run.difficulty === 'narrative' ? '叙事' : '纪实'} · ${String(run.started_at || '').slice(5, 10)}${run.id === state.runId ? ' · 手头这本' : ''}</span>
+          <b>第 ${run.day ?? '?'} 日</b><span class="m-run-meta">${run.mode === 'llm' ? 'LLM' : '直读'} · ${String(run.started_at || '').slice(5, 10)}${run.id === state.runId ? ' · 手头这本' : ''}</span>
         </button>
         <button class="m-del" type="button" data-del="${run.id}" title="删掉这份存档（档案馆的收录保留）">删</button>
       </div>`).join('') + `</div>`;
@@ -1272,10 +1274,7 @@ async function openMenu() {
 
   // 另起一局
   html += `<section class="m-sec"><p class="m-kicker">另起一局</p>
-    <div class="m-row"><select id="m-difficulty">
-      <option value="documentary">纪实（饿死是常事）</option>
-      <option value="narrative" ${s?.difficulty === 'narrative' ? 'selected' : ''}>叙事（轻一点）</option>
-    </select><button class="primary" id="m-new" type="button">翻开新的一页</button></div>
+    <div class="m-row"><button class="primary" id="m-new" type="button">翻开新的一页</button></div>
     ${inGame ? '<p class="hint">手头这局会留在「没写完的局」里，随时翻回来。</p>' : ''}</section>`;
 
   // 阅读
@@ -1361,10 +1360,9 @@ async function openMenu() {
     }
   }));
   sheet.querySelector('#m-new').addEventListener('click', () => {
-    const d = sheet.querySelector('#m-difficulty').value;
     closeSheets();
     if (state.view !== 'play') switchView('play');
-    startRun(d);
+    startRun();
   });
   sheet.querySelector('#m-font').addEventListener('click', (e) => {
     const v = e.target.dataset?.v;

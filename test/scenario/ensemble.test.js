@@ -83,11 +83,15 @@ describe('堂屋：随机场（性格与关系驱动）', () => {
     let s = state;
     for (let d = 0; d < 20; d++) s = skipDayAtHome(s);
     const scenes = s.ensemble.scenes;
+    // 三人局的数学极限：三对全在 5 日冷却内时无从避让——场景会打 pairForced 标记，
+    // 冷却断言只对"有得选却没避"的场景生效。
+    const forced = new Set(scenes.filter((x) => x.pairForced).map((x) => x.id));
     // 随机场（有选择自由）：五天内同对子不重演
     const randos = scenes.filter((x) => x.kind !== 'comment');
     for (let i = 0; i < randos.length; i++) {
       for (let j = i + 1; j < randos.length; j++) {
         if (randos[j].day - randos[i].day > 5) break;
+        if (forced.has(randos[j].id)) continue;
         const a = randos[i].participants.slice(0, 2).sort().join('|');
         const b = randos[j].participants.slice(0, 2).sort().join('|');
         assert.notEqual(a, b, `第 ${randos[i].day} 日与第 ${randos[j].day} 日随机场同对子连场`);
@@ -97,6 +101,7 @@ describe('堂屋：随机场（性格与关系驱动）', () => {
     for (let i = 1; i < scenes.length; i++) {
       if (scenes[i].day - scenes[i - 1].day !== 1) continue;
       if (scenes[i].kind !== 'comment' && scenes[i - 1].kind !== 'comment') continue;
+      if (forced.has(scenes[i].id)) continue;
       const a = scenes[i - 1].participants.slice(0, 2).sort().join('|');
       const b = scenes[i].participants.slice(0, 2).sort().join('|');
       assert.notEqual(a, b, `第 ${scenes[i - 1].day}→${scenes[i].day} 日连日同对（应转位避让）`);

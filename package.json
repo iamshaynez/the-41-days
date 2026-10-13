@@ -1,6 +1,6 @@
 {
   "name": "that-war-of-mine",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "《第 41 天》— LLM 驱动的网页文字生存冒险（致敬 This War of Mine）",

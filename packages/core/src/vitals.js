@@ -25,9 +25,15 @@ export function tickHunger(ctx) {
   }
 }
 
-/** 步骤③：伤病结算矩阵（I-08 全表） */
+/** 步骤③：伤病结算矩阵（I-08 全表）
+ *  cfg 软化系数（内容包难度档提供，缺省 1=原版压力）：
+ *  woundWorseMul 未治伤恶化概率、woundDeathMul 危重致死概率、breakdownLeaveMul 崩溃离队概率——
+ *  单一低难度靠这三根旋钮保住"多数局能走到交割日"，机制本身不变。 */
 export function tickHealth(ctx) {
   const day = ctx.s.day;
+  const cfg = difficultyCfg(ctx.pack, ctx.s);
+  const worseMul = cfg.woundWorseMul ?? 1;
+  const deathMul = cfg.woundDeathMul ?? 1;
   const healerHome = aliveChars(ctx.s).some((c) => c.traits?.healer);
   for (const c of aliveChars(ctx.s)) {
     const woundTreated = c.woundTreatedDay === day - 1;
@@ -37,15 +43,15 @@ export function tickHealth(ctx) {
     // —— 伤 ——
     if (c.wound === 3) {
       if (woundTreated && rested && healerHome) { ctx.setWound(c, 2); }
-      else if (ctx.rng.chance(0.5)) { ctx.fact('dying_wound', { char: c.id }); ctx.die(c, '重伤不治'); continue; }
+      else if (ctx.rng.chance(0.5 * deathMul)) { ctx.fact('dying_wound', { char: c.id }); ctx.die(c, '重伤不治'); continue; }
       else ctx.fact('critical_wound_hold', { char: c.id });
     } else if (c.wound === 2) {
       if (woundTreated && rested) ctx.setWound(c, 1);
       else if (rested) {
         c.woundRestDays++;
         if (c.woundRestDays >= 2) { ctx.setWound(c, 1); c.woundRestDays = 0; }
-        if (ctx.rng.chance(0.2)) { c.woundUntreatedDays = 3; }
-      } else if (ctx.rng.chance(0.3)) { ctx.setWound(c, 3); ctx.fact('wound_worse', { char: c.id }); }
+        if (ctx.rng.chance(0.2 * worseMul)) { c.woundUntreatedDays = 3; }
+      } else if (ctx.rng.chance(0.3 * worseMul)) { ctx.setWound(c, 3); ctx.fact('wound_worse', { char: c.id }); }
       if (!woundTreated) c.woundUntreatedDays++;
     } else if (c.wound === 1) {
       if (rested) ctx.setWound(c, 0);
@@ -63,15 +69,15 @@ export function tickHealth(ctx) {
         c.sickRestDays++;
         if (c.sickRestDays >= 2) { ctx.setSick(c, 2); c.sickRestDays = 0; }
       } else if (sickTreated && rested) {
-        if (ctx.rng.chance(0.35)) { ctx.fact('dying_sick', { char: c.id }); ctx.die(c, '重病不治'); continue; }
-      } else if (ctx.rng.chance(0.5)) { ctx.fact('dying_sick', { char: c.id }); ctx.die(c, '重病不治'); continue; }
+        if (ctx.rng.chance(0.35 * deathMul)) { ctx.fact('dying_sick', { char: c.id }); ctx.die(c, '重病不治'); continue; }
+      } else if (ctx.rng.chance(0.5 * deathMul)) { ctx.fact('dying_sick', { char: c.id }); ctx.die(c, '重病不治'); continue; }
       else ctx.fact('critical_sick_hold', { char: c.id });
     } else if (c.sick === 2) {
       if (sickTreated && rested) ctx.setSick(c, 1);
       else if (rested) {
         c.sickRestDays++;
         if (c.sickRestDays >= 2) { ctx.setSick(c, 1); c.sickRestDays = 0; }
-      } else if (ctx.rng.chance(0.15)) ctx.setSick(c, 3);
+      } else if (ctx.rng.chance(0.15 * worseMul)) ctx.setSick(c, 3);
       if (c.sickTreatedHerb) { c.sickTreatedHerb = false; } // 草药药只顶一晨
     } else if (c.sick === 1) {
       if (rested || sickTreated) {
@@ -122,6 +128,8 @@ export function tickTemperature(ctx) {
 
 /** 步骤⑥：心情拖累与崩溃链（M-05/M-14） */
 export function tickMood(ctx) {
+  const cfg = difficultyCfg(ctx.pack, ctx.s);
+  const leaveMul = cfg.breakdownLeaveMul ?? 1;
   for (const c of aliveChars(ctx.s)) {
     if (c.wound >= 2) ctx.mood(c, -1, '重伤拖累');
     if (c.addiction && ctx.s.day - c.addictionServedDay > 1) ctx.mood(c, -1, '瘾头');
@@ -133,7 +141,7 @@ export function tickMood(ctx) {
         ctx.fact('breakdown_recovered', { char: c.id });
       } else if (c.breakdown.stage >= 2) {
         // 第 3 晨：离队或自伤
-        if (ctx.rng.chance(0.5)) {
+        if (ctx.rng.chance(0.5 * leaveMul)) {
           ctx.fact('breakdown_left', { char: c.id });
           ctx.die(c, '崩溃离队'); // 移出队伍（带走份额的叙事由 facts 承载）
         } else {

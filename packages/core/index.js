@@ -14,7 +14,7 @@ export { applyDayAction, DAY_ACTIONS, lootContainer, findDoc, docAvailable } fro
 export { startNight, applyNightAction, endNightReturn } from './src/night.js';
 export { resolveRaid } from './src/raid.js';
 export { genFrankoStock, sellPrice, executeTrade } from './src/trade.js';
-export { chooseEventOption, buildEnding, optionAvailable } from './src/events.js';
+export { chooseEventOption, buildEnding, optionAvailable, optionCostOk, optionWhy, eventOptionsView } from './src/events.js';
 export { resolveInput, beginRun, validateIntentShape } from './src/resolve.js';
 export { fold } from './src/fold.js';
 export { parseDirect, normalizeIntent } from './src/parser.js';

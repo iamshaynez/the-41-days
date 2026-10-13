@@ -31,7 +31,9 @@ export function worldBrief(state, pack) {
 export function renderDirect(state, facts, pack) {
   const t = pack.narrations;
   const lines = [];
-  const name = (id) => charById(state, id)?.name || id;
+  // 死者仍在 chars 里但 alive=false——charById 只查活人，会漏成内部 id（"bron的病"）。
+  // 人名先查本局名册（含死者），再查内容包，最后才落 id。
+  const name = (id) => state.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || id;
   for (const f of facts) {
     switch (f.k) {
       case 'run_started': lines.push(`第 1 天。${t.dawn.header.replace('{{day}}', 1).replace('{{weather}}', '围城第 9 天')}——你们住进了橘里九号。${f.chars}，三个名字写在了门后的墙上。`); break;
@@ -110,7 +112,7 @@ export function renderDirect(state, facts, pack) {
       case 'winter_end': lines.push('天气松动了些。'); break;
       case 'war_telegraph': lines.push(t.war.telegraph); break;
       case 'run_ended': lines.push(t.war[f.type] || '没有人再从橘里九号走出来。'); break;
-      case 'option_unavailable': lines.push('（做不到——条件不够）'); break;
+      case 'option_unavailable': lines.push(f.why ? `（做不到——${f.why}。）` : '（做不到——条件不够。）'); break;
       // —— v2 管家与决策点 ——
       case 'auto_day_start': lines.push('他们没有等你一一吩咐。新的一天，各忙各的去了。'); break;
       case 'policy_set': {
