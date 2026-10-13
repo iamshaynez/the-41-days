@@ -214,10 +214,21 @@ export function buildStoryline(state, pack) {
 
   const title = { ceasefire: '开城', maicheng: '开城 · 麦城得脱', pyrrhic: '惨胜', alt_both: '另一种三国', contract_end: '交割日', lighthouse: '还师', join_table: '出江陵记' }[s.war.endingType] || '无人幸免';
   // 野史页（正典圣经-v0.2 §8.5 文体规范：史书体、冷、短，批注=老年阿禾）
+  // ── 野史栏（v0.3 全分支入册；ceasefire 三变体批注由铰链注记决定）──
+  // 铰链注记四象限：军心×杠杆（刀偏两格不会出现在 ceasefire，只剩两格正史变体与默认）
+  const heldNote = (s.war.armyHeld && !s.war.leverHad)
+    ? '军心未散而史仍如旧：你拦过那些家书。史官不知道，兰台记了。'
+    : (!s.war.armyHeld && s.war.leverHad)
+      ? '机关拆了，家书没拦住——一个人拦不住已经化掉的大军。'
+      : '军散于家书，城开于交割。谁也没有做错什么——这就是最坏的地方。';
   const ANNALS = {
-    maicheng: { text: '建安二十四年十二月，羽自麦城走房陵，得脱。吴尽得荆州。', note: '你救下的不是荆州，是一个人的命。这座城的交割一天都没有推迟。' },
-    pyrrhic: { text: '建安二十四年闰十月，吕蒙围江陵，六日不拔。关羽还师击之，吴人退。是岁，江陵大饥。', note: '守住的城和开过的城，账本不一样，死人一样多。' },
-    alt_both: { text: null, note: '那年秋天，门没有开，将军没有死。后来他们还是死了——不过，是后来的事。' }
+    ceasefire: { text: '是岁闰十月，江陵易主，不血刃。十二月，将军没于临沮。', note: heldNote },
+    maicheng: { text: '十二月，羽自麦城走房陵，得脱。吴尽得荆州。', note: '军心是你们一户一户留住的；那早到的六个时辰，是北津台的鼓给他的。' },
+    pyrrhic: { text: '吕蒙弃城北渡。羽复入江陵。是岁，大饥。', note: '守住的城和让出的城，账本不一样——军心留住了，米缸见了底。' },
+    alt_both: { text: '门没有开到底，军没有散尽，将军没有死。', note: '这个秋天没有照任何一本书里写的走。你们就是野史。' },
+    lighthouse: { text: '真相比刀快：烽鼓之信入麦城，羽收兵，全军而退。', note: '荆州没有被救——它只是换了一种被战争使用的方式。可这座城知道了真话。' },
+    join_table: { text: '有舟夜发，符传三张。江陵册上，此后无名。', note: '你活着离开了江陵——这句话，往后要对自己说很多年。' },
+    contract_end: { text: '契书用印，城易其主。', note: '章比刀兵体面，一样凉。' }
   };
   const annals = ANNALS[s.war.endingType] ? [{ ...ANNALS[s.war.endingType], ending: s.war.endingType }] : [];
   return {

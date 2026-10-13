@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "semver": "0.18.0",
+  "semver": "0.19.0",
   "name": "第 41 天 · 江陵",
   "coreVersion": ">=0.1.0",
   "files": [
@@ -26,16 +26,16 @@
     "biographer.md"
   ],
   "startInventory": {
-    "wood": 10,
+    "wood": 8,
     "parts": 12,
     "comp": 4,
-    "raw": 10,
-    "canned": 5,
+    "raw": 6,
+    "canned": 2,
     "water": 5,
     "bandage": 1,
     "crowbar": 1,
     "book": 2,
-    "firewood": 4
+    "firewood": 2
   },
   "startKnowledgeLocations": [
     "market",
@@ -44,23 +44,25 @@
     "villas"
   ],
   "war": {
-    "$comment": "v0.2 正典：交割日固定 D45（正史锚点，不掷骰——内核设计-v0.2 §9 W-01；D45 同时是一局 1.5~3 小时的节奏上限）",
+    "$comment": "v0.3 同步日历（正典圣经 v0.3 §1）：白衣渡江在序章之夜——玩家 D1 即交割次晨，D41 固定为临沮日（不掷骰）。玩家的四十一天与将军的四十一天同起点、同终点、两种命运。dissolveThreshold：军心溶解阈值——家访配合/家书报平安推高溶解；刀偏（或然）须同时握有杠杆且溶解低于阈值。",
     "endWindow": [
-      45,
-      45
+      41,
+      41
     ],
-    "forceEndDay": 45,
-    "telegraphDays": 5
+    "forceEndDay": 41,
+    "telegraphDays": 5,
+    "dissolveThreshold": 22
   },
   "winter": {
     "startWindow": [
-      10,
-      35
+      7,
+      20
     ],
     "duration": [
-      8,
-      14
-    ]
+      9,
+      15
+    ],
+    "$comment": "v0.3 同步日历：局缩至 41 天，冬窗前移+拉长保张力"
   },
   "franko": {
     "$comment": "鲁舟泊船：逢双日（正典圣经-v0.2 §6——围城里的准时是特权，破绽即线索）",
@@ -92,14 +94,14 @@
   },
   "difficulty": {
     "documentary": {
-      "raidMul": 0.7,
+      "raidMul": 0.75,
       "checkMod": 1,
       "starveSick": 0.0,
       "tradeMul": 1.0,
       "notorietyMul": 1.0,
-      "woundWorseMul": 0.65,
+      "woundWorseMul": 0.7,
       "woundDeathMul": 0.5,
-      "breakdownLeaveMul": 0.5
+      "breakdownLeaveMul": 0.6
     }
   }
 }

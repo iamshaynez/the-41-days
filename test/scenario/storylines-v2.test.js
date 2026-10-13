@@ -205,15 +205,16 @@ describe('或然结局（正典圣经-v0.2 §8 / 内核 W-04：满足即触发�
     assert.equal(s.activeEvent?.cardId, 'alt_jiangling', '火线卡应在 D30 前注入');
     s = step(s, [{ type: 'event_choice', option: 'deliver' }]).state;
     assert.ok(s.eventFlags.alt_jiangling);
-    s = skipDayAtHome(s); // D21 破晓：tickWar 应用推迟
-    assert.equal(s.war.endDay, 51, '交割推迟六日（45+6）');
-    s.day = 50;
-    s = skipDayAtHome(s); // D51：终局
+    s = skipDayAtHome(s); // D21 破晓：交割不再推迟（v0.3 铰链在 D41 一刀定）
+    assert.equal(s.war.endDay, 41, '交割日不动（41）');
+    s.dissolve = 0; // 军心未散：机关杠杆在 D41 生效
+    s.day = 40;
+    s = skipDayAtHome(s); // D41：临沮日，铰链分岔
     assert.ok(s.over, '局已终');
     assert.equal(s.ending.type, 'pyrrhic');
     assert.equal(s.ending.storyline.title, '惨胜');
-    assert.match(s.ending.storyline.annals[0]?.text || '', /吕蒙围江陵/);
-    assert.match(s.ending.storyline.annals[0]?.note || '', /账本不一样/);
+    assert.match(s.ending.storyline.annals[0]?.text || '', /吕蒙弃城北渡/);
+    assert.match(s.ending.storyline.annals[0]?.note || '', /军心留住了/);
   });
 
   test('B 门槛：缺 #063 不注入；D31 起不再注入', () => {
@@ -308,15 +309,13 @@ describe('或然结局（正典圣经-v0.2 §8 / 内核 W-04：满足即触发�
     let s = state;
     feedUp(s);
     s.eventFlags.alt_jiangling = true; s.eventFlags.alt_maicheng = true;
-    s.day = 44;
-    s = skipDayAtHome(s); // D45 破晓：先应用 B 的推迟
-    assert.equal(s.war.endDay, 51);
-    s.day = 50;
-    s = skipDayAtHome(s);
+    s.dissolve = 0; // 军心未散 + 双杠杆并立
+    s.day = 40;
+    s = skipDayAtHome(s); // D41 临沮日：两杆杠杆同时压住那把刀
     assert.ok(s.over);
     assert.equal(s.ending.type, 'alt_both');
     assert.equal(s.ending.storyline.title, '另一种三国');
-    assert.equal(s.ending.storyline.annals[0]?.text ?? null, null, '此页无纪事，只有批注');
-    assert.match(s.ending.storyline.annals[0]?.note || '', /后来的事/);
+    assert.match(s.ending.storyline.annals[0]?.text || '', /门没有开到底/);
+    assert.match(s.ending.storyline.annals[0]?.note || '', /野史/);
   });
 });

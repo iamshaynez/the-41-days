@@ -60,7 +60,7 @@ describe('序章三幕 · HTTP 全链', () => {
       s = (await view(id)).state;
     }
     assert.equal(s.phase, 'day');
-    assert.equal(s.chronicle.entries[0]?.title, '大胜之秋', 'D1 大事步入卷');
+    assert.equal(s.chronicle.entries[0]?.title, '易帜', 'D1 大事步入卷');
     assert.ok(s.chronicle.entries[0].text.length > 0, '直读回落 fallback 有文');
     assert.ok(s.chronicle.entries[0].digest, '我方一行在卷');
   });
@@ -73,7 +73,7 @@ describe('序章三幕 · HTTP 全链', () => {
     await sendInput(id, { intents: [{ type: 'skip_prelude' }] });
     s = (await view(id)).state;
     assert.equal(s.phase, 'day');
-    assert.equal(s.chronicle.entries[0]?.title, '大胜之秋');
+    assert.equal(s.chronicle.entries[0]?.title, '易帜');
   });
 
   test('开场二选一门（拍板 v5）：本账号活到战争收束才有选择，未通关一律完整三幕', async () => {

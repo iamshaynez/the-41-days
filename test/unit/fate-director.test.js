@@ -113,12 +113,12 @@ describe('黄昏驻场注入与路过', () => {
     await d2.onTurn('r3', s2);
     const r2 = resolveInput(s2, PACK, [{ type: 'dusk_assign', scavenger: null, location: null, gear: [], others: {} }]);
     assert.ok(r2.facts.some((f) => f.k === 'fate_passed'), '路过也有 fact');
-    assert.ok(!r2.state.activeEvent, '事件落幕');
+    assert.ok(!r2.state.activeEvent?.duskFate, '命运卡落幕（晨抽的寻常卡不在此限）');
     assert.equal(r2.state.eventFlags.fate_paper_chased, undefined, '路过的命运不落旗标');
     assert.equal(r2.state.day, DAY + 1, '夜照常过去（在家过夜即破晓）');
     // fold 镜像：EVENT_CHOSEN 落幕后回放一致
     const rebuilt = fold([...r2.events]);
-    assert.ok(!rebuilt.activeEvent);
+    assert.ok(!rebuilt.activeEvent?.duskFate, '回放：命运卡落幕（晨抽寻常卡不在此限）');
     d2.drop('r3');
   });
 });

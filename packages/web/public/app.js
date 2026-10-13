@@ -1120,30 +1120,65 @@ function renderPrologue(s) {
 function renderEnding(s) {
   const box = $('narration');
   closePara();
-  const END_TITLE = { ceasefire: '开　城', maicheng: '开城 · 麦城得脱', pyrrhic: '惨　胜', alt_both: '另一种三国', contract_end: '交割日', lighthouse: '还　师', join_table: '出江陵记', sidestory: '别传' };
+  const END_TITLE = { ceasefire: '第四十一天', maicheng: '麦城得脱', pyrrhic: '惨　胜', alt_both: '另一种三国', contract_end: '交割日', lighthouse: '还　师', join_table: '出江陵记', sidestory: '别传' };
   const title = s.ending.type === 'sidestory' ? (s.ending.storyline?.title || '别传') : (END_TITLE[s.ending.type] || '无人幸免');
-  const endDiv = el('div', 'ending', `<div class="title">${title}</div>`);
-  box.appendChild(endDiv);
-  // 回忆录（EPI-02）：流式已到则落笔定稿（不重播动画），否则一次性呈现
-  if (s.ending.memoir) {
-    memoirTypist.flush();
-    const m = $('memoir-block') || el('div', 'memoir'); m.id = 'memoir-block';
-    m.innerHTML = '';
-    for (const para of String(s.ending.memoir).split('\n').filter(Boolean)) m.appendChild(el('p', '', esc(para)));
-    endDiv.after(m); // 标题在前，回忆录随后——无论它是否流式到过场
+  const story = s.ending.storyline;
+  const codex = story?.codex || {};
+  /* ── 幕一 落幕：题名 + 收束行（手写正典文案，逐行浮现）── */
+  const curtain = el('div', 'finale curtain');
+  curtain.appendChild(el('div', 'ending', `<div class="title">${title}</div>`));
+  for (const [i, line] of (codex.lines || []).entries()) {
+    curtain.appendChild(el('p', 'finale-line reveal', esc(line)));
+    curtain.lastChild.style.animationDelay = `${1.2 + i * 1.6}s`;
   }
-  // 野史页（或然结局专属：史书体一行 + 批注；EPI-06）
-  const annals = s.ending.storyline?.annals || [];
+  box.appendChild(curtain);
+
+  /* ── 幕二 史册：双轨摊开（城轨 × 将军轨）+ 野史批注 ── */
+  const scroll = el('div', 'finale-act codex reveal');
+  scroll.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 1}s`;
+  scroll.appendChild(el('span', 'kicker', '史册 · 双轨'));
+  const dual = el('div', 'dual-track');
+  const mkCol = (label, list) => {
+    const col = el('div', 'track-col');
+    col.appendChild(el('h5', '', label));
+    for (const b of list.slice(-7)) col.appendChild(el('p', 'sys', `第${b.day}天　${esc(b.title)}　${esc((b.text || '').slice(0, 26))}…`));
+    return col;
+  };
+  dual.appendChild(mkCol('城　轨（你们的日子）', codex.tracks?.city || []));
+  dual.appendChild(mkCol('将军轨（北边的路）', codex.tracks?.gen || []));
+  scroll.appendChild(dual);
+  const annals = story?.annals || [];
   if (annals.length) {
-    const an = el('div', 'three-things annals');
+    const an = el('div', 'annals');
     an.appendChild(el('span', 'kicker', '野史'));
     for (const a of annals) {
       if (a.text) an.appendChild(el('p', 'fate', esc(a.text)));
       an.appendChild(el('p', 'sys', `批注：${esc(a.note)}`));
     }
-    box.appendChild(an);
+    scroll.appendChild(an);
   }
-  // 局的日线：这一局的三件事落在时间轴上
+  box.appendChild(scroll);
+
+  /* ── 幕三 擦痕：史×你（同一天的两种记账）── */
+  const echoes = story?.echoes || [];
+  if (echoes.length) {
+    const ec = el('div', 'finale-act echoes reveal');
+    ec.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 2.2}s`;
+    ec.appendChild(el('span', 'kicker', '史 × 你'));
+    for (const e of echoes) {
+      ec.appendChild(el('p', 'echo-line', `<i>第${e.day}天</i>史册记「${esc(e.hist)}」；你的墙上记：${esc(e.deed)}。<b>史书没记这一页。</b>`));
+    }
+    box.appendChild(ec);
+  }
+
+  /* ── 幕四 回忆录与人的账（原区块：回忆录/三件事/账/命运/列传）── */
+  if (s.ending.memoir) {
+    memoirTypist.flush();
+    const m = $('memoir-block') || el('div', 'memoir'); m.id = 'memoir-block';
+    m.innerHTML = '';
+    for (const para of String(s.ending.memoir).split('\n').filter(Boolean)) m.appendChild(el('p', '', esc(para)));
+    box.appendChild(m);
+  }
   if (s.ending.threeThings?.length) {
     const tt = el('div', 'three-things');
     tt.appendChild(el('span', 'kicker', '这一局的三件事'));
@@ -1151,8 +1186,6 @@ function renderEnding(s) {
     for (const t of s.ending.threeThings) tt.appendChild(el('p', 'sys', `第${t.day}天　${esc(t.text)}`));
     box.appendChild(tt);
   }
-  // 人的账（CY-33）：每个名字后面，是他带走的东西
-  const story = s.ending.storyline;
   if (story) {
     const acc = el('div', 'three-things ledger');
     acc.appendChild(el('span', 'kicker', '人的账'));
@@ -1165,7 +1198,6 @@ function renderEnding(s) {
     box.appendChild(acc);
   }
   for (const c of s.ending.chars) box.appendChild(el('p', 'fate', `<b>${esc(c.name)}</b>　${esc(c.fate)}`));
-  // 列传（人物血肉计划 PR3）：每人一段史书小传 + 个人大事时间线 + 盖棺方向
   const bios = s.ending.biographies || [];
   if (bios.length) {
     const DIR_BADGE = { fallen: '殁', haunted: '恸', honored: '誉', survived: '存' };
@@ -1186,7 +1218,8 @@ function renderEnding(s) {
     }
     box.appendChild(bd);
   }
-  // 时间胶囊（EC-02）：埋一件物品 + 一句留话，后续周目后院可挖
+
+  /* ── 幕五 留赠：把一件东西留给后来的陌生人（反战的最后一拍）── */
   renderCapsuleForm(box, s);
   box.appendChild(el('p', 'sys', '（档案馆已收录本局与这篇复盘。从菜单翻开新的一页，城市会记得。）'));
   scrollFlow(true);
@@ -1876,7 +1909,8 @@ function renderChronicle(ch) {
   for (const e of ch.entries) {
     const d = el('div', 'chron-day' + (e.ending ? ' chron-end' : ''));
     const head = el('div', 'chron-head');
-    head.innerHTML = `<span class="chron-d">第${e.day}日</span>${e.ending ? '<span class="chron-flag">收束</span>' : (e.act ? `<span class="chron-act">${esc(e.act)}</span>` : '<span class="chron-act chron-dim">闲笔</span>')}`;
+    const trackBadge = e.track === 'gen' ? '<span class="chron-track gen">将军轨</span>' : (e.track === 'city' ? '<span class="chron-track city">城轨</span>' : '');
+    head.innerHTML = `<span class="chron-d">第${e.day}日</span>${trackBadge}${e.ending ? '<span class="chron-flag">收束</span>' : (e.act ? `<span class="chron-act">${esc(e.act)}</span>` : '<span class="chron-act chron-dim">闲笔</span>')}`;
     d.appendChild(head);
     if (e.text) {
       const p = el('p', 'chron-text');
