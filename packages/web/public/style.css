@@ -290,6 +290,12 @@ body[data-day='45'][data-phase='night'] #fx, body[data-day='45'][data-phase='nig
 }
 .menu-btn:hover { filter: drop-shadow(1px 2px 0 var(--shadow)) brightness(1.08); }
 .menu-btn .icon { width: 14px; height: 14px; }
+/* 舆图抽屉开关（仅移动端显形；桌面侧栏常驻，用不着它） */
+#btn-wing { display: none; }
+.wing-drawer-head { display: none; }   /* 抽屉头只在窄屏抽屉里显形 */
+/* 触控优化：交互件免双击缩放延迟，按压有回礼 */
+button, .opt, .tab, .pl-char, .suggest, .m-run { touch-action: manipulation; }
+button:active, .opt:active { filter: brightness(.86); }
 
 /* ——— 4. 漆器面板与通用元件 ——— */
 .paper {
@@ -1212,32 +1218,73 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 
 /* ——— 响应式 ——— */
 @media (max-width: 760px) {
-  #app { padding: 0 12px; }
+  #app { padding: 0 10px; }
   #watch { display: none; }  /* 窄屏更筹退场 */
-  #topbar { padding: 8px 2px 6px; }
-  .mast { gap: 4px 12px; }
+  /* 报头收成单行：按钮只留图标，日时同行小字——书页要每一寸 */
+  #topbar {
+    padding: calc(6px + env(safe-area-inset-top)) 2px 6px;
+  }
+  #topbar::after { margin-top: 5px; }
+  .mast { gap: 8px; flex-wrap: nowrap; align-items: center; }
+  .mast-left { gap: 8px; min-width: 0; }
   .mast-kicker { display: none; }
-  .brand { font-size: 17px; letter-spacing: .22em; }
-  .clock { order: 3; flex-basis: 100%; font-size: 11.5px; }
+  .brand { font-size: 16px; letter-spacing: .18em; white-space: nowrap; }
+  .clock { order: 0; flex-basis: auto; font-size: 11px; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   #mode-badge { display: none; }
-  .menu-btn { padding: 4px 10px; font-size: 12px; }
-  #vitals { margin: 10px 0 8px; }
+  .menu-btn { padding: 7px 9px; }        /* 图标钮：40px+ 触控面 */
+  .menu-btn .menu-word { display: none; }
+  .menu-btn .icon { width: 17px; height: 17px; }
+  .mast-right { gap: 6px; flex: none; }
+  #btn-wing { display: inline-flex; }
+  #vitals { margin: 8px 0 6px; padding-bottom: 6px; }
   /* 人物行横滑：宽度不再换行；右缘渐隐 = "还有下一位"的手势 */
   .partyline {
     flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
     -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
     mask-image: linear-gradient(90deg, #000 90%, transparent);
     padding-right: 22px;
+    scroll-snap-type: x proximity;
   }
   .partyline::-webkit-scrollbar { display: none; }
-  .pl-char { flex: none; }
-  #narration { padding: 18px 20px 36px; }
+  .pl-char { flex: none; scroll-snap-align: start; }
+  #narration { padding: 16px 16px 34px; }
   body[data-fontsize='m'] #narration { font-size: 16px; }
-  #setup { margin: 10px auto; padding: 26px 22px; }
+  #setup { margin: 10px auto; padding: 26px 20px; }
   #setup::before { font-size: 130px; top: -16px; }
   .doc-wall { grid-template-columns: 1fr; }
   .annal-cols { grid-template-columns: 1fr; }
-  #view-archive .panel.paper, #view-admin .panel.paper { padding: 20px 20px 24px; }
+  #view-archive .panel.paper, #view-admin .panel.paper { padding: 20px 18px 24px; }
+  /* —— 舆图与史卷：收进底部抽屉（实测：侧栏常驻时书页只剩三成屏）——
+     窄屏 #wing 脱离文档流，整屏让给叙事流；点报头的「舆图」拉出 */
+  #wing {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 47;
+    display: flex; flex-direction: column;   /* 盖过 1080 断点的横排——抽屉里竖着摞 */
+    margin: 0; padding: 12px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height: 78dvh; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--paper); background-image: var(--sheen), var(--grain);
+    border-top: 2px solid #241608;
+    box-shadow: 0 -10px 34px rgba(0, 0, 0, .55), inset 0 1px 0 var(--gold-dim);
+    transform: translateY(103%); visibility: hidden;
+    transition: transform .3s cubic-bezier(.2, .8, .3, 1), visibility .3s;
+  }
+  body.wing-open #wing { transform: none; visibility: visible; }
+  body.wing-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
+  #wing .wing-card {
+    flex: none; border: none; box-shadow: none; background: transparent; background-image: none;
+    padding: 6px 0 10px;
+  }
+  #wing .wing-card + .wing-card { border-top: 1px solid var(--rule); }
+  #wing .wing-card { min-width: 0; width: 100%; }
+  #map-box { max-width: none; width: 100%; overflow-x: auto; }
+  #map-box .map-svg { min-width: 520px; }   /* 舆图放大横滚：标签从 ~11px 升到 ~16px */
+  #wing .mp-label { fill: var(--ink-2); font-size: 3.5px; }        /* 抽屉里单独提亮放大——炭笔小字不该费眼 */
+  #wing .place text { fill: var(--ink-2); font-size: 3.7px; }
+  #chronicle-box { max-height: none; }
+  .wing-drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--rule-strong);
+  }
+  .wing-drawer-head .sheet-x { color: var(--ink-2); background: none; border: none; font-size: 16px; padding: 4px 8px; cursor: pointer; }
   /* 覆盖层贴底成抽屉 */
   .sheet {
     left: 0; right: 0; top: auto; bottom: 0; transform: none;
@@ -1248,11 +1295,14 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
   }
   @keyframes sheetUp { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
   #landing { margin: 4vh auto 0; }
-  .cover { padding: 30px 24px 26px; }
+  .cover { padding: 30px 22px 26px; }
   .cover::before { font-size: 96px; top: 4px; right: 14px; }
-  .seal { width: 64px; height: 64px; top: 20px; right: 18px; font-size: 19px; }
+  .seal { width: 64px; height: 64px; top: 20px; right: 16px; font-size: 19px; }
   .spine { display: none; }
-  .cover-toc { gap: 6px 14px; }
+  .cover-toc { gap: 6px 14px; font-size: 12px; }
+  .landing-form .field input { font-size: 16px; }   /* 防 iOS 聚焦缩放 */
+  .landing-row { flex-direction: column; }
+  .landing-row button { width: 100%; min-height: 46px; }
 }
 @media (max-width: 480px) {
   .setup-row { flex-direction: column; align-items: stretch; }
@@ -1402,10 +1452,7 @@ body.motion-off { scroll-behavior: auto; }
   .wing-card { flex: 1; min-height: 180px; }
   #chronicle-box { max-height: 220px; }
 }
-@media (max-width: 640px) {
-  #wing { flex-direction: column; }
-  #map-box { max-width: 340px; }
-}
+/* （640 旧断点并入 760：wing 在 760 起即为抽屉，无需重复） */
 
 /* ═══ v0.3 终局五幕 ═══ */
 .finale { text-align: center; margin: 40px 0 20px; padding: 30px 0; border-top: 1px solid var(--brass, #8a6d3b); border-bottom: 1px solid var(--brass, #8a6d3b); }
