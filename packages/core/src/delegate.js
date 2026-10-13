@@ -149,13 +149,17 @@ export function planDay(state, pack) {
     const deal = tradeDeals(s, pack)[0];
     if (deal) intents.push(delegated({ type: 'trade_op', give: deal.give, get: deal.get }));
   }
+  // —— 吃与做饭共用一份本地估算（B-4：规划器不得安排空灶——
+  //    生粮进了谁的嘴，锅就得知道；执行时的真实消耗仍由内核结算）——
+  const est = { meal: s.inventory.meal || 0, canned: s.inventory.canned || 0, raw: s.inventory.raw || 0, meat: s.inventory.meat || 0, veg: s.inventory.veg || 0 };
+  const pickFood = () => (est.meal > 0 ? 'meal' : est.canned > 0 ? 'canned' : est.raw > 0 ? 'raw' : est.meat > 0 ? 'meat' : null);
   // —— 吃（feeding=auto 时）：熟食优先；省粮策略只喂真正饿的 ——
   if (pol.feeding === 'auto') {
     const threshold = pol.rationing ? 1 : 2;
     for (const c of aliveChars(s)) {
       if (c.hunger > threshold) continue;
-      const item = has(s, 'meal') ? 'meal' : (has(s, 'canned') ? 'canned' : (has(s, 'raw') ? 'raw' : (has(s, 'meat') ? 'meat' : null)));
-      if (item) intents.push(delegated({ type: 'act', actor: c.id, action: 'eat', target: item }));
+      const item = pickFood();
+      if (item) { est[item] -= 1; intents.push(delegated({ type: 'act', actor: c.id, action: 'eat', target: item })); }
     }
   }
   // —— 治：有药有人就治 ——
@@ -205,22 +209,20 @@ export function planDay(state, pack) {
       if (target) { intents.push(delegated({ type: 'act', actor: builder.id, action: 'build', target })); use(builder.id); }
     }
   }
-  // —— 做饭：有灶有料就备熟食（存 4 份封顶） ——
+  // —— 做饭：有灶有料就备熟食（存 4 份封顶）——余量沿用吃段扣过的本地估算 ——
   {
-    // 本地估算余量（规划器不得触碰 state——真实消耗由内核在执行时结算）
-    let estMeal = s.inventory.meal || 0, estRaw = s.inventory.raw || 0, estMeat = s.inventory.meat || 0, estVeg = s.inventory.veg || 0;
     // 燃料估算：厨子省柴，余火白赚；其余情况每锅一份可燃物
     let estFuel = (s.inventory.firewood || 0) + (s.inventory.book || 0) + (s.inventory.wood || 0) + (s.facilities.stoveFireLeft || 0);
     let guard = 0;
-    while ((estRaw > 0 || estMeat > 0 || estVeg >= 2) && s.facilities.stove && estMeal < 4 && guard++ < 4) {
+    while ((est.raw > 0 || est.meat > 0 || est.veg >= 2) && s.facilities.stove && est.meal < 4 && guard++ < 4) {
       const cook = free((c) => c.traits?.cook) || free();
       if (!cook) break;
       if (!cook.traits?.cook && estFuel <= 0) break; // 没柴了，锅是冷的
       intents.push(delegated({ type: 'act', actor: cook.id, action: 'cook' }));
       use(cook.id);
-      estMeal += 1;
+      est.meal += 1;
       if (!cook.traits?.cook) estFuel -= 1;
-      if (estRaw > 0) estRaw -= 1; else if (estMeat > 0) estMeat -= 1; else estVeg -= 2;
+      if (est.raw > 0) est.raw -= 1; else if (est.meat > 0) est.meat -= 1; else est.veg -= 2;
     }
   }
   // —— 搜家：还有没翻过的角落就翻 ——
@@ -233,32 +235,72 @@ export function planDay(state, pack) {
 }
 
 /* ════════════════════════ 晨报：dawnProblems ════════════════════════
-   问题前置原则：晨报不止报状态，要把"今天火烧眉毛的事"摆到玩家面前。 */
+   问题前置原则：晨报不止报状态，要把"今天火烧眉毛的事"摆到玩家面前。
+   批次二加笔：条目带 key（连报衰减账的键）；慢性问题连报多日隔天显示且换措辞——
+   同一句提示挂三十天就成了壁纸（二周目实测"存粮只够一两顿"连挂 30 天）。 */
+const KNOW_MILESTONES = [
+  { k: 4, text: '你开始读得懂这座城了——里社的钟、渡口的规矩，都有了名字。' },
+  { k: 8, text: '这座城的大半摊开在你眼里——有些门，正因为你读过而开。' }
+];
 export function dawnProblems(state, pack) {
   const s = state;
   const out = [];
+  const streak = (key) => (s.problemStreak?.[key] || 0);
+  /** 慢性条目：连报 ≥3 天起隔天显示，且文案换成"老毛病"——火警（sev3）永不衰减 */
+  const chronic = (key, sev, text) => {
+    const n = streak(key);
+    if (n >= 3) {
+      if (s.day % 2 === 1) return; // 隔天再说
+      out.push({ sev, key, text: `${text}（老毛病了，第 ${n} 天。）` });
+      return;
+    }
+    out.push({ sev, key, text });
+  };
+  const alive = aliveChars(s).length;
   const foodTotal = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
-  if (foodTotal === 0) out.push({ sev: 3, text: '家里一点吃的都没有了。' });
-  else if (foodTotal <= 2 && !s.facilities.stove) out.push({ sev: 2, text: '存粮见底了，而且没有炉灶。' });
-  else if (foodTotal <= 2) out.push({ sev: 1, text: '存粮只够一两顿。' });
+  if (foodTotal === 0) out.push({ sev: 3, key: 'food_out', text: '家里一点吃的都没有了。' });
+  else if (foodTotal <= 2 && !s.facilities.stove) out.push({ sev: 2, key: 'food_low', text: `存粮只剩 ${foodTotal} 份对 ${alive} 张嘴，而且没有炉灶。` });
+  else if (foodTotal <= 2) chronic('food_low', 1, `存粮只剩 ${foodTotal} 份，对 ${alive} 张嘴——只够一两顿。`);
   for (const c of aliveChars(s)) {
-    if (c.hunger === 0) out.push({ sev: 3, text: `${c.name}已经饿到极限了。` });
-    else if (c.hunger === 1) out.push({ sev: 2, text: `${c.name}饿得发慌。` });
-    if (c.wound === 3 || c.sick === 3) out.push({ sev: 3, text: `${c.name}病危，拖不过几天。` });
-    else if ((c.wound === 2 || c.sick === 2) && !has(s, 'bandage') && !has(s, 'meds') && !has(s, 'herbmed')) out.push({ sev: 2, text: `${c.name}伤病在身，家里却没有药。` });
-    if (c.breakdown) out.push({ sev: 3, text: `${c.name}崩溃了——需要有人陪他说话，别让他一个人待着。` });
+    if (c.hunger === 0) out.push({ sev: 3, key: `hunger_${c.id}`, text: `${c.name}已经饿到极限了。` });
+    else if (c.hunger === 1) chronic(`hunger_${c.id}`, 2, `${c.name}饿得发慌。`);
+    if (c.wound === 3 || c.sick === 3) out.push({ sev: 3, key: `crit_${c.id}`, text: `${c.name}病危，拖不过几天。` });
+    else if ((c.wound === 2 || c.sick === 2) && !has(s, 'bandage') && !has(s, 'meds') && !has(s, 'herbmed')) chronic(`nomed_${c.id}`, 2, `${c.name}伤病在身，家里却没有药。`);
+    if (c.breakdown) out.push({ sev: 3, key: `mind_${c.id}`, text: `${c.name}崩溃了——需要有人陪着，别让一个人待着。` });
     // 心情的滑坡要趁还能拉的时候看见（一周目实测：连环崩溃当天才见警讯，已无力回天）
-    else if (moodLevel(c.moodPts).key === 'depressed') out.push({ sev: 2, text: `${c.name}情绪很低落——多陪他说说话，别让他一个人撑。` });
+    else if (moodLevel(c.moodPts).key === 'depressed') chronic(`mind_${c.id}`, 2, `${c.name}情绪很低落——得有人多陪着说说话。`);
   }
   const fuel = (s.inventory.firewood || 0) + (s.inventory.fuel || 0);
-  if (s.winterActive && fuel < 2 && (s.facilities.heater || s.facilities.heater_iron)) out.push({ sev: 2, text: '取暖的柴快烧完了。' });
-  if (s.franko) out.push({ sev: 0, text: '鲁舟的船靠在渡口边。' });
+  if (s.winterActive && fuel < 2 && (s.facilities.heater || s.facilities.heater_iron)) chronic('fuel_low', 2, '取暖的柴快烧完了。');
+  if (s.franko) out.push({ sev: 0, key: 'franko', text: '鲁舟的船靠在渡口边。' });
   // 或然亲和的暗提示（二周目起）：读过城的人记得哪里有纸——不指路，只提醒城有夹层
   if (s.echoBoon && s.day >= 24 && (s.docsSeen || []).length < 3) {
     out.push({ sev: 0, text: '你记得这座城的墙里有夹层——有些纸，上一局没来得及翻出来。' });
   }
-  if (s.war?.telegraphed) out.push({ sev: 0, text: '炮声稀了——懂行的人说，可能快了。' });
+  // 知晓度里程碑（体验9）：读城的过程要被城看见——一次性、低声（同档不重提）
+  for (const m of KNOW_MILESTONES) {
+    if (s.knowledge >= m.k && !(s.knowledgeShown || []).includes(m.k)) {
+      out.push({ sev: 0, text: m.text });
+    }
+  }
+  if (s.war?.telegraphed) chronic('war_soon', 0, '炮声稀了——懂行的人说，可能快了。');
   return out.sort((a, b) => b.sev - a.sev);
+}
+
+/** 破晓时更新晨报衰减账与知晓度里程碑账（toDawn 管线调用；FLAG 镜像可回放） */
+export function tickDawnLedgers(ctx) {
+  const s = ctx.s;
+  const today = new Set(dawnProblems(s, ctx.pack).map((p) => p.key).filter(Boolean));
+  const next = {};
+  for (const k of new Set([...Object.keys(s.problemStreak || {}), ...today])) {
+    if (today.has(k)) next[k] = (s.problemStreak?.[k] || 0) + 1;
+  }
+  const shown = [...new Set([...(s.knowledgeShown || []), ...KNOW_MILESTONES.filter((m) => s.knowledge >= m.k).map((m) => m.k)])];
+  if (JSON.stringify(next) !== JSON.stringify(s.problemStreak || {}) || shown.length !== (s.knowledgeShown || []).length) {
+    s.problemStreak = next; s.knowledgeShown = shown;
+    ctx.emit('FLAG', { key: 'problemStreak', val: structuredClone(next) });
+    ctx.emit('FLAG', { key: 'knowledgeShown', val: [...shown] });
+  }
 }
 
 /* ════════════════════════ 黄昏：planDusk ════════════════════════
@@ -273,6 +315,25 @@ export function planDusk(state, pack) {
   const s = state;
   const alive = aliveChars(s);
   if (!alive.length) return { plans: [] };
+  // A-3 协防之夜：白天答应替邻居守门，卡面说好的「今夜不可外出」要兑现——
+  // 方案卡只给守家（不然玩家点出门又吃一次拒绝，承诺变成陷阱）
+  const guardOfSafe = (excludeId) => {
+    const rest = alive.filter((c) => c.id !== excludeId && c.wound < 3 && c.sick < 3);
+    rest.sort((a, b) => ((b.combat || 0) - (a.combat || 0)) || (b.apMax - a.apMax));
+    return rest[0] || null;
+  };
+  if (s.assistTonight) {
+    const guard = guardOfSafe(null);
+    const others = {};
+    for (const c of alive) others[c.id] = (guard && c.id === guard.id) ? 'guard' : 'sleep';
+    return {
+      plans: [{
+        key: 'stay', label: `替邻居守夜${guard ? `，${guard.name}看门` : ''}`,
+        hint: '答应过替邻居守门——今晚家里出不了人，活路少一夜',
+        intent: { type: 'dusk_assign', scavenger: null, location: null, gear: [], others }
+      }]
+    };
+  }
   const known = (s.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]);
 
   // 外出候选：危重出不了门（startNight 会拒），排序 = 心态可出门 > 背包 > 战斗。
@@ -515,6 +576,19 @@ export function suggests(state, pack) {
     const close = { type: 'auto_day' };
     if (!s.activeEvent) out.push({ label: '让他们自己张罗这一天', intents: [close] });
     const foodTotal = ['meal', 'canned', 'raw', 'meat'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
+    // 开饭一键（体验6，二周目实测：挨饿的日子逐人喂饭把清晨打碎——43 次"让X吃点东西"）
+    if (foodTotal > 0) {
+      const est = { meal: s.inventory.meal || 0, canned: s.inventory.canned || 0, raw: s.inventory.raw || 0, meat: s.inventory.meat || 0 };
+      const eats = [];
+      for (const c of aliveChars(s)) {
+        if (c.hunger > 2) continue; // 饥饿及以下才喂
+        const item = est.meal > 0 ? 'meal' : est.canned > 0 ? 'canned' : est.raw > 0 ? 'raw' : est.meat > 0 ? 'meat' : null;
+        if (!item) break;
+        est[item] -= 1;
+        eats.push({ type: 'act', actor: c.id, action: 'eat', target: item });
+      }
+      if (eats.length) out.push({ label: '让挨饿的都吃上，今天交给他们', intents: [...eats, close] });
+    }
     if (foodTotal <= 3 && foodTotal > 0) out.push({ label: '省着吃，今天交给他们', intents: [{ type: 'policy', key: 'rationing', value: true }, close] });
     if (policyOf(s).rationing && foodTotal > 3) out.push({ label: '恢复正常吃饭，今天交给他们', intents: [{ type: 'policy', key: 'rationing', value: false }, close] });
     if (s.facilities.radio) {

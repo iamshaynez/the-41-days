@@ -14,7 +14,11 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
     if (plan === 'guard') { c.guardTonight = true; c.awakeTonight = true; ctx.emit('CHAR_FLAG', { char: id, key: 'guardTonight', val: true }); ctx.emit('CHAR_FLAG', { char: id, key: 'awakeTonight', val: true }); recordCausal(ctx, 'guard_night', { actor: id, target: 'home' }); }
     else { c.awakeTonight = false; ctx.emit('CHAR_FLAG', { char: id, key: 'awakeTonight', val: false }); }
   }
-  if (!scavenger || !location) {
+  // A-3 协防承诺兑现：白天答应替邻居守门（n_thugs 的 flagTonight），这一夜家里人手都在门外街上——
+  // 卡面写着「今夜不可外出」，机制说到做到：出门指派自动降级为在家过夜（不卡阶段、不吃拒绝）
+  const assistOverride = s.assistTonight && scavenger && location;
+  if (assistOverride) ctx.fact('assist_night', {});
+  if (!scavenger || !location || assistOverride) {
     for (const c of s.chars.filter((x) => x.alive)) if (!c.guardTonight) { c.awakeTonight = false; ctx.emit('CHAR_FLAG', { char: c.id, key: 'awakeTonight', val: false }); }
     s.night = { home: true };
     s.phase = 'night';
@@ -302,7 +306,7 @@ function lootNight(ctx, cont, c) {
       const n2 = ctx.rng.range(e.count[0], e.count[1]);
       if (n2 > 0) { addItemCarried(ctx, e.item, n2); gotItems.push({ item: e.item, n: n2 }); }
     }
-    if (gotItems.length) ctx.fact('night_search_hit', { items: gotItems, n: gotItems.reduce((a, b) => a + b.n, 0) });
+    if (gotItems.length) ctx.fact('night_search_hit', { char: s.night.charId, items: gotItems, n: gotItems.reduce((a, b) => a + b.n, 0) });
     else ctx.fact('search_miss', {});
   }
   if (cont.docs?.length && ctx.rng.chance(0.5)) {
@@ -432,7 +436,11 @@ export function endNightReturn(ctx, reason) {
       else ctx.addItem(g, 1, '战损归位'); // 被丢弃逻辑保护，理论不可达；防御性归还
     }
     ctx.emit('NIGHT_ENDED', { loc: n.locId, reason: reason || 'dawn', carried: n.pack.length, gear: n.gear || [] });
-    ctx.fact('night_end', { carried: n.pack.length, reason: reason || 'dawn' });
+    // A-1 夜访事实带人名：叙事者不再拿渡口的鲁舟顶包（二周目实测 8+ 处主语顶替）
+    ctx.fact('night_end', { char: n.charId, loc: ctx.pack.locMap[n.locId]?.name || n.locId, carried: n.pack.length, reason: reason || 'dawn' });
+    // 昨夜谁出的门：晨间叙事与世界简报都靠它钉主语（fold 经 FLAG 还原）
+    s.lastScavenger = n.charId;
+    ctx.emit('FLAG', { key: 'lastScavenger', val: n.charId });
     const st = s.locState[n.locId];
     if (st) st.firstVisit = false;
   } else {
