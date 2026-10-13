@@ -1128,10 +1128,24 @@ function renderEnding(s) {
   const curtain = el('div', 'finale curtain');
   curtain.appendChild(el('div', 'ending', `<div class="title">${title}</div>`));
   for (const [i, line] of (codex.lines || []).entries()) {
-    curtain.appendChild(el('p', 'finale-line reveal', esc(line)));
+    const cls = line.startsWith('变了') ? 'finale-line flip-chg reveal' : line.startsWith('没变') ? 'finale-line flip-keep reveal' : 'finale-line reveal';
+    curtain.appendChild(el('p', cls, esc(line)));
     curtain.lastChild.style.animationDelay = `${1.2 + i * 1.6}s`;
   }
   box.appendChild(curtain);
+
+  /* ── 幕二·五 后日谈：本局结局的开放未来（0.21.0：每局自己的城市肌理）── */
+  const futures = codex.futures || [];
+  if (futures.length) {
+    const fu = el('div', 'finale-act futures reveal');
+    fu.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 1.6}s`;
+    fu.appendChild(el('span', 'kicker', '后日谈'));
+    for (const l of futures) {
+      const cls = l.startsWith('（') ? 'future-line blank' : 'future-line';
+      fu.appendChild(el('p', cls, esc(l)));
+    }
+    box.appendChild(fu);
+  }
 
   /* ── 幕二 史册：双轨摊开（城轨 × 将军轨）+ 野史批注 ── */
   const scroll = el('div', 'finale-act codex reveal');

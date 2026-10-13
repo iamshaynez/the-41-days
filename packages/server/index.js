@@ -174,11 +174,22 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       const directs = renderBiographiesDirect(storyline, pack);
       let llm = null;
       if (gw) {
-        try {
-          const raw = await biographerRole({ provider: gw.providers.biographer || gw.providers.narrator || gw.providers.referee, prompts: promptsCache }, buildBioBrief(st, pack));
-          if (Array.isArray(raw?.bios)) llm = raw.bios;
-        } catch (e) {
-          log.warn('biographer failed', { runId, error: String(e?.message || e).slice(0, 120) });
+        for (let attempt = 0; attempt < 2 && !llm; attempt++) {
+          try {
+            const raw = await biographerRole({ provider: gw.providers.biographer || gw.providers.narrator || gw.providers.referee, prompts: promptsCache }, buildBioBrief(st, pack));
+            if (Array.isArray(raw?.bios)) {
+              // 逐人 lint，全数过关才算整批成功；有被拦的即整批重试一次（终局一次，可承受）
+              const ok = raw.bios.every((b) => {
+                const ep = storyline.epilogues.find((x) => x.id === b?.id || x.name === b?.name);
+                const text = String(b?.text || '').trim();
+                return ep && text && biographyLint(text, ep, storyline);
+              });
+              if (ok) llm = raw.bios;
+              else log.warn('列传整批未过 lint，重试', { runId, attempt });
+            }
+          } catch (e) {
+            log.warn('biographer failed', { runId, error: String(e?.message || e).slice(0, 120) });
+          }
         }
       }
       st.ending.biographies = directs.map((d) => {
@@ -210,7 +221,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           timeline: ep.timeline || []
         };
       }),
-      ending: { type: st.ending?.type, title: story?.title, days: story?.days }
+      ending: { type: st.ending?.type, title: story?.title, days: story?.days, future: story?.future || [] }
     };
   }
 

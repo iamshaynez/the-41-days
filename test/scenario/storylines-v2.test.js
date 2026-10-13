@@ -315,7 +315,7 @@ describe('或然结局（正典圣经-v0.2 §8 / 内核 W-04：满足即触发�
     assert.ok(s.over);
     assert.equal(s.ending.type, 'alt_both');
     assert.equal(s.ending.storyline.title, '另一种三国');
-    assert.match(s.ending.storyline.annals[0]?.text || '', /门没有开到底/);
+    assert.match(s.ending.storyline.annals[0]?.text || '', /门未竟开/);
     assert.match(s.ending.storyline.annals[0]?.note || '', /野史/);
   });
 });
