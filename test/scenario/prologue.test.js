@@ -17,13 +17,13 @@ function playPrelude(s, pick = (c) => PICK[c.id] ?? c.options[0].key) {
 }
 
 describe('序章三幕 · 节拍引擎', () => {
-  test('幕序：天下×2 → 围城 → p1/p3/p4 → 前传×3 → 合流 → p2/p5 → 第 1 天', () => {
+  test('幕序：天下×4 → 围城×3 → p1/p3/p4 → 前传×3 → 合流 → p2/p5 → 第 1 天', () => {
     const { state } = newRun({ prologue: true });
     let s = state;
     assert.equal(s.phase, 'prologue');
     assert.equal(s.prelude.i, 0, '开局在幕一第一拍');
-    // 幕一 + 幕二引文：三翻
-    for (let i = 0; i < 3; i++) {
+    // 幕一（天下/荆州/这一年/大胜的账）+ 幕二（关城/白日/夜）：七翻
+    for (let i = 0; i < 7; i++) {
       assert.ok(!s.activeEvent, '文本幕不带卡');
       s = step(s, [{ type: 'advance' }]).state;
     }
@@ -60,7 +60,8 @@ describe('序章三幕 · 节拍引擎', () => {
 
   test('卡拍上 advance 被挡——选择才有旗标与因果账', () => {
     const { state } = newRun({ prologue: true });
-    let s = step(state, [{ type: 'advance' }, { type: 'advance' }, { type: 'advance' }]).state;
+    let s = state;
+    for (let i = 0; i < 7; i++) s = step(s, [{ type: 'advance' }]).state; // 幕一×4 + 幕二×3
     assert.equal(s.activeEvent?.cardId, 'p1_water');
     const r = step(s, [{ type: 'advance' }]);
     assert.ok(r.rejects.some((x) => x.reason === 'IN_PROLOGUE'), '卡拍必须选');
@@ -130,9 +131,7 @@ describe('序章三幕 · 节拍引擎', () => {
     assert.equal(s.preludeMode, 'full', '模式翻全');
     assert.equal(s.prelude.i, 0, '从「天下」重读');
     assert.ok(!s.activeEvent, '重回文本幕');
-    s = step(s, [{ type: 'advance' }]).state;
-    s = step(s, [{ type: 'advance' }]).state;
-    s = step(s, [{ type: 'advance' }]).state;
+    for (let i = 0; i < 7; i++) s = step(s, [{ type: 'advance' }]).state; // 完整幕一×4 + 幕二×3
     assert.equal(s.activeEvent?.cardId, 'p3_shelling', '已答的 p1 跳过，p3 接上');
   });
 

@@ -5,20 +5,21 @@ import { PACK } from '../helpers.js';
 import { parseMarkers, stripMarkers, validateTextMarkers } from '../../packages/core/index.js';
 
 describe('标注协议 · 解析', () => {
-  test('六类标记可解析、可剥净', () => {
-    const t = '[[人|关羽]]围[[地|樊城]]，手里有[[物|#039]]，这是[[事|大胜]]，他在[[决|交割]]前埋了[[伏|断弦的琴]]。';
+  test('七类标记可解析、可剥净', () => {
+    const t = '[[人|关羽]]围[[地|樊城]]，手里有[[物|#039]]，这是[[事|大胜]]，他在[[决|交割]]前埋了[[伏|断弦的琴]]，记住[[要|白天别出门]]。';
     const ms = parseMarkers(t);
-    assert.equal(ms.length, 6);
-    assert.deepEqual(ms.map((m) => m.type), ['人', '地', '物', '事', '决', '伏']);
+    assert.equal(ms.length, 7);
+    assert.deepEqual(ms.map((m) => m.type), ['人', '地', '物', '事', '决', '伏', '要']);
     const plain = stripMarkers(t);
     assert.ok(!plain.includes('[['));
-    assert.ok(plain.includes('关羽') && plain.includes('#039'));
+    assert.ok(plain.includes('关羽') && plain.includes('#039') && plain.includes('白天别出门'));
   });
 
-  test('registry 拒绝表外名词', () => {
+  test('registry 拒绝表外名词；「要」是排版指令，任意文本免查', () => {
     assert.equal(validateTextMarkers('[[人|赵子龙]]单骑救主', PACK).length, 1, '表外人名即非法');
     assert.equal(validateTextMarkers('[[人|关羽]]在此', PACK).length, 0);
     assert.equal(validateTextMarkers('[[地|不存在的城]]', PACK).length, 1);
+    assert.equal(validateTextMarkers('[[要|随便什么话都行]]', PACK).length, 0, '要点朱批不走 registry');
   });
 });
 
