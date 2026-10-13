@@ -83,10 +83,9 @@ function apply(s, ev) {
     case 'NIGHT_PATCH': {
       if (s.night && !s.night.home) {
         const patch = {};
-        for (const k of ['room', 'slots', 'noise', 'packSlots', 'lowSlotsAck']) if (d[k] !== undefined) patch[k] = d[k];
+        for (const k of ['room', 'slots', 'noise', 'packSlots', 'lowSlotsAck', 'atFork', 'micro']) if (d[k] !== undefined) patch[k] = d[k];
         for (const k of ['pack', 'observed', 'unlocked', 'cleared', 'sawed']) if (d[k] !== undefined) patch[k] = clone(d[k]);
         if (d.directive !== undefined) patch.directive = clone(d.directive);
-        if (d.micro !== undefined) patch.micro = d.micro;
         Object.assign(s.night, patch);
       }
       break;

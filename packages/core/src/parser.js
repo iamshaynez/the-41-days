@@ -19,7 +19,7 @@ const ITEM_ALIAS = {
   拨针: 'lockpick', 铁撬: 'crowbar', 锸: 'shovel', 锯: 'saw', 斧: 'axe', 环首刀: 'knife', 刀: 'knife',
   手弩: 'pistol', 强弩: 'rifle', 弩箭: 'bullet'
 };
-const LOC_ALIAS = {
+export const LOC_ALIAS = {
   南市: 'market', 里社: 'church', 医棚: 'hospital', 驿亭: 'post', 宅区: 'villas', 水门渡: 'frontline', 旧垒: 'frontline', 前线: 'frontline', 水窦: 'sewer', 城濠: 'sewer', 北津台: 'beacon', 烽台: 'beacon', 家: 'home'
 };
 const RECIPE_ALIAS = { 艾条: 'make_cigs', 汤药: 'make_herbmed', 拨针: 'make_lockpick', 环首刀: 'make_knife', 斧: 'make_axe', 浊酒: 'make_moonshine', 酒: 'make_moonshine', 弩箭: 'make_bullet' };

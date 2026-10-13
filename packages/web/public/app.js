@@ -369,6 +369,8 @@ function restoreDraft() {
   if (inp) { inp.value = draft; inp.focus({ preventScroll: true }); inp.setSelectionRange(draft.length, draft.length); }
 }
   if (ev === 'done') {
+    // 裁判代答的话（say）：世界/NPC 接住了玩家的话——得让玩家看见，不然话凭空消失
+    if (data.say) narrateRaw(data.say, { cls: 'clarify' });
     if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' });
     restoreDraft(); // 追问轮不发 state-patch（state 挂在 done 里）——回填挂这里才追得上
   }
@@ -987,7 +989,8 @@ function syncAsks(s) {
       for (const p of s.duskView.plans) {
         const go = () => {
           const intents = [p.intent];
-          if (p.intent.scavenger && stance !== 'micro') intents.push({ type: 'night_directive', stance, text: p.label });
+          if (p.intent.scavenger && stance === 'micro') intents.push({ type: 'auto_night' }); // 自己走：出门即自走，到第一个岔路停
+          else if (p.intent.scavenger && stance !== 'micro') intents.push({ type: 'night_directive', stance, text: p.label });
           sendIntents(intents, p.label);
         };
         opts.appendChild(optBtn(p.label, { a: '甲', b: '乙', stay: '守' }[p.key] || '·', go, p.hint || ''));
@@ -995,8 +998,9 @@ function syncAsks(s) {
       // 同拍落纸：红色保底在暗处备好，谋士方案一到（或失败）一起上纸；金色点击同样按方针挡位走整夜
       const goldClick = (o) => {
         const intents = o.intents.filter((i) => i.type !== 'auto_day');
-        if (stance !== 'micro' && intents.some((i) => i.type === 'dusk_assign' && i.scavenger)) {
-          intents.push({ type: 'night_directive', stance, text: o.label });
+        if (intents.some((i) => i.type === 'dusk_assign' && i.scavenger)) {
+          if (stance === 'micro') intents.push({ type: 'auto_night' });
+          else intents.push({ type: 'night_directive', stance, text: o.label });
         }
         sendIntents(intents, o.label);
       };
