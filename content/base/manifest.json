@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "semver": "0.11.0",
+  "semver": "0.12.0",
   "name": "第 41 天 · 江陵",
   "coreVersion": ">=0.1.0",
   "files": [
@@ -22,7 +22,8 @@
     "referee.md",
     "narrator.md",
     "actor.md",
-    "ensemble.md"
+    "ensemble.md",
+    "biographer.md"
   ],
   "startInventory": {
     "wood": 10,
