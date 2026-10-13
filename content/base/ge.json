@@ -1,43 +1,155 @@
 {
   "$comment": "C 层生成事件守卫（内核设计-v0.2 §8.8 GE-01~13）：编剧 LLM 的提案只在白名单内有效；校验不过即拒。正典防火墙=暗线词表+正史锚点词表，提案含即拒。v3 命运导演：flagKeys=旗标注册表（LLM 只能点菜），arcs=命运弧（随进度解锁的生成方向，皮肤自由、包络住数据）。",
-  "budget": { "perDayMax": 1, "maxShareOfEvents": 0.25 },
+  "budget": {
+    "perDayMax": 1,
+    "maxShareOfEvents": 0.25
+  },
   "cooldownDays": 7,
-  "themeWheel": ["稀缺", "病痛", "孩子", "士兵", "天气", "失物", "交易", "艺术", "沉默日"],
+  "themeWheel": [
+    "稀缺",
+    "病痛",
+    "孩子",
+    "士兵",
+    "天气",
+    "失物",
+    "交易",
+    "艺术",
+    "沉默日"
+  ],
   "effectCaps": {
-    "moodAll": [-1, 1],
-    "moodChar": [-2, 2],
+    "moodAll": [
+      -1,
+      1
+    ],
+    "moodChar": [
+      -2,
+      2
+    ],
     "itemValue": 4,
-    "reputation": [-1, 1],
+    "reputation": [
+      -1,
+      1
+    ],
     "riskWoundMax": 1
   },
-  "flagKeys": ["fate_paper_chased", "fate_paper_ignored", "fate_children_fed"],
+  "flagKeys": [
+    "fate_children_fed",
+    "fate_kept_silent",
+    "fate_paper_chased",
+    "fate_paper_ignored",
+    "fate_signal_relaid",
+    "fate_string_played"
+  ],
   "arcs": [
     {
       "id": "late_paper",
       "tier": 2,
       "at": "dusk",
       "oncePerRun": true,
-      "when": { "dayWindow": [34, 42] },
+      "when": {
+        "dayWindow": [
+          34,
+          42
+        ]
+      },
       "theme": "失物",
       "brief": "炮声稀了的那些天里的一个黄昏：一页写着你家名字的纸（欠据、名录或家书）落在了别人手里，今晚不去取，它就永远取不回来。用锚池里的事实交代这页纸的来路，不发明大事。给三个方向：冒险去取（risk，旗标 fate_paper_chased）、付出代价赎回（item_cost）、由它去（旗标 fate_paper_ignored）。禁词一个不许出现。",
-      "flags": ["fate_paper_chased", "fate_paper_ignored"]
+      "flags": [
+        "fate_paper_chased",
+        "fate_paper_ignored"
+      ]
     },
     {
       "id": "two_children",
       "tier": 1,
       "at": "day",
       "oncePerRun": true,
-      "when": { "minDay": 14 },
+      "when": {
+        "minDay": 14
+      },
       "theme": "孩子",
       "brief": "两个半大孩子站在你家门口的分岔。他们讨的不只是吃的——用锚池里你们最近的处境把这件事写疼。给与不给之外，至少再给一个出乎意料但合理的应对面（旗标 fate_children_fed 表示你给了）。",
-      "flags": ["fate_children_fed"]
+      "flags": [
+        "fate_children_fed"
+      ]
+    },
+    {
+      "id": "zofia_string",
+      "tier": 2,
+      "at": "day",
+      "oncePerRun": true,
+      "when": {
+        "dayWindow": [
+          16,
+          38
+        ]
+      },
+      "theme": "艺术",
+      "brief": "素徽在队的一天：一张写满琴谱的旧纸辗转到了你家门口——她认得它，是乐坊散时没带出来的那一张。断弦的琴还差一根弦，谱却可以先唱。用锚池里的事实交代这张纸怎么来的（当铺？逃户？鲁舟的货堆？），不发明大事。给三个方向：当着全家的面把这一段唱完（mood_all，旗标 fate_string_played）、把谱折好收进箱底等琴续上弦（旗标 fate_kept_silent）、谁也不提（零效果）。禁词一个不许出现。",
+      "flags": [
+        "fate_string_played",
+        "fate_kept_silent"
+      ]
+    },
+    {
+      "id": "beacon_smoke",
+      "tier": 2,
+      "at": "day",
+      "oncePerRun": true,
+      "when": {
+        "dayWindow": [
+          22,
+          40
+        ]
+      },
+      "theme": "士兵",
+      "brief": "逄灶在队的一天：一个过路的老卒在门口讨了口水，盯着你们檐下晾的烽鼓具看了很久——他当过北津台的燧卒，认得出那是什么。他说台上的信火快没人会接了。用锚池里的事实交代这场相遇（天气、逄灶的旧伤、家里的烽鼓具），不发明大事。给三个方向：让逄灶把点火的规矩写下来托人带去（旗标 fate_signal_relaid）、多问几句台上的事（mood 或 risk）、请他喝口热的就送走（零效果）。禁词一个不许出现。",
+      "flags": [
+        "fate_signal_relaid"
+      ]
     }
   ],
   "bannedTerms": [
-    "券局", "更籍", "鼓谱", "誊抄", "守藏", "文修", "老纪", "鲁舟", "濠鼠", "白翎", "交割", "券书", "长桌",
-    "湘水之盟", "展期", "编号段", "火种",
-    "关羽", "关将军", "吕蒙", "曹操", "孙权", "刘备", "徐晃", "陆逊", "司马懿", "诸葛",
-    "虞翻", "糜芳", "傅士仁", "于禁", "潘濬", "廖化", "习珍", "郝普",
-    "麦城", "临沮", "赤壁", "官渡", "白衣渡江", "水淹七军"
+    "券局",
+    "更籍",
+    "鼓谱",
+    "誊抄",
+    "守藏",
+    "文修",
+    "老纪",
+    "鲁舟",
+    "濠鼠",
+    "白翎",
+    "交割",
+    "券书",
+    "长桌",
+    "湘水之盟",
+    "展期",
+    "编号段",
+    "火种",
+    "关羽",
+    "关将军",
+    "吕蒙",
+    "曹操",
+    "孙权",
+    "刘备",
+    "徐晃",
+    "陆逊",
+    "司马懿",
+    "诸葛",
+    "虞翻",
+    "糜芳",
+    "傅士仁",
+    "于禁",
+    "潘濬",
+    "廖化",
+    "习珍",
+    "郝普",
+    "麦城",
+    "临沮",
+    "赤壁",
+    "官渡",
+    "白衣渡江",
+    "水淹七军"
   ]
 }

@@ -43,9 +43,12 @@ const arcStub = (state) => ({
 const PROMPTS = { playwright: '# 当局锚池（只能从这里挑）\n{{anchors}}\n# 今日主题\n{{theme}}\n{{arc}}\n{{world}}' };
 
 describe('弧选择（ge.json 数据驱动）', () => {
-  test('第 36 天 → late_paper（高档位优先）；第 20 天 → two_children', () => {
-    assert.equal(currentArc(PACK, runAt(DAY)).id, 'late_paper');
-    assert.equal(currentArc(PACK, runAt(20)).id, 'two_children');
+  test('弧池数据驱动：窗口+档位决定指派（0.18.0 起琴线/烽火线入池）', () => {
+    assert.equal(currentArc(PACK, runAt(DAY)).id, 'late_paper', '第 36 天同档位里序在前的 late_paper');
+    assert.equal(currentArc(PACK, runAt(20)).id, 'zofia_string', '第 20 天琴线（档位 2）压过 two_children（档位 1）');
+    const burned = runAt(20);
+    burned.geArcsFired = { zofia_string: 20 };
+    assert.equal(currentArc(PACK, burned).id, 'two_children', '琴线烧掉后轮到 two_children');
     assert.equal(currentArc(PACK, runAt(5)), null, '第 5 天无弧（微光卡照常）');
   });
 

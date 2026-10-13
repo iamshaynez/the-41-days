@@ -338,10 +338,10 @@ describe('增强：抑郁可感、商人可见', () => {
     assert.ok(probs.some((p) => p.text.includes('辛夷') && p.text.includes('陪')), '抑郁应有"多陪说话"警讯');
   });
 
-  test('suggests：鲁舟靠岸且有建议成交时，白天建议行出现换货入口', () => {
+  test('suggests：鲁舟靠岸也不出现商人交互入口（交易全自动，玩家零决策）', () => {
     const { state } = newRun({ seed: 3, roster: ['marta', 'emil', 'pavel'] });
     state.franko = { merchant: 'franko', stock: [{ item: 'canned', n: 2, buy: 5 }] };
     state.inventory.jewel = 2; state.inventory.canned = 0; state.inventory.raw = 0; state.inventory.meal = 0;
-    assert.ok(suggests(state, PACK).some((s) => s.label.startsWith('跟鲁舟换')), '建议行应有换货入口');
+    assert.ok(!suggests(state, PACK).some((x) => x.label.includes('鲁舟')), '商人不上建议行');
   });
 });
