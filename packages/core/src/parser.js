@@ -228,6 +228,10 @@ export function parseDirect(state, pack, input) {
       const c = actor || firstFree(state);
       return { intents: [{ type: 'act', actor: c?.id, action: 'listen_radio' }] };
     }
+    if (/宽心汤|熬.*汤|安神汤/.test(text)) {
+      const healer = aliveChars(state).find((c) => c.traits?.healer) || actor || firstFree(state);
+      return { intents: [{ type: 'act', actor: healer?.id, action: 'comfort_soup' }] };
+    }
     if (/撬开|打开|清开/.test(text)) {
       const room = { 地窖: 'cellar', 柴房: 'garage', 阁楼: 'attic', 卧室: 'bedroom', 后院: 'yard' }[Object.keys({ 地窖: 1, 柴房: 1, 阁楼: 1, 卧室: 1, 后院: 1 }).find((k) => text.includes(k)) || ''];
       if (room) {

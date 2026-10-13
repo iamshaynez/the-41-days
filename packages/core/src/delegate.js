@@ -56,6 +56,11 @@ export function feasibleIntent(state, pack, intent) {
           const t = intent.target ? s.chars.find((x) => x.id === intent.target) : null;
           return !!t && t.alive && t.id !== c.id;
         }
+        case 'comfort_soup': {
+          if (!c.traits?.healer) return false;
+          if (!has(s, 'herb') || !has(s, 'water')) return false;
+          return aliveChars(s).some((x) => x.breakdown || (x.moodPts ?? 0) <= -4);
+        }
         case 'rest': return !c.bedRest;
         case 'read': return (s.inventory.book || 0) > 0 && !c.readToday;
         case 'listen_radio': return !!s.facilities.radio;
@@ -138,8 +143,8 @@ export function planDay(state, pack) {
   const free = (pred = () => true) => aliveChars(s).find((c) => c.ap > 0 && !busy.has(c.id) && pred(c));
   const use = (id) => busy.add(id);
 
-  // —— 交易（水下）：商人在门口，管家自取一笔建议成交——价目卡已退场，
-  //    想干预的玩家用自由文本开价（trade_op），或种下念头让世界长出回应 ——
+  // —— 交易（水下全自动）：商人是物资匮乏的救命机会——到访必成交一笔
+  //    最救命的（tradeDeals 已按断粮>药>柴>材排序），玩家零决策 ——
   if (s.franko && s.phase === 'day') {
     const deal = tradeDeals(s, pack)[0];
     if (deal) intents.push(delegated({ type: 'trade_op', give: deal.give, get: deal.get }));
@@ -162,6 +167,15 @@ export function planDay(state, pack) {
       if (wounded && has(s, 'bandage')) { intents.push(delegated({ type: 'act', actor: healer.id, action: 'treat', target: 'bandage', patient: wounded.id })); }
       else if (sick && has(s, 'meds')) { intents.push(delegated({ type: 'act', actor: healer.id, action: 'treat', target: 'meds', patient: sick.id })); }
       else if (sick && has(s, 'herbmed')) { intents.push(delegated({ type: 'act', actor: healer.id, action: 'treat', target: 'herbmed', patient: sick.id })); }
+    }
+  }
+  // —— 宽心汤：心也要人医（崩溃/抑郁优先于一切杂务）——
+  {
+    const healer2 = free((c) => c.traits?.healer);
+    const lowMind = aliveChars(s).find((c) => c.breakdown || (c.moodPts ?? 0) <= -4);
+    if (healer2 && lowMind && has(s, 'herb') && has(s, 'water')) {
+      intents.push(delegated({ type: 'act', actor: healer2.id, action: 'comfort_soup', patient: lowMind.id }));
+      use(healer2.id);
     }
   }
   // —— 卧床：重伤/重病养伤 ——
@@ -430,17 +444,29 @@ export function tradeDeals(state, pack) {
     }
     return need <= 0 ? give : null;
   };
+  // 想买什么：按"救命程度"动态排序——商人是物资匮乏时的救命机会（全自动，玩家零决策）：
+  // 断粮 > 无药（有伤病例）> 冬季断柴 > 常规补粮 > 建材缺口
+  const foodTotal = ['meal', 'canned', 'raw', 'meat'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
+  const famine = foodTotal <= 2;
+  const sickNeed = aliveChars(s).some((c) => c.wound >= 1 || c.sick >= 1);
+  const prio = (item) => {
+    if ((item === 'canned' || item === 'raw') && famine) return 0;
+    if ((item === 'bandage' || item === 'meds') && sickNeed) return 1;
+    if (item === 'firewood' && s.winterActive && (s.inventory.firewood || 0) < 2) return 1;
+    if (item === 'bandage' || item === 'meds') return 2;
+    if (item === 'canned' || item === 'raw') return 2;
+    if (item === 'firewood') return 3;
+    return 4; // 木板/杂件：建材缺口（无斧之家商路是唯一来路）
+  };
   const want = [
     { item: 'bandage', when: () => !has(s, 'bandage') },
     { item: 'meds', when: () => !has(s, 'meds') },
-    { item: 'canned', when: () => (s.inventory.canned || 0) + (s.inventory.raw || 0) + (s.inventory.meal || 0) < 4 },
-    { item: 'raw', when: () => (s.inventory.canned || 0) + (s.inventory.raw || 0) + (s.inventory.meal || 0) < 4 },
+    { item: 'canned', when: () => foodTotal < 4 },
+    { item: 'raw', when: () => foodTotal < 4 },
     { item: 'firewood', when: () => (s.inventory.firewood || 0) < 3 },
-    // 建材（一周目实测：没有斧子的家永远凑不齐捕鼠笼的 3 木板——管家不会劈柴时，
-    // 商路就是唯一来路；把缺口摆上建议单，而不是天天提一个做不到的建造）
     { item: 'wood', when: () => (s.inventory.wood || 0) < 4 && !has(s, 'axe') },
     { item: 'parts', when: () => (s.inventory.parts || 0) < 4 }
-  ];
+  ].sort((a, b) => prio(a.item) - prio(b.item));
   for (const w of want) {
     const sku = stock.find((x) => x.item === w.item);
     if (!sku || !w.when()) continue;
@@ -480,13 +506,8 @@ export function suggests(state, pack) {
   if (s.over) return out;
   if (s.phase === 'prologue') return out;
   if (s.phase === 'day') {
-    // 宏观节奏（一次选择走完今天）：白天建议全部收卷——单效诉求（省粮/听更）也并入当天方略
-    // 商人在门口：把管家的建议成交摆上建议行（水下交易也要有上岸的入口——
-    // 一周目实测鲁舟到访 22 次玩家只看见 2 笔，商路存在感近于零）
-    if (s.franko) {
-      const deal = tradeDeals(s, pack)[0];
-      if (deal) out.push({ label: `跟鲁舟换：${deal.label}`, intents: [{ type: 'trade_op', give: deal.give, get: deal.get }] });
-    }
+    // 宏观节奏（一次选择走完今天）：白天建议全部收卷——单效诉求（省粮/听更）也并入当天方略。
+    // 商人零交互（产品意见）：到访成交全自动沉在水下（planDay），建议行不出商人入口
     const close = { type: 'auto_day' };
     if (!s.activeEvent) out.push({ label: '让他们自己张罗这一天', intents: [close] });
     const foodTotal = ['meal', 'canned', 'raw', 'meat'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
@@ -495,6 +516,13 @@ export function suggests(state, pack) {
     if (s.facilities.radio) {
       const hearer = aliveChars(s).find((c) => c.ap > 0 && !c.bedRest);
       if (hearer) out.push({ label: '听听更鼓，其余交给他们', intents: [{ type: 'act', actor: hearer.id, action: 'listen_radio' }, close] });
+    }
+    {
+      const healer = aliveChars(s).find((c) => c.traits?.healer);
+      const broken = aliveChars(s).find((c) => c.breakdown);
+      if (healer && broken && (s.inventory.herb || 0) > 0 && (s.inventory.water || 0) > 0) {
+        out.push({ label: `让${healer.name}给${broken.name}熬碗宽心汤`, intents: [{ type: 'act', actor: healer.id, action: 'comfort_soup', patient: broken.id }] });
+      }
     }
     if (s.day <= 2) out.push({ label: '我能做什么？', text: '帮助' }); // 求助不收卷
   } else if (s.phase === 'dusk') {

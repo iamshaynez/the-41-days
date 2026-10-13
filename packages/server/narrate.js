@@ -195,6 +195,7 @@ export function renderDirect(state, facts, pack) {
       case 'fate_passed': lines.push('门外的动静等你等到天黑。等你动身，它已经过去了。'); break;
       // —— 此前落到默认省略号的事实，逐条补上人话 ——
       case 'chop': lines.push(`${name(f.char)}劈了件家具，得些木料。`); break;
+      case 'comfort_soup': lines.push(`${name(f.char)}把一撮草药滚进水里，熬了一锅安神汤。${name(f.patient)}捧着碗，手稳了一点。`); break;
       case 'nap': lines.push(`${name(f.char)}眯了一阵。`); break;
       case 'no_furniture': lines.push('能拆的家具都拆完了。'); break;
       case 'no_item': lines.push('手头没有那个东西。'); break;
@@ -248,3 +249,4 @@ function raidLine(f, t, name) {
   if (f.band === 'theft') return `${t.raid.theft.replace('{{lost}}', lost)}`;
   return `${t.raid.bad.replace('{{lost}}', lost).replace('{{hurt}}', (f.hurt || []).map(name).join('、') || '有人')}`;
 }
+
