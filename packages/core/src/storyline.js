@@ -212,7 +212,7 @@ export function buildStoryline(state, pack) {
     };
   });
 
-  const title = { ceasefire: '开城', maicheng: '开城 · 麦城得脱', pyrrhic: '惨胜', alt_both: '另一种三国', contract_end: '交割日', lighthouse: '还师', join_table: '出江陵记' }[s.war.endingType] || '无人幸免';
+  const title = { ceasefire: '第四十一天', maicheng: '麦城得脱', pyrrhic: '惨胜', alt_both: '另一种三国', contract_end: '交割日', lighthouse: '还师', join_table: '出江陵记', hostage: '槛车', wiped: '无人幸免' }[s.war.endingType] || '无人幸免';
   // 野史页（正典圣经-v0.2 §8.5 文体规范：史书体、冷、短，批注=老年阿禾）
   // ── 野史栏（v0.3 全分支入册；ceasefire 三变体批注由铰链注记决定）──
   // 铰链注记四象限：军心×杠杆（刀偏两格不会出现在 ceasefire，只剩两格正史变体与默认）
@@ -229,11 +229,12 @@ export function buildStoryline(state, pack) {
     lighthouse: { text: '真相比刀快：烽鼓之信入麦城，羽收兵，全军而退。', note: '荆州没有被救——它只是换了一种被战争使用的方式。可这座城知道了真话。' },
     join_table: { text: '有舟夜发，符传三张。江陵册上，此后无名。', note: '你活着离开了江陵——这句话，往后要对自己说很多年。' },
     hostage: { text: '十二月，吴人获羽于章乡，不杀，槛送武昌。荆州入吴，将军为质。', note: '杀降不祥——联名的那页纸压住了刀。你们救下的不是对错，是一条命。' },
+    wiped: { text: '是岁，江陵易主。橘里九号，无人生还。', note: '史册只记了城，没记门牌。兰台记了。' },
     contract_end: { text: '契书用印，城易其主。', note: '章比刀兵体面，一样凉。' }
   };
   const annals = ANNALS[s.war.endingType] ? [{ ...ANNALS[s.war.endingType], ending: s.war.endingType }] : [];
   return {
-    days: s.day, title, annals,
+    days: s.day, title, annals, endingType: s.war.endingType,
     arrival: `第 1 天，${s.chars.map((c) => c.name).join('、')}住进了橘里九号。`,
     prologue,
     beats: capped,
@@ -299,12 +300,25 @@ export function renderMemoirDirect(story, pack) {
 }
 
 // —— N-02 事实校验（回忆录 LLM 输出的底线闸）：违规即回退直读 ——
+// 结局一致性禁词（showcase 生成时抓到的真实缺口）：或然局的回忆录不许复述正史结局，
+// 反之亦然——LLM 的三国知识会自己长出「斩羽于临沮」，lint 必须拦住
+const ENDING_BAN = {
+  hostage: ['斩羽', '没于临沮', '羽死', '遇害'],
+  maicheng: ['斩羽', '没于临沮', '羽死', '遇害'],
+  pyrrhic: ['斩羽', '没于临沮', '羽死', '遇害'],
+  alt_both: ['斩羽', '没于临沮', '羽死', '遇害'],
+  lighthouse: ['斩羽', '没于临沮', '羽死', '遇害'],
+  ceasefire: ['槛送', '得脱', '为质'],
+  wiped: ['槛送', '得脱']
+};
+
 export function memoirLint(text, story, pack) {
   if (!text || typeof text !== 'string') return false;
   const t = text.trim();
   if (t.length < 80 || t.length > 2400) return false;
   if (t.includes('{{') || t.includes('}}')) return false;
   if (/[A-Za-z]{3,}/.test(t)) return false; // 中文书页不收西文串（B-4：franko 式代号音译）
+  if (ENDING_BAN[story.endingType]?.some((w) => t.includes(w))) return false; // 结局矛盾即废稿
   // 提到的天数不得超出本局（防"第 99 天"式幻觉）
   for (const m of t.matchAll(/第\s*(\d+)\s*天/g)) {
     if (Number(m[1]) > story.days) return false;
