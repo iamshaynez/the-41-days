@@ -1266,15 +1266,30 @@ function openSheet(id) {
 }
 function closeSheets() {
   for (const x of ['menu', 'homebook']) $(x).hidden = true;
+  closeWing();
   document.body.classList.remove('overlay-open');
 }
-$('overlay-backdrop').addEventListener('click', closeSheets);
+// 舆图/史卷抽屉（移动端）：窄屏下侧栏让位给书页，点「舆图」从底部拉出
+function closeWing() { document.body.classList.remove('wing-open'); }
+$('btn-wing').addEventListener('click', () => {
+  if (document.body.classList.contains('wing-open')) closeWing();
+  else { closeSheets(); document.body.classList.add('wing-open'); }
+});
+// 抽屉头上给一只合上的手（一次性注入，窄屏 CSS 才显形）
+{
+  const head = el('div', 'wing-drawer-head');
+  head.innerHTML = `<span class="kicker">舆图 · 史卷</span><button class="sheet-x" type="button" aria-label="合上">${svgUse('close')}</button>`;
+  head.querySelector('.sheet-x').addEventListener('click', closeWing);
+  $('wing').prepend(head);
+}
+$('overlay-backdrop').addEventListener('click', () => { closeSheets(); });
 // 档案馆/管理的显式返回（菜单里的「对局」仍在，但入口要一眼看得见）
 $('back-from-archive').addEventListener('click', () => switchView('play'));
 $('back-from-admin').addEventListener('click', () => switchView('play'));
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (document.body.classList.contains('overlay-open')) closeSheets();
+    if (document.body.classList.contains('wing-open')) closeWing();
+    else if (document.body.classList.contains('overlay-open')) closeSheets();
     else if (state.view === 'play' && !$('game').hidden) openMenu();
     hideCharPop();
   }
