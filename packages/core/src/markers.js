@@ -1,7 +1,7 @@
-// 高亮标注协议（叙事双轴-v0.1 §6）：六类标记 [[类|词]]，registry 校验——标不出即不存在。
+// 高亮标注协议（叙事双轴-v0.1 §6）：七类标记 [[类|词]]，registry 校验——标不出即不存在。
 // 手作文本与 LLM 输出同律；server 侧史官校验与 web 渲染共用本协议。
-
-const MK_RE = /\[\[([人地物事决伏])\|([^\]|]+)\]\]/g;
+// 「要」是排版指令（要点朱批），不是名词引用：任意文本合法，不走 registry。
+const MK_RE = /\[\[([人地物事决伏要])\|([^\]|]+)\]\]/g;
 
 /** 解析一段文本里的全部标记 */
 export function parseMarkers(text) {
@@ -30,8 +30,8 @@ export function markerRegistry(pack) {
   };
 }
 
-/** 校验一段文本：返回非法标记列表（空数组即合规） */
+/** 校验一段文本：返回非法标记列表（空数组即合规；「要」为排版指令，免查） */
 export function validateTextMarkers(text, pack) {
   const reg = markerRegistry(pack);
-  return parseMarkers(text).filter((m) => !reg[m.type]?.has(m.name)).map((m) => ({ type: m.type, name: m.name }));
+  return parseMarkers(text).filter((m) => m.type !== '要' && !reg[m.type]?.has(m.name)).map((m) => ({ type: m.type, name: m.name }));
 }

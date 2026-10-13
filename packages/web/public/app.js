@@ -223,12 +223,12 @@ loadResume();
    ════════════════════════════════════════════════════════════════ */
 const rich = (() => {
   const esc1 = (t) => esc(t);
-  const MK_CLS = { 人: 'p', 地: 'l', 物: 'i', 事: 'e', 决: 'd', 伏: 'f' };
+  const MK_CLS = { 人: 'p', 地: 'l', 物: 'i', 事: 'e', 决: 'd', 伏: 'f', 要: 'y' };
   return (t) => esc1(t)
     .replace(/\*\*(.+?)\*\*/g, '<b class="ink-em">$1</b>')
     .replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<i class="em-kai">$1</i>')
-    // 高亮标注（叙事双轴 §6）：六类 [[类|词]] → 色标 span（人朱/地青/物金/事玄/决绛/伏暗金）
-    .replace(/\[\[([人地物事决伏])\|([^\]]+)\]\]/g, (m, t, n) => `<span class="mk mk-${MK_CLS[t] || 'p'}">${n}</span>`);
+    // 高亮标注（叙事双轴 §6）：七类 [[类|词]] → 色标 span（人朱/地青/物金/事玄/决绛/伏暗金/要朱批）
+    .replace(/\[\[([人地物事决伏要])\|([^\]]+)\]\]/g, (m, t, n) => `<span class="mk mk-${MK_CLS[t] || 'p'}">${n}</span>`);
 })();
 class Typist {
   /** hooks.makePara：自定义段落容器（默认正文叙事流）；hooks.mark=false 关闭名词标注 */
@@ -1059,7 +1059,9 @@ function renderPrologue(s) {
     const kicker = pv.kind === 'prequel' ? `前传 · ${pv.title}` : (pv.title || '卷首');
     box.innerHTML = `<span class="kicker">${esc(kicker)}</span>`;
     for (const p of String(pv.text).split('\n').filter(Boolean)) {
-      const para = el('p', '', rich(p));
+      // 引文块：以「> 」开头的行按史书引文排版（序章引《三国志》原文与《演义》回目用）
+      const isQuote = p.startsWith('> ');
+      const para = el(isQuote ? 'blockquote' : 'p', '', rich(isQuote ? p.slice(2) : p));
       markNouns(para);
       box.appendChild(para);
     }
