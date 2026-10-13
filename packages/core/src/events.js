@@ -125,6 +125,12 @@ function applyEffects(ctx, card, option, ev) {
     }
   }
   if (e.reputation) for (const [k, v] of Object.entries(e.reputation)) ctx.reputation(k, v);
+  // v0.3 军心溶解账：家访/家书的效果通道（正=报平安，负=如实/劝归队）；FLAG 镜像可回放
+  if (typeof e.dissolve === 'number' && e.dissolve !== 0) {
+    s.dissolve = (s.dissolve || 0) + e.dissolve;
+    ctx.emit('FLAG', { key: 'dissolve', val: s.dissolve });
+    ctx.fact('dissolve_shift', { n: e.dissolve, why: card.id });
+  }
   if (e.items) for (const [k, v] of Object.entries(e.items)) ctx.addItem(k, v, '事件'); // 得物（别传日卡/GE 白名单同款）
   if (e.knowledge) ctx.addKnowledge(e.knowledge, card.id);
   if (e.flags) {
@@ -226,14 +232,56 @@ export function buildEnding(state, pack) {
   const alive = s.chars.filter((c) => c.alive);
   const dead = s.chars.filter((c) => !c.alive);
   const story = buildStoryline(s, pack); // 单一源：chars[].fate 消费 storyline.direction（口径统一）
+  // ── 擦痕（史×你）：同一天，史册记的大事 × 因果账里你做的事。最多四对，重者优先。
+  // 全部内核事实拼装，零发明——LLM 局与直读局拿到同一份底稿
+  {
+    const stepMap = new Map((pack.mainline?.steps || []).map((x) => [x.id, x]));
+    const name = (id) => s.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || '';
+    const deedsByDay = new Map();
+    for (const e of (s.causality?.entries || [])) {
+      if (e.weight < 1.5 || e.tags?.includes('prologue')) continue;
+      if (!deedsByDay.has(e.day)) deedsByDay.set(e.day, []);
+      deedsByDay.get(e.day).push(e);
+    }
+    const echoes = [];
+    for (const m of (s.mainline || [])) {
+      const def = m.stepId ? stepMap.get(m.stepId) : null;
+      if (!def) continue;
+      const hits = [...(deedsByDay.get(m.day) || []), ...(deedsByDay.get(m.day - 1) || [])];
+      if (!hits.length) continue;
+      const e = [...hits].sort((a, b) => b.weight - a.weight)[0];
+      const phrase = DEED_PHRASES[e.verb];
+      if (!phrase) continue;
+      const who = e.via ? name(e.via) : (e.actor === 'player' ? '你' : '');
+      echoes.push({ day: m.day, hist: def.title, histText: (def.fallback || '').slice(0, 40), deed: `${who}${phrase}${e.target && pack.charMap?.[e.target] ? '·' + name(e.target) : ''}` });
+      if (echoes.length >= 4) break;
+    }
+    story.echoes = echoes;
+  }
+  // ── codex（结局屏自足数据：落幕行/双轨/题卷）──
+  {
+    const stepMap = new Map((pack.mainline?.steps || []).map((x) => [x.id, x]));
+    const tracks = { city: [], gen: [] };
+    for (const m of (s.mainline || [])) {
+      const def = m.stepId ? stepMap.get(m.stepId) : null;
+      if (!def) continue;
+      const t = def.track === 'gen' ? tracks.gen : tracks.city;
+      t.push({ day: m.day, title: def.title, text: def.fallback || '' });
+    }
+    story.codex = {
+      lines: pack.mainline?.endings?.[s.war.endingType] || [],
+      tracks
+    };
+  }
   const epById = Object.fromEntries(story.epilogues.map((e) => [e.id, e]));
   const chars = [...alive, ...dead].map((c) => {
     const ep = epById[c.id] || {};
+    const ep2 = ep.epithet ? `——${ep.epithet}` : '';
     const fate = ep.direction === 'fallen'
-      ? `没能撑过去。第 ${deathsDay(s, c.id)} 天，橘里的墙上多了一个名字。`
-      : ep.direction === 'haunted' ? '活下来了，但有些夜晚会突然惊醒，手先于他摸向不存在的刀。'
-      : ep.direction === 'honored' ? '活下来了。战争结束后很久，还有人敲他家的门——为了道谢，不是为了讨债。'
-      : '活下来了。就是活下来了。在这个年头，这四个字已经够写一整页。';
+      ? `没能撑过去。第 ${deathsDay(s, c.id)} 天，橘里的墙上多了一个名字${ep2}。`
+      : ep.direction === 'haunted' ? `活下来了，但有些夜晚会突然惊醒，手先于他摸向不存在的刀${ep2}。`
+      : ep.direction === 'honored' ? `活下来了。战争结束后很久，还有人敲他家的门——为了道谢，不是为了讨债${ep2}。`
+      : `活下来了。就是活下来了。在这个年头，这四个字已经够写一整页${ep2}。`;
     return { id: c.id, name: c.name, alive: c.alive, fate, direction: ep.direction || 'survived' };
   });
   // 三件事（EX-02）：戏剧分 top3。deeds 只在击杀等重事落笔——和平局的账在因果引擎里
@@ -287,6 +335,6 @@ export function buildEnding(state, pack) {
   };
 }
 function deathsDay(s, id) {
-  const d = s.deeds.find((x) => x.actor === id && x.type === 'died');
-  return d ? d.day : s.day;
+  // 真实死亡日优先（ctx.die 记账，fold 镜像）；旧档无此账再退 deeds，最后退当日
+  return s.deathDays?.[id] ?? s.deeds.find((x) => x.actor === id && x.type === 'died')?.day ?? s.day;
 }

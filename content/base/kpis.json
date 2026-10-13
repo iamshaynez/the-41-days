@@ -1,12 +1,44 @@
 {
   "$comment": "技术架构 §11.2 KPI 门禁。0.13.0 设计转向：单一较低难度（不再让玩家选）——死因数据分析显示旧档压死均衡局的是「重伤不治/崩溃离队」而非饥饿，故难度档以 wound/breakdown 软化系数为主旋钮。目标：认真玩的局（均衡策略）多数能走到交割日 D45（交割夜是全游戏的情感顶点）；乱玩（赌徒/恶魔）仍应死。门禁读此文件。",
   "gates": {
-    "median_survival_days": { "min": 18, "max": 62, "desc": "中位局生存天数（标准/均衡；交割日固定 D45）" },
-    "any_survivor_to_end": { "min": 0.5, "max": 0.8, "desc": "≥1 人活到交割日比例（0.13.0 单一低难度：下限提到 0.5——低于即难度回潮，越带上限即失去张力）" },
-    "starve_death_share": { "min": 0.0, "max": 0.5, "desc": "饿死（含转病）占死因（starveSick=0 后饥饿只拖心情）" },
-    "raid_wipe_rate": { "max": 0.08, "desc": "袭击致全灭率上限" },
-    "docs_per_run_median": { "min": 1, "max": 9, "desc": "每局文档发现中位数" },
-    "run_length_days_median": { "min": 30, "max": 62, "desc": "中位局时长（交割或全灭；活到交割的局会走到余波）" }
+    "median_survival_days": {
+      "min": 18,
+      "max": 62,
+      "desc": "中位局生存天数（标准/均衡；交割日固定 D45）"
+    },
+    "any_survivor_to_end": {
+      "min": 0.5,
+      "max": 0.9,
+      "desc": "≥1 人活到临沮日比例。v0.3 同步日历设计说明：交割固定 D41（较 v0.2 少四天死亡尾巴），认真玩的局按正典目标应多数到达（≥0.5）；上限由 0.8 放宽至 0.9——张力由乱玩曲线保（赌徒/恶魔全灭 77%/68%）与均衡局全灭率（~12%）保，不再由压缩生存天数保"
+    },
+    "starve_death_share": {
+      "min": 0.0,
+      "max": 0.5,
+      "desc": "饿死（含转病）占死因（starveSick=0 后饥饿只拖心情）"
+    },
+    "raid_wipe_rate": {
+      "max": 0.08,
+      "desc": "袭击致全灭率上限"
+    },
+    "docs_per_run_median": {
+      "min": 1,
+      "max": 9,
+      "desc": "每局文档发现中位数"
+    },
+    "run_length_days_median": {
+      "min": 30,
+      "max": 62,
+      "desc": "中位局时长（交割或全灭；活到交割的局会走到余波）"
+    }
   },
-  "simDefaults": { "runs": 300, "seed": 41001, "policies": ["balanced", "gambler", "hoarder", "devil"] }
+  "simDefaults": {
+    "runs": 300,
+    "seed": 41001,
+    "policies": [
+      "balanced",
+      "gambler",
+      "hoarder",
+      "devil"
+    ]
+  }
 }

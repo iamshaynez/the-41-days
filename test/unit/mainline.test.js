@@ -7,48 +7,51 @@ import { buildChronicle, dayDigest } from '../../packages/core/index.js';
 describe('大事轴 · 日步引擎', () => {
   test('开局即有 D1 步；步序随天数推进、一日一步', () => {
     const { state } = newRun({ seed: 5 });
-    assert.equal(state.mainline[0]?.stepId, 'm_d01');
+    assert.equal(state.mainline[0]?.stepId, 'm1_flag');
     let s = state;
     for (let d = 2; d <= 14; d++) s = skipDayAtHome(s);
     const ids = s.mainline.map((m) => m.stepId);
-    assert.ok(ids.includes('m_d03') && ids.includes('m_d11') && ids.includes('m_d12') && ids.includes('m_d14'), 'D3/D11/D12/D14 步在列');
+    assert.ok(ids.includes('m2_visit') && ids.includes('m5_cannon') && ids.includes('m6_envoy') && ids.includes('m7_return'), 'D3/D10/D12/D14 步在列');
     const days = s.mainline.map((m) => m.day);
     assert.equal(new Set(days).size, days.length, '一日至多一步');
   });
 
-  test('大仓火步落在 D21-30 窗内且只落一次', () => {
+  test('府库火步固定 D5 且只落一次（v0.3 固定日谱）', () => {
     const { state } = newRun({ seed: 9 });
-    state.winterStart = 99; // 排除冻饿干扰，专测窗口步
+    state.winterStart = 99; // 排除冻饿干扰
     let s = state;
-    for (let d = 0; d < 60 && s.day <= 31 && !s.over; d++) {
+    for (let d = 0; d < 60 && s.day <= 8 && !s.over; d++) {
       for (const c of s.chars) { c.hunger = 3; c.wound = 0; c.sick = 0; if (c.breakdown) c.breakdown = null; }
       s = skipDayAtHome(s);
     }
-    const fires = s.mainline.filter((m) => m.stepId === 'm_fire');
-    assert.equal(fires.length, 1, `窗口步一局一次（day=${s.day}, over=${s.over}, fires=${fires.length}）`);
-    assert.ok(fires[0].day >= 21 && fires[0].day <= 30, '落位在窗口内: ' + fires[0]?.day);
+    const fires = s.mainline.filter((m) => m.stepId === 'm3_fire');
+    assert.equal(fires.length, 1, `一局一次（day=${s.day}, fires=${fires.length}）`);
+    assert.equal(fires[0].day, 5, '固定 D5');
   });
 
-  test('冬季步只在入冬后落', () => {
+  test('雪线步 D39 落卷（冬季叙事由天气与史笔承载）', () => {
     const { state } = newRun({ seed: 3 });
     state.winterStart = 2; state.winterEnd = 60;
     let s = state;
-    for (let d = 0; d < 12; d++) s = skipDayAtHome(s);
-    assert.ok(s.winterActive, '入冬前提成立');
-    const w = s.mainline.filter((m) => m.stepId === 'm_winter');
-    assert.equal(w.length, 1);
+    for (let d = 0; d < 40 && !s.over; d++) {
+      for (const c of s.chars) { c.hunger = 3; c.wound = 0; c.sick = 0; if (c.breakdown) c.breakdown = null; }
+      s = skipDayAtHome(s);
+    }
+    assert.ok(s.mainline.some((m) => m.stepId === 'm19_snowline'), `局应走到 D39（day=${s.day}, over=${s.over}）`);
+    const w = s.mainline.filter((m) => m.stepId === 'm19_snowline');
+    assert.equal(w.length, 1, '雪线南下步在卷');
   });
 
   test('或然/结局旗标切换史卷收束步组（锚不动，步组换）', () => {
     const { state } = newRun({ seed: 4 });
     state.war.ended = true; state.war.endingType = 'pyrrhic';
     const ch = buildChronicle(state, PACK);
-    assert.ok(ch.entries.some((e) => e.ending && e.text.includes('六日不拔')), '惨胜收束步在卷');
+    assert.ok(ch.entries.some((e) => e.ending && e.text.includes('大饥')), '惨胜收束步在卷');
     const s2 = newRun({ seed: 4 }).state;
     s2.war.ended = true; s2.war.endingType = 'lighthouse';
     const ch2 = buildChronicle(s2, PACK);
-    assert.ok(ch2.entries.some((e) => e.ending && e.text.includes('券局连夜收摊')), '还师收束步在卷');
-    assert.ok(!ch2.entries.some((e) => e.ending && e.text.includes('六日不拔')), '步组互斥');
+    assert.ok(ch2.entries.some((e) => e.ending && e.text.includes('真话')), '还师收束步在卷');
+    assert.ok(!ch2.entries.some((e) => e.ending && e.text.includes('大饥')), '步组互斥');
   });
 
   test('闲笔与投影进史卷；我方一行是账不是文', () => {
@@ -63,10 +66,10 @@ describe('大事轴 · 日步引擎', () => {
     assert.ok(ch.currentAct?.title, '当前幕在卷头');
   });
 
-  test('D14 无表象步：史笔只许平淡（水下不在轴上露头）', () => {
-    const st = PACK.mainline.steps.find((x) => x.id === 'm_d14');
-    assert.equal(st.anchor, '城中无事');
-    assert.ok(!/券|盟|吴|火|降/.test(st.fallback), 'fallback 不触水下词');
+  test('平淡日步（v0.3：D37 分冬柴）：史笔只许平淡（水下不在轴上露头）', () => {
+    const st = PACK.mainline.steps.find((x) => x.id === 'm17_firewood');
+    assert.equal(st.anchor, '坊中分冬柴');
+    assert.ok(!/券局|盟约|吴人|降卒/.test(st.fallback), 'fallback 不触水下词');
     assert.ok(st.brief.includes('只许写平淡'));
   });
 

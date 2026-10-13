@@ -117,6 +117,7 @@ export function buildChronicle(state, pack, annalsByDay = null) {
     entries.push({
       day: e.day,
       act: step ? (actMap[step.act]?.title || '') : '',
+      track: step?.track || null, // v0.3 双轨：city=城轨 / gen=将军轨
       title: step?.title || '闲笔',
       text,
       anchor: !!step,

@@ -5,11 +5,11 @@ import { newRun, step, ch, PACK } from '../helpers.js';
 import { parseDirect } from '../../packages/core/index.js';
 
 describe('战争 W/N 系', () => {
-  test('W-01 交割日固定 D45 且提前 5 天预告（v0.2 正典：不掷骰）', () => {
+  test('W-01 临沮日固定 D41 且提前 5 天预告（v0.3 同步日历：不掷骰）', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const { state } = newRun({ seed, roster: ['bron'] });
       const endDay = state.war.endDay;
-      assert.equal(endDay, 45, `endDay=${endDay}`);
+      assert.equal(state.war.endDay, 41);
       assert.equal(state.war.telegraphed, false);
     }
   });

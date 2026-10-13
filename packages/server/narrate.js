@@ -101,7 +101,10 @@ export function renderDirect(state, facts, pack) {
       case 'prologue_beat': lines.push(`——${f.title}——`); break;
       case 'prologue_end': lines.push('序章读完。从今天起，每一天都是你们的了。'); break;
       case 'in_prologue': lines.push('（先把这一拍读完，再选。）'); break;
-      case 'phase_day': lines.push(`天亮了。第 ${f.day} 天，${weatherName[f.weather]}。该干的活，等着人。`); break;
+      case 'phase_day': lines.push(`天亮了。交割后第 ${f.day} 天，${weatherName[f.weather]}。该干的活，等着人。`); break;
+      case 'dissolve_shift': lines.push(f.n > 0
+        ? '北边的军心，又松了一分——家访的簿子、家书的袖子，都在替它使劲。'
+        : '有一封家书没有写"都好"。北边握矛的手，紧了一紧。'); break;
       case 'phase_dusk': lines.push(t.phase.to_dusk); break;
       case 'eat': lines.push(t.eat[f.item === 'meal' ? 'meal' : 'raw'].replace('{{name}}', name(f.char))); break;
       case 'cook': lines.push(t.cook); break;
