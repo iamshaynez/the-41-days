@@ -188,6 +188,15 @@ export function addPrivateNote(ctx, charId, note) {
   ctx.emit('CAUSAL_NOTE', { charId, note });
 }
 
+/** 信任弧直接微调（堂屋结局拍等演出外通道用）：PAIR_ARC 事件镜像，fold 可回放 */
+export function bumpPairArc(ctx, a, b, w) {
+  if (a === b || !w) return;
+  const cz = ctx.s.causality || (ctx.s.causality = { entries: [], pairArcs: {}, charArcs: {}, shadowTouched: {} });
+  const arc = cz.pairArcs[pairKey(a, b)] || (cz.pairArcs[pairKey(a, b)] = emptyArc());
+  if (w > 0) arc.pos += w; else arc.neg += -w;
+  ctx.emit('PAIR_ARC', { key: pairKey(a, b), pos: arc.pos, neg: arc.neg });
+}
+
 /** 近 lastDays 天针对某角色的 deny_food 次数（袭击睡岗 CY-32 用） */
 export function denyFoodCount(state, charId, lastDays = 5) {
   return (state.causality?.entries || []).filter((e) =>

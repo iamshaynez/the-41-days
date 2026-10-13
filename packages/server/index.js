@@ -14,9 +14,9 @@ import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect } from './narrate.js';
 import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
-import { referee, narrator, memoirist, optionsmith, annalist } from '../llm/index.js';
+import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
-import { applySceneEffects } from '../core/index.js';
+import { applySceneEffects, validateEnsemble, renderEnsembleDirect } from '../core/index.js';
 import { anchorPool } from '../core/src/ge.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from './echoes.js';
 import { createGeDirector } from './ge.js';
@@ -63,7 +63,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     // 老库缺条目（如新加的 optionsmith）时兜底读内容包原文件——提示词永远不允许是空的
     const fromDisk = (n) => { try { return loadPrompt(n, PACK_DIR); } catch { return ''; } };
     const pick = (n) => ents[n]?.text || fromDisk(n);
-    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith'), stage: pick('stage'), annalist: pick('annalist') };
+    return { referee: pick('referee'), narrator: pick('narrator'), actor: pick('actor'), memoirist: pick('memoirist'), playwright: pick('playwright'), optionsmith: pick('optionsmith'), stage: pick('stage'), annalist: pick('annalist'), ensemble: pick('ensemble') };
   }
 
   // —— C 层导演（GE：LLM 在配才在场；离线即关，游戏完整可玩） ——
@@ -166,6 +166,37 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     }
     db.finishRun(runId, st, st.ending);
     archiveRun(userId, runId, st);
+  }
+
+  /** 堂屋台词本（人物血肉计划 PR2）：只装角色自己知道的东西——
+   *  persona 卡按场景分寸裁剪（shadow 仅暗面场给），封印文本一律不进提示词。 */
+  function buildEnsembleBrief(scene, state, pk) {
+    const defs = scene.participants.map((cid) => pk.charMap[cid]).filter(Boolean);
+    const step = scene.topic?.stepId ? pk.mainline?.steps.find((x) => x.id === scene.topic.stepId) : null;
+    const cast = defs.map((d) => ({
+      id: d.id, name: d.name, role: d.role,
+      persona: {
+        epithet: d.persona?.epithet || null,
+        voice: (d.persona?.voice || []).slice(0, 5),
+        taboo: d.persona?.taboo || null,
+        knot: d.persona?.knot || null,
+        stances: scene.kind === 'comment' && step?.act && d.persona?.stances?.[step.act]
+          ? { [step.act]: d.persona.stances[step.act] } : null,
+        shadow: scene.kind === 'shadow' && scene.topic?.exposed === d.id ? d.persona?.shadow : null
+      }
+    }));
+    return {
+      scene: {
+        day: scene.day, kind: scene.kind, participants: cast,
+        topic: {
+          stepId: step?.id || null, title: step?.title || null,
+          anchor: step?.anchor || null, surface: step?.surface || null,
+          low: scene.topic?.low || null, clash: scene.topic?.clash || null, exposed: scene.topic?.exposed || null
+        },
+        outcomeBeat: scene.outcome.beat
+      },
+      worldBrief: worldBrief(state, pk)
+    };
   }
 
   // —— 状态富化（给 UI 的视图） ——
@@ -609,16 +640,47 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
             ink.push({ day: result.state.day, role: 'narrator', text: line });
           }
         }
-        // 叙事：LLM 流式 → 直读模板兜底（空白输出也视为没写出来，落兜底）
+        // 叙事：LLM 流式 → 直读模板兜底（空白输出也视为没写出来，落兜底）。
+        // 堂屋事实单独走对话轨（下方），不混进散文叙事。
+        const narrFacts = result.facts.filter((x) => x.k !== 'ensemble');
         let text = '';
         const gwN = run.mode === 'llm' ? gw : null;
-        if (gwN && result.facts.length) {
-          text = await gwN.narrate(result.facts, result.state, (d) => send('narration-delta', { d }));
+        if (gwN && narrFacts.length) {
+          text = await gwN.narrate(narrFacts, result.state, (d) => send('narration-delta', { d }));
           if (text && !text.trim()) text = '';
         }
         if (!text) {
-          text = renderDirect(result.state, result.facts, pack);
+          text = renderDirect(result.state, narrFacts, pack);
           send('narration-delta', { d: text });
+        }
+        if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
+
+        // 堂屋（人物血肉计划 PR2）：晨间三人场——内核已裁决谁/何话题/结局拍，
+        // LLM 只写台词（越界走直读拼装）；心情与信任的结算早在内核完成，LLM 挂了场子照样散不了。
+        for (const f of result.facts.filter((x) => x.k === 'ensemble')) {
+          const scene = result.state.ensemble?.scenes.find((x) => x.id === f.sceneId);
+          if (!scene) continue;
+          let out = null;
+          if (gw) {
+            try {
+              const raw = await ensembleRole({ provider: gw.providers.ensemble || gw.providers.narrator || gw.providers.referee, prompts: promptsCache },
+                buildEnsembleBrief(scene, result.state, pack));
+              if (raw) {
+                const v = validateEnsemble(scene, raw, pack);
+                if (v.ok) out = { lines: v.lines, narration: String(raw.narration || '').trim().slice(0, 160) };
+                else log.warn('堂屋台词被弃', { runId: id, reasons: v.reasons });
+              }
+            } catch (e) {
+              log.warn('ensemble failed', { runId: id, error: String(e?.message || e).slice(0, 120) });
+            }
+          }
+          const via = out ? 'llm' : 'direct';
+          if (!out) out = renderEnsembleDirect(scene, pack);
+          send('ensemble', { day: scene.day, kind: scene.kind, lines: out.lines, beat: scene.outcome.beat, via });
+          ink.push({
+            day: scene.day, role: 'ensemble',
+            text: [out.narration, ...out.lines.map((l) => `${pack.charMap[l.char]?.name || l.char}：${l.text}`), `——${scene.outcome.beat}`].filter(Boolean).join('\n')
+          });
         }
         if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
         if (result.rejects?.length) ink.push({ day: result.state.day, role: 'sys', text: '（有些事做不到：' + result.rejects.map((r) => r.reason).join('、') + '）' });
@@ -783,7 +845,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (!b.name || !b.adapter || !b.baseUrl || !b.model) return json(res, 400, { error: '缺字段' });
         const id = db.upsertProvider(b);
         // 添加即上线：没配路由的用途自动接入新供应商（已有路由不劫持）
-        for (const purpose of ['referee', 'narrator', 'actor']) {
+        for (const purpose of ['referee', 'narrator', 'actor', 'ensemble']) {
           const cur = db.routes().find((r) => r.purpose === purpose);
           if (!cur || !cur.provider_id) db.setRoute(purpose, Number(id), cur?.fallback_provider_id || null);
         }
