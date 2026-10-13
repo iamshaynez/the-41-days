@@ -3,9 +3,9 @@
 import { aliveChars, charById, moodLevel, difficultyCfg, combatModOf } from './state.js';
 import { recordCausal, pairStage } from './causality.js';
 
-export const DAY_ACTIONS = ['eat', 'cook', 'craft', 'build', 'treat', 'talk', 'guard', 'sleep', 'rest', 'listen_radio', 'search_home', 'open_room', 'chop', 'repair', 'read', 'play_piano'];
+export const DAY_ACTIONS = ['eat', 'cook', 'craft', 'build', 'treat', 'talk', 'guard', 'sleep', 'rest', 'listen_radio', 'search_home', 'open_room', 'chop', 'repair', 'read', 'play_piano', 'comfort_soup'];
 
-export const AP_COST = { eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2, rest: 0, listen_radio: 1, search_home: 1, open_room: 1, chop: 1, repair: 1, read: 1, play_piano: 1 };
+export const AP_COST = { eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2, rest: 0, listen_radio: 1, search_home: 1, open_room: 1, chop: 1, repair: 1, read: 1, play_piano: 1, comfort_soup: 1 };
 
 export function applyDayAction(ctx, intent) {
   const s = ctx.s, pack = ctx.pack;
@@ -40,6 +40,7 @@ export function applyDayAction(ctx, intent) {
     case 'repair': return actRepair(ctx, c);
     case 'read': return actRead(ctx, c);
     case 'play_piano': return actPiano(ctx, c);
+    case 'comfort_soup': return actComfortSoup(ctx, c, intent.patient);
     default: return { ok: false, reason: 'BAD_ACTION' };
   }
 }
@@ -201,6 +202,26 @@ function actTreat(ctx, c, med, patientId) {
   }
   ctx.fact('no_med', {});
   return { ok: false, reason: 'NO_ITEM' };
+}
+
+/** 宽心汤（崩溃链的主动干预面，报告 7.2 P1）：懂医的人拿草药和水熬一锅安神汤——
+ *  安抚 +2（配合交谈，崩溃的"安抚 4 可逆转"从看不见的运气变成够得着的日程）。 */
+export function actComfortSoup(ctx, c, patientId) {
+  const s = ctx.s, pack = ctx.pack;
+  if (!c.traits?.healer) { ctx.fact('need_trait', { trait: '懂医' }); return { ok: false, reason: 'NEED_TRAIT' }; }
+  const p = (patientId ? [charById(s, patientId)] : aliveChars(s)).filter(Boolean)
+    .find((x) => x.breakdown || ['depressed', 'low'].includes(moodLevel(x.moodPts).key))
+    || null;
+  if (!p) { ctx.fact('no_patient', {}); return { ok: false, reason: 'NO_PATIENT' }; }
+  if (!ctx.hasItem('herb') || !ctx.hasItem('water')) { ctx.fact('no_material', { item: 'herb' }); return { ok: false, reason: 'NO_ITEM' }; }
+  ctx.spendAp(c, 1);
+  ctx.takeItem('herb', 1, '熬汤'); ctx.takeItem('water', 1, '熬汤');
+  const gain = p.breakdown ? 2 : 1;
+  if (p.breakdown) ctx.setCharFlag(p, 'soothed', (p.soothed || 0) + gain);
+  ctx.mood(p, 1, '宽心汤');
+  recordCausal(ctx, 'comfort', { actor: c.id, target: p.id });
+  ctx.fact('comfort_soup', { char: c.id, patient: p.id });
+  return { ok: true };
 }
 
 function actTalk(ctx, c, targetId) {

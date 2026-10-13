@@ -148,6 +148,9 @@ export function tickMood(ctx) {
           ctx.setWound(c, 2);
           for (const o of aliveChars(ctx.s)) if (o.id !== c.id) ctx.moodRaw(o, -4, '同伴崩溃自伤');
           c.breakdown = null; c.soothed = 0;
+          // 事件镜像（回放一致性铁律）：这层清零必须能被 fold 还原——
+          // 旧版在此静默清零，重放永远停在崩溃态（管理台 replay match:false）
+          ctx.emit('BREAKDOWN_CALM', { char: c.id, selfhurt: true });
         }
       } else {
         c.breakdown.stage++;
@@ -319,7 +322,7 @@ export function drawMorningEvents(ctx) {
   for (const card of cards.filter((c) => c.kind === 'timeline')) {
     if ((card.side || null) !== (s.sidestory?.id || null)) continue; // 别传卡只进别传局，主线亦然
     const [lo, hi] = card.when.dayWindow || [];
-    if (card.when.once && s.firedOnce[card.id]) continue;
+    if (s.firedOnce[card.id]) continue; // firedOnce 的语义就是"发过一次"——不论从哪条路径烧的
     if (card.when.requiresFlag && !s.eventFlags[card.when.requiresFlag]) continue;
     if (lo !== undefined && (s.day < lo || s.day > hi)) continue;
     if (s.activeEvent) break; // 一次一张
@@ -336,8 +339,11 @@ export function drawMorningEvents(ctx) {
   const eligible = cards.filter((c) => {
     if (c.kind !== 'knock' && c.kind !== 'internal') return false;
     if ((c.side || null) !== (s.sidestory?.id || null)) return false;
+    // 或然注入路径会把命运卡写进 firedOnce 但不标 when.once——发过就是发过，不许从随机池重入
+    // （一周目实测：《火线·证据交给谁》D6 或然触发、D29 又被随机池抽中重演）
+    if (s.firedOnce[c.id]) return false;
     const w = c.when || {};
-    if (w.once && s.firedOnce[c.id]) return false;
+    if (w.chance === 0) return false; // 零概率卡（或然手作卡）只走或然注入路径，不入随机池
     if (s.eventCooldowns[c.id] && s.day < s.eventCooldowns[c.id]) return false;
     if (w.requiresChar && !charById(s, w.requiresChar)) return false;
     if (w.requiresChars && !w.requiresChars.every((id) => charById(s, id))) return false; // 对子卡：两人同局才触发（REL-01）
@@ -354,7 +360,7 @@ export function drawMorningEvents(ctx) {
     return true;
   });
   if (!eligible.length) return;
-  const card = ctx.rng.weighted(eligible.map((c) => ({ w: c.weight || 5, c }))).c;
+  const card = ctx.rng.weighted(eligible.map((c) => ({ w: c.weight ?? 5, c }))).c; // ?? 不把 0 当缺省
   s.activeEvent = { cardId: card.id };
   if (card.when?.once) { s.firedOnce[card.id] = true; ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) }); }
   s.eventCooldowns[card.id] = s.day + (card.when?.cooldown || 8);

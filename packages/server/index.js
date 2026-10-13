@@ -12,13 +12,15 @@ import { makeLogger } from './log.js';
 import { hashPassword, verifyPassword, validateUsername, validatePassword, sessionCookie, clearSessionCookie, publicUser } from './auth.js';
 import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
-import { worldBrief, renderDirect } from './narrate.js';
+import { worldBrief, renderDirect, humanFacts, narrationLint } from './narrate.js';
+import { rejectText } from '../core/src/rejects.js';
 import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
 import { applySceneEffects, validateEnsemble, renderEnsembleDirect, renderBiographiesDirect, biographyLint } from '../core/index.js';
 import { anchorPool } from '../core/src/ge.js';
+import { markerSyntaxErrors } from '../core/src/markers.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from './echoes.js';
 import { createGeDirector } from './ge.js';
 import { validateOptions, cardBrief } from './options.js';
@@ -147,6 +149,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       if (plain.length < 12 || plain.length > 160) return null;
       if (ANNALS_STYLE_BAN.test(plain)) return null;
       if (validateTextMarkers(t, pack).length) return null;
+      if (markerSyntaxErrors(t).length) return null; // [[江陵|江陵]] 式野标记（C-4）
       return t;
     } catch {
       return null;
@@ -324,7 +327,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       hunger: ['濒死', '严重饥饿', '饥饿', '正常', '饱足'][c.hunger],
       mood: moodName(c.moodPts), ap: c.ap, apMax: apMaxOf(c),
       wound: ['无', '轻伤', '重伤', '危重'][c.wound], sick: ['无', '微恙', '重病', '危重'][c.sick],
-      fatigue: ['正常', '疲惫', '力竭'][c.fatigue], breakdown: !!c.breakdown
+      fatigue: ['正常', '疲惫', '力竭'][c.fatigue], breakdown: !!c.breakdown,
+      // 崩溃链的进度条（一周目实测：滑坡全程不可见，玩家无从干预）——安抚累计 4 可逆转
+      mind: c.breakdown ? `崩溃·安抚${c.soothed || 0}/4` : null
     }));
     view.packVersion = pack.manifest.semver;
     return view;
@@ -685,15 +690,23 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
             ink.push({ day: result.state.day, role: 'narrator', text: line });
           }
         }
-        // 叙事：LLM 流式 → 直读模板兜底（空白输出也视为没写出来，落兜底）。
+        // 叙事：LLM → 守门（西文串/野标记/名词在册）→ 一次整段下发（打字机在前端）→
+        // 直读模板兜底。守门不过重试一次，再不过落兜底——坏一行不如少一行。
         // 堂屋事实单独走对话轨（下方），不混进散文叙事。
         const narrFacts = result.facts.filter((x) => x.k !== 'ensemble');
         let text = '';
         const gwN = run.mode === 'llm' ? gw : null;
         if (gwN && narrFacts.length) {
-          text = await gwN.narrate(narrFacts, result.state, (d) => send('narration-delta', { d }));
-          if (text && !text.trim()) text = '';
+          const humanized = humanFacts(result.state, pack, narrFacts); // id 值 → 中文名（B-4）
+          // 代号对照（k 是内部事实代号，值层翻译管不到它）：把丑话说在前头
+          humanized.push({ k: 'note', text: '说明：字段 k 是事实代号（如 franko_left=船牙鲁舟离岸、franko=鲁舟）。正文一律用中文名，禁止把代号音译成人名，禁止出现英文。' });
+          for (let attempt = 0; attempt < 2 && !text; attempt++) {
+            const out = await gwN.narrate(humanized, result.state, null);
+            if (out && out.trim() && !narrationLint(out, pack).length) text = out;
+            else if (out && out.trim()) log.warn('叙事被守门拦下，重试/兜底', { runId: id, reasons: narrationLint(out, pack).join('、') });
+          }
         }
+        if (text) send('narration-delta', { d: text });
         if (!text) {
           text = renderDirect(result.state, narrFacts, pack);
           send('narration-delta', { d: text });
@@ -726,7 +739,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           });
         }
         if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
-        if (result.rejects?.length) ink.push({ day: result.state.day, role: 'sys', text: '（有些事做不到：' + result.rejects.map((r) => r.reason).join('、') + '）' });
+        if (result.rejects?.length) ink.push({ day: result.state.day, role: 'sys', text: '（有些事做不到：' + result.rejects.map((r) => rejectText(r.reason)).join('、') + '）' });
         db.appendNarration(id, ink);
         db.saveState(id, result.state); // 戏文微效果可能改了状态——以最终态发补丁
         send('state-patch', { state: enrich(result.state, annalsByDay) });

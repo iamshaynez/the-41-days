@@ -5,6 +5,7 @@ import { genFrankoStock } from './trade.js';
 import { recordCausal, eventVerb } from './causality.js';
 import { buildStoryline } from './storyline.js';
 import { maybeFireLocScript, combatRound } from './night.js';
+import { DEED_PHRASES } from './ge.js';
 
 /** 是否满足选项前置（物品/任一物品） */
 export function optionAvailable(ctx, option) {
@@ -235,11 +236,25 @@ export function buildEnding(state, pack) {
       : '活下来了。就是活下来了。在这个年头，这四个字已经够写一整页。';
     return { id: c.id, name: c.name, alive: c.alive, fate, direction: ep.direction || 'survived' };
   });
-  // 三件事（EX-02）：戏剧分 top3
+  // 三件事（EX-02）：戏剧分 top3。deeds 只在击杀等重事落笔——和平局的账在因果引擎里
+  // （施舍/拒援/医治/守夜/送走死者都是"带走的事"），两周目实测零击杀局三件事恒空。
+  // 合并取材：deeds ∪ 因果条目，权重沿用各自的账；文案必须是人话（名字，不是 id）
+  const name = (id) => s.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name
+    || (id === 'player' ? '你' : (id === 'world' || id === 'home' || !id ? '' : id));
   const drama = [];
   for (const d of s.deeds) {
     const w = DEED_TIERS[d.type]?.weight || 1;
-    drama.push({ day: d.day, text: `${d.actor} · ${d.type} · ${d.target}`, w });
+    drama.push({ day: d.day, text: `${name(d.actor)}${DEED_PHRASES[d.type] || d.type}${d.target ? `·${name(d.target)}` : ''}`, w });
+  }
+  const seenDrama = new Set(drama.map((x) => x.text));
+  for (const e of (s.causality?.entries || [])) {
+    const phrase = DEED_PHRASES[e.verb];
+    if (!phrase || e.weight < 1) continue; // 琐事不上榜；守夜/喂饭这类轻账让位给重账
+    const who = e.via ? name(e.via) : (e.actor === 'world' ? '' : name(e.actor));
+    const text = `${who}${phrase}${e.target && pack.charMap?.[e.target] ? `·${name(e.target)}` : ''}`;
+    if (seenDrama.has(text)) continue;
+    seenDrama.add(text);
+    drama.push({ day: e.day, text, w: e.weight });
   }
   const three = drama.sort((a, b) => b.w - a.w || b.day - a.day).slice(0, 3);
   // 别传结局（长线体验-v0.2 §3.4）：按旗标选变体，史书体/批注进史册格

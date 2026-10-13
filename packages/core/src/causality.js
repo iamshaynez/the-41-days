@@ -32,6 +32,8 @@ export const VERBS = {
 // 事件卡选项 → 因果动词（A 层手作卡的埋点表，新卡在这里登记）
 const EVENT_VERBS = {
   n_meds:     { give: 'help', refuse: 'refuse_help' },
+  n_washer:   { swap: 'help' },   // 换工卡：正和的互助，回绝无刺（软心者自伤已足）
+  n_herbal:   { swap: 'help' },
   n_tool:     { lend: 'help', refuse: 'refuse_help' },
   n_thugs:    { help: 'help', refuse: 'refuse_help' },
   v_deserter: { shelter: 'help', refuse: 'refuse_help' },

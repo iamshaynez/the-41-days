@@ -108,6 +108,7 @@ export async function playwright({ provider, prompts }, brief) {
     .replace('{{theme}}', brief.theme || '')
     .replace('{{arc}}', arcTxt)
     .replace('{{anchors}}', (brief.anchors || []).join('、'))
+    .replace('{{items}}', brief.itemLegend || '')
     .replace('{{world}}', brief.worldBrief || '');
   const r = await provider.call({ system, user: '提案一个微事件。只输出 JSON。', json: true, temperature: 0.9, maxTokens: 6000, thinking: THINKING_LOW });
   return extractJson(r.text);
