@@ -239,7 +239,7 @@ describe('v0.3.1 或然扩张（劝刀·槛车·或然亲和）', () => {
     assert.equal(e.type, 'hostage');
     assert.ok(e.storyline.codex.lines.some((l) => l.includes('第四十一天')), '题卷行');
     assert.ok(e.storyline.codex.lines.some((l) => l.includes('蜀记')), '正史引文');
-    assert.match(e.storyline.annals[0].note, /联名的那页纸压住了刀/);
+    assert.match(e.storyline.annals[0].note, /联名帖压住了一半/);
   });
 
   test('或然亲和：完结局数折 boon——开局知晓度+2/局，杠杆门槛-2/局', async () => {
@@ -277,5 +277,43 @@ describe('v0.3.1 或然扩张（劝刀·槛车·或然亲和）', () => {
     const lines = PACK.mainline.endings.hostage;
     assert.ok(lines.some((l) => l.includes('第四十一天')));
     assert.ok(PACK.cardMap.o_plea.when.dayWindow[1] <= 40, '联名窗口不晚于 D40');
+  });
+});
+
+describe('0.21.0 终局文案大改', () => {
+  test('八局收尾句各不相同：兰台题卷只属于刀落与无人幸免', () => {
+    const ends = PACK.mainline.endings;
+    const lastLines = Object.entries(ends).map(([k, v]) => [k, v[v.length - 1]]);
+    const uniq = new Set(lastLines.map(([, l]) => l));
+    assert.equal(uniq.size, lastLines.length, '收尾句不得重复');
+    for (const [k, l] of lastLines) {
+      if (l.includes('兰台把这卷书合上')) assert.ok(['ceasefire', 'wiped'].includes(k), `${k} 不配题卷句`);
+    }
+    assert.ok(lastLines.find(([k]) => k === 'maicheng')[1].includes('另一卷'), '麦城收在另一卷');
+    assert.ok(lastLines.find(([k]) => k === 'hostage')[1].includes('留'), '槛车收在「留」');
+    assert.ok(lastLines.find(([k]) => k === 'pyrrhic')[1].includes('空的'), '惨胜收在空页');
+  });
+
+  test('每局都有变了／没变对照行与后日谈', () => {
+    for (const [k, lines] of Object.entries(PACK.mainline.endings)) {
+      if (k === 'contract_end' || k === 'wiped') continue; // 兜底线不设对照；全灭局无见证者，刻意不设
+      assert.ok(lines.some((l) => l.startsWith('变了')), `${k} 缺「变了」行`);
+      assert.ok(lines.some((l) => l.startsWith('没变')), `${k} 缺「没变」行`);
+    }
+    for (const [k, fu] of Object.entries(PACK.mainline.futures)) {
+      assert.ok(fu.length >= 2, `${k} 后日谈过短`);
+    }
+    assert.ok(PACK.mainline.futures.wiped.some((l) => l.includes('人没等到，东西等到了')), '全灭后日谈的兰台注');
+    assert.ok(PACK.mainline.futures.hostage.some((l) => l.includes('种菜')), '槛车后日谈的武昌菜院');
+  });
+
+  test('codex 带后日谈；storyline.future 进回忆录底稿', async () => {
+    const { buildEnding } = await import('../../packages/core/index.js');
+    const s = at41({ dissolve: 40, eventFlags: { alt_plea: true } });
+    VITALS.tickWar(new Ctx(s, PACK, [], []));
+    const e = buildEnding(s, PACK);
+    assert.equal(e.storyline.codex.futures.length, 3, '槛车后日谈三行');
+    assert.ok(e.storyline.future.length === 3, '回忆录底稿带 future');
+    assert.ok(e.storyline.future.some((l) => l.includes('种菜')));
   });
 });

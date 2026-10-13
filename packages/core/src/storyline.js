@@ -222,19 +222,21 @@ export function buildStoryline(state, pack) {
       ? '机关拆了，家书没拦住——一个人拦不住已经化掉的大军。'
       : '军散于家书，城开于交割。谁也没有做错什么——这就是最坏的地方。';
   const ANNALS = {
-    ceasefire: { text: '是岁闰十月，江陵易主，不血刃。十二月，将军没于临沮。', note: heldNote },
-    maicheng: { text: '十二月，羽自麦城走房陵，得脱。吴尽得荆州。', note: '军心是你们一户一户留住的；那早到的六个时辰，是北津台的鼓给他的。' },
-    pyrrhic: { text: '吕蒙弃城北渡。羽复入江陵。是岁，大饥。', note: '守住的城和让出的城，账本不一样——军心留住了，米缸见了底。' },
-    alt_both: { text: '门没有开到底，军没有散尽，将军没有死。', note: '这个秋天没有照任何一本书里写的走。你们就是野史。' },
-    lighthouse: { text: '真相比刀快：烽鼓之信入麦城，羽收兵，全军而退。', note: '荆州没有被救——它只是换了一种被战争使用的方式。可这座城知道了真话。' },
-    join_table: { text: '有舟夜发，符传三张。江陵册上，此后无名。', note: '你活着离开了江陵——这句话，往后要对自己说很多年。' },
-    hostage: { text: '十二月，吴人获羽于章乡，不杀，槛送武昌。荆州入吴，将军为质。', note: '杀降不祥——联名的那页纸压住了刀。你们救下的不是对错，是一条命。' },
-    wiped: { text: '是岁，江陵易主。橘里九号，无人生还。', note: '史册只记了城，没记门牌。兰台记了。' },
+    ceasefire: { text: '是岁闰十月，江陵易主，不血刃。十二月，将军没于临沮。城中人家四十一日，史册无名。', note: heldNote },
+    maicheng: { text: '十二月，羽自麦城走房陵，得脱。吴尽得荆州，江陵如旧。', note: '军心是你们一户一户留住的；那早到的六个时辰，是北津台的鼓给他的。史书被改了半行——半行，十一个字，一条命。' },
+    pyrrhic: { text: '吕蒙弃城北渡，羽复入江陵。是岁，大饥。', note: '守住的城和让出的城，账本不一样：军心留住了，米缸见了底。最后一页是空的——围还没解，账还在记。' },
+    alt_both: { text: '门未竟开，军未尽散，刀未尝落。', note: '兰台取来两卷史书并排放着：一卷写他死，一卷写他活。哪一卷是真的？——都是。野史不是假的史，是平行的史。' },
+    lighthouse: { text: '烽鼓之信先于刀至，羽收兵，全军而退。荆州如故，江陵知真。', note: '真话没有停战，只是让下一个谎更难开口。这座城的耳朵，从此是开的。' },
+    join_table: { text: '有舟夜发，符传三张。江陵册上，橘里九号，从此空号。', note: '你们从「在场」变成了「听说」。活着离开江陵——这句话，往后要对自己说很多年。' },
+    hostage: { text: '十二月，吴人获羽于章乡，不杀，槛送武昌。荆州入吴，将军为质。', note: '《蜀记》记着那场争论，联名帖压住了一半。你们救下的不是对错，是一条命——武昌的院里，如今有人在种菜。' },
+    wiped: { text: '是岁，江陵易主。橘里九号，无人生还。', note: '史册只记了城，没记门牌。兰台记了——包括他们埋给后来人的那件东西。人没等到，东西等到了。' },
     contract_end: { text: '契书用印，城易其主。', note: '章比刀兵体面，一样凉。' }
   };
   const annals = ANNALS[s.war.endingType] ? [{ ...ANNALS[s.war.endingType], ending: s.war.endingType }] : [];
   return {
     days: s.day, title, annals, endingType: s.war.endingType,
+    // 后日谈（0.21.0）：本局结局的开放未来——进回忆录底稿，八局的复盘从此写得不一样
+    future: pack.mainline?.futures?.[s.war.endingType] || [],
     arrival: `第 1 天，${s.chars.map((c) => c.name).join('、')}住进了橘里九号。`,
     prologue,
     beats: capped,
@@ -312,13 +314,29 @@ const ENDING_BAN = {
   wiped: ['槛送', '得脱']
 };
 
+/** 结局禁词判定（0.21.0）：命中禁词且前后无否定/改写语境才算违规——
+ *  或然局列传写「史书本该写斩羽，野史改作得脱」是合法的对照笔法，不许一刀切 */
+const BAN_CTX_OK = /(本该|原该|本应|没有|不曾|未尝|未曾|无尸|落空|改作|改了|另一卷|野史|槛送)/;
+export function endingBanHit(t, endingType) {
+  const words = ENDING_BAN[endingType];
+  if (!words) return null;
+  for (const w of words) {
+    let i = String(t).indexOf(w);
+    while (i >= 0) {
+      if (!BAN_CTX_OK.test(String(t).slice(Math.max(0, i - 24), i + 24))) return w;
+      i = String(t).indexOf(w, i + 1);
+    }
+  }
+  return null;
+}
+
 export function memoirLint(text, story, pack) {
   if (!text || typeof text !== 'string') return false;
   const t = text.trim();
   if (t.length < 80 || t.length > 2400) return false;
   if (t.includes('{{') || t.includes('}}')) return false;
   if (/[A-Za-z]{3,}/.test(t)) return false; // 中文书页不收西文串（B-4：franko 式代号音译）
-  if (ENDING_BAN[story.endingType]?.some((w) => t.includes(w))) return false; // 结局矛盾即废稿
+  if (endingBanHit(t, story.endingType)) return false; // 结局矛盾即废稿（否定语境豁免）
   // 提到的天数不得超出本局（防"第 99 天"式幻觉）
   for (const m of t.matchAll(/第\s*(\d+)\s*天/g)) {
     if (Number(m[1]) > story.days) return false;
