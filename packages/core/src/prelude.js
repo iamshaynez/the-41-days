@@ -24,7 +24,7 @@ export function preludeBeats(pack, s) {
   const short = (s.preludeMode || 'full') === 'short';
   const beats = [];
   if (short) {
-    // 通关账号的开场选择（拍板 v3）：第一拍二选一——完整三幕 or 精简版
+    // 开场二选一（拍板 v4）：第一拍二选一——完整三幕 or 精简版；玩家局由 server 默认 short 进入
     if (p.openingChoice) beats.push({ t: 'text', id: p.openingChoice.id || 'openingChoice', source: 'openingChoice', title: p.openingChoice.title || '开场', text: p.openingChoice.text });
     if (p.heavenLine) beats.push({ t: 'text', id: 'heavenLine', source: 'heavenLine', title: '天下', text: p.heavenLine });
   } else {
@@ -46,7 +46,7 @@ export function preludeBeats(pack, s) {
 /**
  * 当前节拍的视图（server enrich 直用）：
  * { idx, total, kind: 'text'|'prequel'|'card'|'done', title, text, canSkip }
- * canSkip：二周目（short 模式）才给跳过键——首局的三幕是入场礼，不设快门。
+ * canSkip：精简版（short 模式）才有跳过键——选了完整三幕的人，三幕就是入场礼，不设快门。
  */
 export function preludeBeatView(pack, s) {
   const beats = preludeBeats(pack, s);

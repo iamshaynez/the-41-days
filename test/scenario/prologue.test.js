@@ -107,7 +107,7 @@ describe('序章三幕 · 节拍引擎', () => {
     const beats = preludeBeats(PACK, state);
     const full = preludeBeats(PACK, newRun({ prologue: true }).state);
     assert.ok(beats.length < full.length, '单句版节拍更少');
-    assert.equal(beats[0].id, 'openingChoice', '通关账号第一拍是开场二选一');
+    assert.equal(beats[0].id, 'openingChoice', '单句版第一拍是开场二选一（玩家局默认由此进入）');
     assert.equal(beats[1]?.id, 'heavenLine', '第二拍才是单句天下');
     assert.equal(beats.filter((b) => b.t === 'text' && b.source === 'heaven').length, 0, '长天下不进单句版');
     const preq = beats.find((b) => b.t === 'prequel');

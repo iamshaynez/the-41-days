@@ -79,7 +79,9 @@ async function playUntilOver(runId) {
 
 describe('时间胶囊全链（EC-02：埋 → 下周目挖 → 再下周目只剩字条）', () => {
   test('闭环', async () => {
-    const r1 = await api('POST', '/api/runs', { mode: 'direct', prologue: false });
+    // 固定种子（41003：110 步终局、余 3 件、无卡死）——不固定时服务端随机播种，
+    // 部分种子 160 步内不终局/终局无物，此用例三成偶发红（与仓库种子确定性哲学相悖）。
+    const r1 = await api('POST', '/api/runs', { mode: 'direct', prologue: false, seed: 41003 });
     // 进行中的局不能埋
     const early = await api('POST', `/api/runs/${r1.id}/capsule`, { item: 'wood', message: '给后来的人' });
     assert.equal(early.status, 409, '进行中的局不能埋');

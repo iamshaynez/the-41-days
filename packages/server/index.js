@@ -1,10 +1,11 @@
 // HTTP 服务（技术架构 §8）：REST + SSE、会话编排、管理面（LLM 配置/连通测试/内容/回放）。
 // 单进程、零依赖：node:http + node:sqlite + core/llm 包。
 import { createServer } from 'node:http';
-import { randomUUID, randomBytes } from 'node:crypto';
+import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
+import { statSync, readFileSync } from 'node:fs';
 import { Db, decryptKey } from './db.js';
 import { loadConfig } from './config.js';
 import { makeLogger } from './log.js';
@@ -371,7 +372,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       });
 
       // 静态资源
-      if ((req.method === 'GET' || req.method === 'HEAD') && !path.startsWith('/api/')) return await staticFile(path, res);
+      if ((req.method === 'GET' || req.method === 'HEAD') && !path.startsWith('/api/')) return await staticFile(url, res);
 
       // —— 认证（多用户：注册 / 登录 / 登出 / 我是谁） ——
       if (path === '/api/auth/signup' && req.method === 'POST') {
@@ -455,11 +456,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const prologue = body.sidestory ? false : body.prologue !== false; // 玩家局默认带序章（围城头九天）；测试/sim 显式关闭
         // —— 跨周目回响装配（长线体验 EC 系）：档案馆里有什么，新局就从什么里长出来 ——
         const echoes = collectEchoes(db, s.userId);
-        // 首局门（叙事双轴 §2.4 拍板 v2）：账号维度「完全通关」（活到战争收束的结局）才进单句版；
-        // 全灭/超时不算通关——死过的人，还配听一遍完整的开场。body.preludeMode 是测试/开发后门。
-        const WAR_ENDINGS = ['ceasefire', 'contract_end', 'maicheng', 'pyrrhic', 'alt_both', 'lighthouse', 'join_table'];
-        const cleared = db.listRuns(s.userId).some((r) => r.status === 'ended' && WAR_ENDINGS.includes(r.ending_type));
-        const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : (cleared ? 'short' : 'full');
+        // 开场二选一（拍板 v4，取代首局门 v2）：每一局都从「完整三幕 or 精简版」的选择开始——
+        // 选择本身就是入场礼，与账号通关与否无关。默认 short（选择拍只在 short 节拍册里）；
+        // 拣「完整开场」由 prelude_full 翻全。body.preludeMode 仍是测试/开发后门。
+        const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : 'short';
         const state = createRun(pack, { seed: body.seed || Math.floor(Math.random() * 1e9), difficulty: body.difficulty || 'documentary', roster: body.roster, prologue, preludeMode, echoes, sidestory: sideDef?.id || null });
         const { events } = beginRun(state, pack, { prologue });
         db.createRun({ id, userId: s.userId, seed: state.seed, packId, difficulty: state.difficulty, mode, state });
@@ -947,23 +947,53 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     }
   });
 
-  async function staticFile(path, res) {
-    // 多用户入口：/ 为 landing（注册/登录），/app 为游戏 SPA（会话 cookie 已具备则直接可用）
-    const file = path === '/' ? '/landing.html' : path === '/app' ? '/index.html' : path;
+  // 静态资源版本化：HTML 引用的本地 js/css 与 js 的模块导入都盖内容哈希戳（?v=……）。
+  // 内容变则 URL 变——新 index.html 永远配新 app.js，缓存再不规范（内置 WebView 等）
+  // 也拿不到「新页面 + 旧脚本」的混搭（0.3.0 上线时旧脚本找 #difficulty 抛错即此祸）。
+  const verCache = new Map(); // 相对路径 -> { mtime, v }
+  const versionOf = (rel) => {
     try {
-      const content = await readFile(join(WEB_DIR, file));
+      const full = join(WEB_DIR, rel);
+      const st = statSync(full);
+      const hit = verCache.get(rel);
+      if (hit && hit.mtime === st.mtimeMs) return hit.v;
+      const v = createHash('sha256').update(readFileSync(full)).digest('hex').slice(0, 8);
+      verCache.set(rel, { mtime: st.mtimeMs, v });
+      return v;
+    } catch { return null; }
+  };
+
+  async function staticFile(url, res) {
+    // 多用户入口：/ 为 landing（注册/登录），/app 为游戏 SPA（会话 cookie 已具备则直接可用）
+    const file = url.pathname === '/' ? '/landing.html' : url.pathname === '/app' ? '/index.html' : url.pathname;
+    try {
+      let body = await readFile(join(WEB_DIR, file));
+      const ext = file.slice(file.lastIndexOf('.'));
       const types = {
         '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
         '.woff2': 'font/woff2', '.woff': 'font/woff', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg'
       };
+      if (ext === '.html') {
+        body = body.toString('utf8').replace(/((?:src|href)=")(\/[^"?#]+\.(?:js|css))(")/g, (m, a, rel, z) => {
+          const v = versionOf(rel);
+          return v ? `${a}${rel}?v=${v}${z}` : m;
+        });
+      } else if (ext === '.js') {
+        body = body.toString('utf8').replace(/(from\s+')(\.\/[^'?"]+\.js)(')/g, (m, a, rel, z) => {
+          const v = versionOf(rel);
+          return v ? `${a}${rel}?v=${v}${z}` : m;
+        });
+      }
       const isAsset = file.startsWith('/assets/');
+      // 字体切片按 unicode-range 按需取用且内容随版本稳定，值得长缓存；
+      // 带 ?v= 的代码文件 URL 与内容一一对应，同样长缓存；裸 URL 保持协商缓存（旧书签兜底）
+      const versioned = ext !== '.html' && url.searchParams.get('v');
       res.writeHead(200, {
-        'content-type': types[file.slice(file.lastIndexOf('.'))] || 'application/octet-stream',
+        'content-type': types[ext] || 'application/octet-stream',
         'x-content-type-options': 'nosniff',
-        // 字体切片按 unicode-range 按需取用且内容随版本稳定，值得长缓存；代码文件保持协商缓存便于开发
-        'cache-control': isAsset ? 'public, max-age=604800' : 'no-cache'
+        'cache-control': isAsset || versioned ? 'public, max-age=604800' : 'no-cache'
       });
-      res.end(content);
+      res.end(body);
     } catch {
       res.writeHead(404); res.end('not found');
     }

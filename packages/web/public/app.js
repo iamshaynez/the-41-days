@@ -1065,7 +1065,7 @@ function renderPrologue(s) {
     }
     const opts = el('div', 'prologue-opts');
     if (pv.id === 'openingChoice') {
-      // 通关账号的开场二选一（拍板 v3）：完整三幕 or 精简版
+      // 开场二选一（拍板 v4）：每一局都从「完整三幕 or 精简版」开始，与通关与否无关
       const full = el('button', 'opt', '<span class="key">全</span><span>完整开场——从天下讲起</span>');
       full.type = 'button';
       full.addEventListener('click', () => sendIntents([{ type: 'prelude_full' }], '完整开场'));
