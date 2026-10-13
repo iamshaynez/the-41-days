@@ -1294,8 +1294,20 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
     animation: sheetUp .35s cubic-bezier(.2, .8, .3, 1) both;
   }
   @keyframes sheetUp { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
-  #landing { margin: 4vh auto 0; }
-  .cover { padding: 30px 22px 26px; }
+  #landing { margin: 0 auto 0; }
+  .cover { padding: 24px 20px 24px; }
+  /* 封面重排序（线上实测：表单被 1800px 文案压到两屏外，移动用户"看不到输入框"）——
+     先进门，再读城：品牌头之后直接给登录/注册，长文案与目录随后 */
+  .cover { display: flex; flex-direction: column; }
+  .cover > .kicker { order: 0; }
+  .cover > h1 { order: 1; }
+  .cover > .subtitle { order: 2; }
+  .cover > #welcome, .cover > #authbox { order: 3; margin: 14px 0 6px; }
+  .cover > .lede { order: 4; }
+  .cover > .lede.premise { order: 5; }
+  .cover > .hint { order: 6; }          /* "注册一个名字…"跟着表单说 */
+  .cover > .cover-toc { order: 7; margin-top: 14px; }
+  .cover > .hint.foot { order: 8; margin-top: 14px; }
   .cover::before { font-size: 96px; top: 4px; right: 14px; }
   .seal { width: 64px; height: 64px; top: 20px; right: 16px; font-size: 19px; }
   .spine { display: none; }
