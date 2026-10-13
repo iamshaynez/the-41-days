@@ -12,7 +12,7 @@ import { hashPassword, verifyPassword, validateUsername, validatePassword, sessi
 import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect } from './narrate.js';
-import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
@@ -255,10 +255,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId]; // C 层生成卡走 run 级卡册
       if (card) {
         const names = state.chars.map((c) => c.name).join('、');
-        // 用 ctx 检查选项可用性（无副作用：只读检查）
+        // 选项带可用性与原因（ok:false → UI 禁用并显示 why；玩家不再点一个做不到的选项吃闭门羹）
         view.eventView = {
           title: card.title, text: (card.text || '').replaceAll('{{names}}', names).replaceAll('{{wish_name}}', state.echoes?.wish?.charName || '前人'),
-          options: (card.options || []).map((o) => ({ key: o.key, label: o.label }))
+          options: eventOptionsView(state, pack, card)
         };
       }
     }
@@ -298,7 +298,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId];
         if (card) view.duskView.fate = {
           title: card.title, text: card.text || '',
-          options: (card.options || []).map((o) => ({ key: o.key, label: o.label }))
+          options: eventOptionsView(state, pack, card)
         };
       }
     }
@@ -695,8 +695,6 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           text = renderDirect(result.state, narrFacts, pack);
           send('narration-delta', { d: text });
         }
-        if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
-
         // 堂屋（人物血肉计划 PR2）：晨间三人场——内核已裁决谁/何话题/结局拍，
         // LLM 只写台词（越界走直读拼装）；心情与信任的结算早在内核完成，LLM 挂了场子照样散不了。
         for (const f of result.facts.filter((x) => x.k === 'ensemble')) {

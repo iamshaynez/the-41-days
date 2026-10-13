@@ -47,7 +47,8 @@ describe('饥饿 H-01~H-05', () => {
     assert.ok(minHunger >= 1, `最低饥饿档应 ≥1（实际 ${minHunger}，共 ${meals} 餐）`);
   });
 
-  test('H-04(v1 修订) 濒死每晨 50% 转微恙起步（100 局统计 30~70%）', () => {
+  test('H-04(v2) 濒死转病由难度档 starveSick 定：单一低难度为 0（饿由饥饿轴自己施压），旋钮生效', () => {
+    // 默认档（0.13.0 单一难度）：饿不转病——100 局零命中
     let hits = 0;
     for (let seed = 1; seed <= 100; seed++) {
       const { state } = newRun({ seed, roster: ['bron'] });
@@ -56,7 +57,23 @@ describe('饥饿 H-01~H-05', () => {
       const next = skipDayAtHome(state);
       if (ch(next, 'bron').sick >= 1) hits++;
     }
-    assert.ok(hits >= 30 && hits <= 70, `转病率 ${hits}% 应落在 30~70`);
+    assert.equal(hits, 0, `单一难度下饿不转病（实际 ${hits}%）`);
+    // 机制仍在：把 starveSick 拨回 0.5，100 局统计落 30~70（抽样统计带宽）
+    const old = PACK.manifest.difficulty.documentary.starveSick;
+    PACK.manifest.difficulty.documentary.starveSick = 0.5;
+    try {
+      let hits2 = 0;
+      for (let seed = 1; seed <= 100; seed++) {
+        const { state } = newRun({ seed, roster: ['bron'] });
+        const b = ch(state, 'bron');
+        b.hunger = 0; b.sick = 0;
+        const next = skipDayAtHome(state);
+        if (ch(next, 'bron').sick >= 1) hits2++;
+      }
+      assert.ok(hits2 >= 30 && hits2 <= 70, `starveSick=0.5 时转病率 ${hits2}% 应落 30~70`);
+    } finally {
+      PACK.manifest.difficulty.documentary.starveSick = old;
+    }
   });
 });
 

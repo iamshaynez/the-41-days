@@ -361,9 +361,12 @@ export function renderBiographiesDirect(story, pack) {
       : ep.direction === 'haunted'
         ? `${DIR_TXT.haunted}${ep.knot ? `压在心上的：${ep.knot}。` : ''}`
         : DIR_TXT[ep.direction];
+    // 死者没有"战后的去向"——救赎种子是生者的愿望句，写给死人就串了时态；
+    // fallen 的后日谈永远落在门后那面墙（与 GDD：死也推进认知、名字留在墙上同构）。
+    const after = ep.direction === 'fallen' ? AFTER_TXT.fallen : (red || AFTER_TXT[ep.direction]);
     return {
       id: ep.id, name: ep.name, via: 'direct',
-      text: `${ep.name}者，江陵人也，${def.role || '里坊中人'}。${beats}${close}后日谈：${red || AFTER_TXT[ep.direction]}`
+      text: `${ep.name}者，江陵人也，${def.role || '里坊中人'}。${beats}${close}后日谈：${after}`
     };
   });
 }

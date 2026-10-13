@@ -66,10 +66,10 @@ async function input(b, t, id, text) {
   return st;
 }
 
-/** 硬挨到终局（至多 40 天） */
+/** 硬挨到终局（单一难度更宽容，被动队也可能撑到交割日——上限放到 D50） */
 async function playToEnd(b, t, id) {
   let st = await (await fetch(`${b}/api/runs/${id}`, { headers: auth(t) })).json().then((r) => r.state);
-  for (let d = 0; d < 40 && !st.over; d++) {
+  for (let d = 0; d < 50 && !st.over; d++) {
     if (st.eventView) {
       const o = st.eventView.options[st.eventView.options.length - 1];
       st = (await input(b, t, id, `选${o.key === 'refuse' ? 'B' : 'A'}`)) || st;
@@ -80,12 +80,12 @@ async function playToEnd(b, t, id) {
     const guardName = st.charView?.find((c) => c.alive)?.name || '石大';
     st = (await input(b, t, id, `今晚都不出去，${guardName}守夜`)) || st;
   }
-  assert.ok(st.over, '40 天内应终局');
+  assert.ok(st.over, '50 天内应终局');
   return st;
 }
 
 describe('列传 e2e：直读模式（LLM 全挂）', () => {
-  test('全灭局：ending.biographies 每人一段，via=direct，开篇史书体', async () => {
+  test('终局（全灭或开城）：ending.biographies 每人一段，via=direct，开篇史书体', async () => {
     const ctx = await boot(false);
     try {
       const run = await (await fetch(`${ctx.base}/api/runs`, { method: 'POST', headers: auth(ctx.token), body: JSON.stringify({ mode: 'direct', seed: 42, prologue: false }) })).json();

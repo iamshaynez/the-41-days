@@ -22,6 +22,32 @@ export function optionCostOk(ctx, option) {
   return !(option.cost || []).length;
 }
 
+/** 选项不满足时的人话原因（供视图禁用态与拒绝文案共用——玩家得知道缺什么） */
+export function optionWhy(s, pack, option) {
+  const req = option.requires || {};
+  const iname = (id) => pack.itemMap[id]?.name || id;
+  if (req.item && !(s.inventory[req.item] >= 1)) return `家里没有${iname(req.item)}`;
+  if (req.anyItem && !req.anyItem.some((i) => (s.inventory[i] || 0) >= 1)) return `家里没有${req.anyItem.map(iname).join('、')}中的任何一样`;
+  if (req.doc && !s.docsSeen.includes(req.doc)) return `得先读到${pack.docMap?.[req.doc]?.title || '那份纸'}`;
+  if (req.flag && !s.eventFlags[req.flag]) return '还差一件事没发生';
+  for (const cst of option.cost || []) {
+    if ((s.inventory[cst.item] || 0) < (cst.n || 1)) return `缺${iname(cst.item)}×${(cst.n || 1) - (s.inventory[cst.item] || 0)}`;
+  }
+  return '';
+}
+
+/** 事件卡选项视图（enrich 用）：label + ok + why——不可用的选项 UI 直接禁用并写明原因 */
+export function eventOptionsView(s, pack, card) {
+  card = card || pack.cardMap[s.activeEvent?.cardId] || s.geCards?.[s.activeEvent?.cardId];
+  if (!card) return [];
+  const ro = { s, hasItem: (i, n = 1) => (s.inventory[i] || 0) >= n }; // 只读鸭子 ctx：optionAvailable/CostOk 只读库存
+  return (card.options || []).map((o) => {
+    const ok = optionAvailable(ro, o) && optionCostOk(ro, o);
+    return { key: o.key, label: o.label, ok, ...(ok ? {} : { why: optionWhy(s, pack, o) }) };
+  });
+}
+
+
 /** 玩家选了事件卡选项 */
 export function chooseEventOption(ctx, optionKey) {
   const s = ctx.s;
@@ -32,7 +58,7 @@ export function chooseEventOption(ctx, optionKey) {
   const option = (card.options || []).find((o) => o.key === optionKey);
   if (!option) return { ok: false, reason: 'BAD_OPTION' };
   if (!optionAvailable(ctx, option) || !optionCostOk(ctx, option)) {
-    ctx.fact('option_unavailable', { key: optionKey });
+    ctx.fact('option_unavailable', { key: optionKey, why: optionWhy(s, ctx.pack, option) });
     return { ok: false, reason: 'UNAVAILABLE' };
   }
   s.activeEvent = null;
