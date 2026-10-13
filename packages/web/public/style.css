@@ -457,6 +457,23 @@ input:focus, select:focus { outline: none; border-color: var(--brass); box-shado
   width: min(880px, 100%); margin: 0 auto;
   display: flex; flex-direction: column; overflow: hidden;
 }
+/* 新的一拍：用户还在读上文时，纸面下缘浮一枚提示（不打断阅读，看完自己下来） */
+.flow-ping {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  z-index: 6; cursor: pointer;
+  font: inherit; font-family: var(--font-li); font-size: 12.5px; letter-spacing: .22em; text-indent: .11em;
+  color: var(--tan-ink);
+  background: linear-gradient(180deg, var(--tan-hi), var(--tan-lo));
+  border: 1px solid var(--wood);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 3px 10px rgba(0, 0, 0, .45);
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  padding: 7px 18px;
+  animation: flowPingIn .45s ease both;
+  transition: filter .18s, transform .25s ease;
+}
+.flow-ping:hover { filter: brightness(1.08); }
+.flow-ping:active { transform: translateX(-50%) translateY(1px); }
+@keyframes flowPingIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 /* 人定的残烛与夜半的烛光渐晕（UIP-3）：一盏悬在纸面上的暖光池，四周沉入暗色 */
 body[data-phase='night'] #flow::after, body[data-phase='dusk'] #flow::after {
   content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
