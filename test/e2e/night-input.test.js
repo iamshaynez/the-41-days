@@ -39,14 +39,14 @@ before(async () => {
 
   dir = mkdtempSync(join(tmpdir(), 'twom-night-'));
   applyMigrations(join(dir, 'game.db'));
-  app = createApp({ dbPath: join(dir, 'game.db'), adminUsername: 'admin', adminPassword: 'test-admin-pw', inputRatePerMin: 0 });
+  app = createApp({ dbPath: join(dir, 'game.db'), adminUsername: 'admin', adminPassword: 'owl admin watchword', inputRatePerMin: 0 });
   await new Promise((r) => app.server.listen(0, '127.0.0.1', r));
   base = `http://127.0.0.1:${app.server.address().port}`;
 
-  const su = await api('POST', '/api/auth/signup', { username: 'nightowl', password: 'secret1' });
+  const su = await api('POST', '/api/auth/signup', { username: 'nightowl', password: 'owls read at night' });
   token = su.token;
-  const login = await api('POST', '/api/auth/login', { username: 'admin', password: 'test-admin-pw' });
-  const created = await api('POST', '/api/admin/providers', { name: '桩', adapter: 'openai-compat', baseUrl: `http://127.0.0.1:${stubPort}`, model: 'stub-model', apiKey: 'stub' }, login.token);
+  const login = await api('POST', '/api/auth/login', { username: 'admin', password: 'owl admin watchword' });
+  const created = await api('POST', '/api/admin/providers', { name: '桩', adapter: 'openai-compat', baseUrl: `http://127.0.0.1:${stubPort}`, model: 'stub-model', apiKey: 'owl stub pass phrase' }, login.token);
   await api('POST', '/api/admin/llm/routes', { purpose: 'referee', providerId: created.id }, login.token);
   await api('POST', '/api/admin/llm/routes', { purpose: 'narrator', providerId: created.id }, login.token);
 });
