@@ -22,7 +22,14 @@ export function humanFacts(state, pack, facts) {
     if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
     return v;
   };
-  return (facts || []).map((f) => (f && typeof f === 'object' ? walk(f) : f));
+  const mapped = (facts || []).map((f) => (f && typeof f === 'object' ? walk(f) : f));
+  // 代号对照（B-2 二周目实测：war_telegraph 被叙事者直译成"电报线"）——
+  // k 是内部事实代号，值层翻译管不到它；把丑话说在前头，且明确禁止具象化成器物
+  mapped.push({
+    k: 'note',
+    text: '说明：字段 k 是事实代号（如 franko_left=船牙鲁舟离岸、franko=鲁舟、war_telegraph=交割前兆——指北边的动静变了，不是任何具体器物）。代号一律不得直译成器物或地名。正文一律用中文名，禁止把代号音译成人名，禁止出现英文与现代器物。'
+  });
+  return mapped;
 }
 
 /** 内部 id 的常见音译（玩家侧永远不该见到）：franko=鲁舟、emil=老甑……
@@ -34,12 +41,23 @@ const TRANSLIT_BAN = [
   '达尼洛', '阿列克谢', '亚历克谢', '尤拉', '安东', '卡佳', '布隆', '薇拉'
 ];
 
-/** 叙事后守门（B-4）：中文书页不收西文串、不收野标记、不收音译名。返回 reasons（空=过）。 */
+/** 现代器物黑名单（B-2 二周目实测：手电/开枪/电报线混进了建安年间的江陵）——
+ *  注意「炮」是本作正典词表内的通假（内容全卷统一使用），不在此列 */
+const ANACHRON_BAN = ['手电', '电报', '开枪', '枪声', '子弹', '电话', '广播', '汽车', '火车', '飞机', '电池', '手表', '照相机', '电脑'];
+
+/** 常见繁体字（简体正典里不该出现的字面——D36 实测「門缝」漏网） */
+const TRAD_CHARS = '門們時說聽國東車馬鳥龍風雲電書長樂關髮還進遠運過當歲處帶幾後裡裏為無發從眾備複應識證據戰紙張現線讓話將與點體驗鄰銀餓飯藥傷醫燈';
+
+/** 叙事后守门（B-4 + B-2）：中文书页不收西文串、不收野标记、不收音译名、
+ *  不收现代器物、不收繁体字面、不收半角标点。返回 reasons（空=过）。 */
 export function narrationLint(text, pack) {
   const reasons = [];
   const t = String(text || '');
   if (/[A-Za-z]{3,}/.test(t)) reasons.push('西文串泄漏');
   if (TRANSLIT_BAN.some((w) => t.includes(w))) reasons.push('内部代号音译');
+  if (ANACHRON_BAN.some((w) => t.includes(w))) reasons.push('现代器物（时代错位）');
+  for (const ch of TRAD_CHARS) { if (t.includes(ch)) { reasons.push(`繁体字面（${ch}）`); break; } }
+  if (/[,.!?;:]/.test(t.replace(/\d+[.:]\d+/g, ''))) reasons.push('半角标点');
   if (markerSyntaxErrors(t).length) reasons.push('标记语法不对');
   if (validateTextMarkers(t, pack).length) reasons.push('名词不在册');
   return reasons;
@@ -66,7 +84,13 @@ export function worldBrief(state, pack) {
   // 玩家立下的规矩（裁判要认："省着吃"之类的话语会沉淀成这里的策略）
   const pol = policyOf(state);
   const polTxt = `【现行规矩】吃饭${pol.feeding === 'auto' ? '管家自动喂' : '玩家亲自管'}·${pol.rationing ? '省粮配给' : '正常吃饭'}·夜里${{ cautious: '谨慎不出声', bold: '大胆放手', normal: '照常' }[pol.nightApproach] || '照常'}`;
-  return `第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${night}${sealNote}${dirTxt}`;
+  // A-1 主语钉死（二周目实测：夜访叙事里商人鲁舟频频顶替夜访者——8+ 处）：
+  // 夜已收工后叙事多发生在晨间，靠 lastScavenger 把"昨夜谁出门"写进世界简报
+  const lastScav = state.lastScavenger ? (charById(state, state.lastScavenger)?.name || null) : null;
+  const castTxt = lastScav
+    ? `【人物分工·铁律】昨夜出门夜访的是${lastScav}，夜访段落的唯一主语；鲁舟是渡口商人，只在自己的摊上做买卖，从不替这个家出门、搜刮、办事。`
+    : '';
+  return `第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${night}${castTxt}${sealNote}${dirTxt}`;
 }
 
 /** 模板变体选条（文案丰满批次一）：模板值可为字符串或数组——数组按
@@ -142,13 +166,13 @@ export function renderDirect(state, facts, pack) {
       case 'night_arrive': lines.push(t.night.arrive.replace('{{char}}', name(f.char)).replace('{{loc}}', pack.locMap[state.night?.locId]?.name || '')); break;
       case 'night_move': lines.push(`挪进了${f.room}。`); break;
       case 'night_observe': lines.push(`看清了这间屋：${(f.containers || []).join('、') || '没有容器'}。${(f.npcs || []).length ? `还有${f.npcs.join('、')}。` : ''}`); break;
-      case 'night_search_hit': lines.push(t.night.search_hit.replace('{{loot}}', (f.items || []).map((g) => `${pack.itemMap[g.item]?.name || g.item}×${g.n}`).join('、'))); break;
+      case 'night_search_hit': lines.push(t.night.search_hit.replace('{{char}}', name(f.char)).replace('{{loot}}', (f.items || []).map((g) => `${pack.itemMap[g.item]?.name || g.item}×${g.n}`).join('、'))); break;
       case 'night_no': lines.push(f.msg ? `（${f.msg}）` : '……'); break;
       case 'night_unlock': lines.push(f.quiet ? '锁簧轻轻让开了。' : '撬棍闷响一声，锁开了。'); break;
       case 'night_noise_alert': lines.push(t.night.noise); break;
       case 'lockpick_broke': lines.push('拨针断在锁眼里。'); break;
       case 'night_drop': lines.push(`背不动了，${pack.itemMap[f.item]?.name || f.item}被留在了原地。`); break;
-      case 'night_end': lines.push(`天边泛灰，该回去了。背回来了 ${f.carried} 件东西。`); break;
+      case 'night_end': lines.push(f.reason === 'abort' ? `${name(f.char)}连夜退了出去。今晚就到这。` : `天边泛灰，${name(f.char)}往回走。背回来了 ${f.carried} 件东西。`); break;
       case 'night_abort': lines.push('退出去。今晚就到这。'); break;
       case 'combat_win': lines.push(t.night.combat_win); break;
       case 'combat_hurt': lines.push(t.night.combat_hurt.replace('{{char}}', name(state.lastScavenger || state.chars.find((c) => !c.bedRest)?.id))); break;

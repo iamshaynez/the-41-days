@@ -254,7 +254,8 @@ export function tickWar(ctx) {
     war.endingType = armyHeld ? (mil || plea || 'ceasefire') : (plea || 'ceasefire');
     war.armyHeld = armyHeld;      // 野史批注用：军心未散而刀仍落 → 「你拦过，史官不知道」
     war.leverHad = !!mil;         // 军事杠杆而军心已散 → 「机关拆了，军队散了」（联名帖不在此列）
-    ctx.emit('WAR_ENDED', { type: war.endingType, day: s.day });
+    // 铰链读数随事件落盘（A-2 二周目实测：只写 state 不发事件，fold 重放即丢这对字段）
+    ctx.emit('WAR_ENDED', { type: war.endingType, day: s.day, armyHeld, leverHad: war.leverHad });
   }
   if (!war.ended && s.day >= ctx.pack.manifest.war.forceEndDay) {
     war.ended = true; war.endingType = 'contract_end';
@@ -375,14 +376,24 @@ export function drawMorningEvents(ctx) {
     if (w.minDay && s.day < w.minDay) return false;
     if (w.maxDay && s.day > w.maxDay) return false; // 或然 B 的 D30 截止
     if (w.eveOfWarEnd && s.day !== s.war.endDay - 1) return false; // 或然 A 只在交割前夜
+    if (!cardAllowedInPool(s, c)) return false; // C-2：来过两回的卡不再入池
     return true;
   });
   if (!eligible.length) return;
-  const card = ctx.rng.weighted(eligible.map((c) => ({ w: c.weight ?? 5, c }))).c; // ?? 不把 0 当缺省
+  // C-2 卡池降重（二周目实测：同一寡妇带着同一句台词来了三回）——
+  // 出场过的卡权重打折（来过一回减半），来过两回的直接出池（cardCount 账随 FLAG 落盘可回放）
+  const card = ctx.rng.weighted(eligible.map((c) => ({ w: (c.weight ?? 5) / (1 + (s.cardCount?.[c.id] || 0)), c }))).c; // ?? 不把 0 当缺省
+  s.cardCount = { ...(s.cardCount || {}), [card.id]: (s.cardCount?.[card.id] || 0) + 1 };
+  ctx.emit('FLAG', { key: 'cardCount', val: structuredClone(s.cardCount) });
   s.activeEvent = { cardId: card.id };
   if (card.when?.once) { s.firedOnce[card.id] = true; ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) }); }
   s.eventCooldowns[card.id] = s.day + (card.when?.cooldown || 8);
   ctx.emit('FLAG', { key: 'eventCooldowns', val: structuredClone(s.eventCooldowns) });
   ctx.emit('EVENT_FIRED', { cardId: card.id });
   ctx.fact('event', { cardId: card.id, title: card.title });
+}
+
+/** C-2 随机池资格（纯函数，测试直查）：同卡一局至多两回 */
+export function cardAllowedInPool(s, card) {
+  return ((s.cardCount?.[card.id] || 0) < 2);
 }

@@ -114,7 +114,7 @@ function apply(s, ev) {
     case 'WEATHER': s.weather = d.to; break;
     case 'WINTER_START': s.winterActive = true; break;
     case 'WINTER_END': s.winterActive = false; break;
-    case 'WAR_ENDED': s.war.ended = true; s.war.endingType = d.type; break;
+    case 'WAR_ENDED': s.war.ended = true; s.war.endingType = d.type; if (d.armyHeld !== undefined) s.war.armyHeld = d.armyHeld; if (d.leverHad !== undefined) s.war.leverHad = d.leverHad; break;
     case 'WAR_TELEGRAPH': s.war.telegraphed = true; break;
     case 'RUN_ENDED': s.over = true; s.ending = clone(d.ending); s.threeThings = clone(d.ending?.threeThings || []); break;
     case 'CAUSAL': {
@@ -151,7 +151,7 @@ function apply(s, ev) {
     case 'PRELUDE_BEAT': s.prelude = { i: d.i }; break;
     case 'MAINLINE_STEP': {
       if (!s.mainline) s.mainline = [];
-      s.mainline.push({ day: d.day, stepId: d.stepId ?? null, pens: d.pens || [], mirrors: d.mirrors || [] });
+      s.mainline.push({ day: d.day, stepId: d.stepId ?? null, pens: d.pens || [], mirrors: d.mirrors || [], ...(d.echo ? { echo: d.echo } : {}) });
       if (!s.mainlinePens) s.mainlinePens = [];
       for (const p of d.pens || []) if (!s.mainlinePens.includes(p)) s.mainlinePens.push(p);
       break;
