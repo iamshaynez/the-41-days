@@ -36,6 +36,7 @@ export const REJECT_TEXT = {
   NO_TARGET: '没有这个对象',
   PRICE_BAND: '价开得太离谱',
   TOO_WEAK: '人已经迈不动夜路了',
+  ASSIST_NIGHT: '今晚答应了帮邻居守门，家里出不了人',
   UNAVAILABLE: '条件还不够',
   UNKNOWN_LOC: '还不知道那个地方',
   USE_COOK: '这个要在锅上做'

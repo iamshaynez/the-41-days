@@ -82,9 +82,9 @@ function pickScene(ctx, rng, alive) {
   const beat = (kind) => {
     const pool = ctx.pack.ensembleTemplates?.beats?.[kind];
     if (!pool?.length) return '话说了，日子照旧。';
-    // 近两场用过的拍子先让位（一周目实测：同一结局拍 34 场里出现 7 次，连看三天出戏）；
-    // 池子本来就小，滤空了再用全池——节奏让位于确定性
-    const recent = en.scenes.slice(-2).map((x) => x.outcome.beat);
+    // 近三场用过的拍子先让位（二周目实测 27 场前四种拍占 20 场——窗口从两场放宽到三场，
+    // 配合各池 4→7 条扩容；滤空了再用全池——节奏让位于确定性）
+    const recent = en.scenes.slice(-3).map((x) => x.outcome.beat);
     const fresh = pool.filter((b) => !recent.includes(b));
     return (fresh.length ? fresh : pool)[rng.int((fresh.length ? fresh : pool).length)];
   };

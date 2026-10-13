@@ -110,7 +110,12 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       async narrate(facts, state, onDelta) {
         const t0 = Date.now();
         try {
-          const out = await narrator({ provider: providers.narrator || providers.referee, prompts: promptsCache, worldBrief: worldBrief(state, pack) }, facts, onDelta);
+          // ME-3 前情钩子：昨日书页开头两行——叙事要承接前情、避开同款句式（防"夜里你只交代了一句"×20）
+          const recap = db.narrationOf(runId, 12)
+            .filter((x) => x.role === 'narrator' && x.text && !x.text.startsWith('【'))
+            .slice(-2)
+            .map((x) => x.text.slice(0, 60));
+          const out = await narrator({ provider: providers.narrator || providers.referee, prompts: promptsCache, worldBrief: worldBrief(state, pack) }, facts, onDelta, recap);
           db.logCall({ purpose: 'narrator', provider: out.via || 'llm', latencyMs: Date.now() - t0, runId, ok: true });
           return out.text;
         } catch (e) {
@@ -248,7 +253,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         topic: {
           stepId: step?.id || null, title: step?.title || null,
           anchor: step?.anchor || null, surface: step?.surface || null,
-          low: scene.topic?.low || null, clash: scene.topic?.clash || null, exposed: scene.topic?.exposed || null
+          low: scene.topic?.low || null, clash: scene.topic?.clash || null, exposed: scene.topic?.exposed || null,
+          echo: (state.mainline || []).find((m) => m.stepId === scene.topic?.stepId)?.echo || null // ME-2：大事步上这个家的影子，堂屋可以拿来嚼
         },
         outcomeBeat: scene.outcome.beat
       },
@@ -604,6 +610,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           'x-accel-buffering': 'no'
         });
         const send = (ev, data) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
+        // 体验10：先回一声——LLM 串行调用前的白屏等待有了心跳（UI 对未知事件天然忽略）
+        send('ack', { day: state.day, phase: state.phase });
         if (clarify && !intents.length) {
           send('clarify', { text: clarify });
           ink.push({ day: state.day, role: 'sys', text: '……' + clarify });
@@ -708,9 +716,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         let text = '';
         const gwN = run.mode === 'llm' ? gw : null;
         if (gwN && narrFacts.length) {
-          const humanized = humanFacts(result.state, pack, narrFacts); // id 值 → 中文名（B-4）
-          // 代号对照（k 是内部事实代号，值层翻译管不到它）：把丑话说在前头
-          humanized.push({ k: 'note', text: '说明：字段 k 是事实代号（如 franko_left=船牙鲁舟离岸、franko=鲁舟）。正文一律用中文名，禁止把代号音译成人名，禁止出现英文。' });
+          const humanized = humanFacts(result.state, pack, narrFacts); // id 值 → 中文名（B-4）；代号对照 note 随行（B-2）
           for (let attempt = 0; attempt < 2 && !text; attempt++) {
             const out = await gwN.narrate(humanized, result.state, null);
             if (out && out.trim() && !narrationLint(out, pack).length) text = out;
@@ -954,7 +960,15 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const id = path.split('/')[4];
         const events = db.eventsOf(id);
         const rebuilt = fold(events);
-        return json(res, 200, { ok: true, day: rebuilt?.day, docs: rebuilt?.docsSeen?.length, events: events.length, match: JSON.stringify(rebuilt) === JSON.stringify(db.getRun(id)?.state) });
+        // A-2 回放口径：终局演出产物（回忆录/列传，事件流之外由 finalizeEndedRun 落盘）
+        // 不参与全等比较——它们不是状态，是落幕后的墨迹；比了每个完结局都恒 false
+        const strip = (st) => {
+          if (!st) return st;
+          const c = structuredClone(st);
+          if (c.ending) { delete c.ending.memoir; delete c.ending.memoirVia; delete c.ending.biographies; }
+          return c;
+        };
+        return json(res, 200, { ok: true, day: rebuilt?.day, docs: rebuilt?.docsSeen?.length, events: events.length, match: JSON.stringify(strip(rebuilt)) === JSON.stringify(strip(db.getRun(id)?.state)) });
       }
       if (path === '/api/admin/sim/smoke' && req.method === 'POST') {
         const { runSim } = await import('../sim/runner.js');

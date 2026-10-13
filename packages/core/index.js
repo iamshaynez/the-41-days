@@ -21,7 +21,7 @@ export { resolveInput, beginRun, validateIntentShape } from './src/resolve.js';
 export { fold } from './src/fold.js';
 export { parseDirect, normalizeIntent } from './src/parser.js';
 export { applySceneEffects } from './src/scene.js';
-export { planDay, planDusk, planNightStep, dawnProblems, tradeDeals, suggests, freeExamples, charDigest, feasibleIntent, OPTION_INTENT_TYPES } from './src/delegate.js';
+export { planDay, planDusk, planNightStep, dawnProblems, tickDawnLedgers, tradeDeals, suggests, freeExamples, charDigest, feasibleIntent, OPTION_INTENT_TYPES } from './src/delegate.js';
 export {
   VERBS, recordCausal, addPrivateNote, eventVerb, tickAutonomous, tickDirections, slumberGuard, denyFoodCount,
   valenceOf, charArc, pairKey, pairStage, bondStage, alienated, stageOf, STAGE_NAMES

@@ -57,8 +57,12 @@ export async function referee({ provider, prompts, worldBrief, dayActions, duskA
 }
 
 /** 叙事者：facts → 散文（流式回调可选）。离线时由调用方走直读模板。 */
-export async function narrator({ provider, prompts, worldBrief }, facts, onDelta) {
-  const system = prompts.narrator.replace('{{world}}', worldBrief).replace('{{facts}}', JSON.stringify(facts, null, 1));
+export async function narrator({ provider, prompts, worldBrief }, facts, onDelta, recap = null) {
+  // recap（ME-3 前情钩子）：昨日两段书页的开头——行文要承接前情、避开同款句式（防复读）
+  const recapTxt = (recap && recap.length)
+    ? `\n# 前情（昨日书页的开头，仅供衔接：不许复述、不许续写、开头句式不得与之相同）\n${recap.join('\n')}`
+    : '';
+  const system = prompts.narrator.replace('{{world}}', worldBrief).replace('{{facts}}', JSON.stringify(facts, null, 1)).replace('{{recap}}', recapTxt);
   const r = await provider.call({ system, user: '请渲染。', temperature: 0.85, maxTokens: 4000, stream: !!onDelta, onDelta, thinking: THINKING_LOW });
   return { text: r.text, usage: r.usage };
 }

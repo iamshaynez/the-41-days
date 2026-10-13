@@ -13,7 +13,7 @@ import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickPro
 import { tickAutonomous, tickDirections } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
-import { planDay, planNightStep } from './delegate.js';
+import { planDay, planNightStep, tickDawnLedgers } from './delegate.js';
 import { preludeBeats } from './prelude.js';
 import { mainlineTick } from './mainline.js';
 import { ensembleTick } from './ensemble.js';
@@ -356,6 +356,7 @@ function toDawn(ctx) {
   drawMorningEvents(ctx);
   mainlineTick(ctx);      // 大事轴日步：破晓选步＋闲笔＋投影（叙事双轴 §4.3）
   ensembleTick(ctx);      // 堂屋（人物血肉计划 PR2）：主线日必评史＋随机场，内核先裁决结局拍
+  tickDawnLedgers(ctx);   // 晨报衰减账/知晓度里程碑账（批次二 C-3/体验9；FLAG 镜像可回放）
   s.phase = 'day';
   ctx.emit('PHASE', { to: 'day' });
   ctx.fact('phase_day', { day: s.day, weather: s.weather });

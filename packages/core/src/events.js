@@ -87,6 +87,14 @@ export function chooseEventOption(ctx, optionKey) {
     });
   }
   applyEffects(ctx, card, option, ev);
+  // B-3 选择→回应不断链（二周目实测：拒了逃兵，回应叙事只字不提逃兵）——
+  // 结算事实带足上下文：哪张卡、玩家选了什么、卡面落定的结果文本，叙事者有料可接
+  ctx.fact('card_resolved', {
+    card: card.title,
+    option: option.label,
+    result: (option.effects || {}).text || option.label,
+    ...(card.actor || card.for ? { who: card.actor || card.for } : {})
+  });
   // 夜访链续火（北津台或然 A 的三段）：选项落旗后，同地同夜续点下一拍
   if (s.night && !s.night.home && !s.activeEvent) {
     const loc = ctx.pack.locMap[s.night.locId];
@@ -163,7 +171,10 @@ function applyEffects(ctx, card, option, ev) {
   }
   if (e.abortNight && s.night) { // 撤离夜访
     const n = s.night;
-    ctx.emit('NIGHT_ENDED', { loc: n.locId, reason: 'abort' });
+    ctx.emit('NIGHT_ENDED', { loc: n.locId, reason: 'abort', carried: n.pack.length, gear: n.gear || [] });
+    ctx.fact('night_end', { char: n.charId, loc: ctx.pack.locMap[n.locId]?.name || n.locId, carried: n.pack.length, reason: 'abort' }); // A-1：中断收工也点名夜访者
+    s.lastScavenger = n.charId;
+    ctx.emit('FLAG', { key: 'lastScavenger', val: n.charId });
     s.night = null; s.phase = 'dawn';
     ctx.fact('night_abort', {});
   }
@@ -182,7 +193,7 @@ function applyEffects(ctx, card, option, ev) {
     const items = ctx.pack.items.filter((i) => (s.inventory[i.id] || 0) > 0).sort((a, b) => b.value - a.value);
     for (const it of items) { while ((s.inventory[it.id] || 0) > 0 && left > 0) { ctx.takeItem(it.id, 1, '失窃'); left -= it.value; } }
   }
-  if (e.text) ctx.fact('event_text', { text: e.text });
+  if (e.text) ctx.fact('event_text', { text: String(e.text).replaceAll('{{names}}', s.chars.map((c) => c.name).join('、')) });
   if (e.wound && ev.actorId) {
     const c = charById(s, ev.actorId); if (c) ctx.setWound(c, c.wound + e.wound);
   }
@@ -315,6 +326,7 @@ export function buildEnding(state, pack) {
     const ending = {
       type: 'sidestory',
       day: s.day,
+      title: sideStory.title,
       sidestory: { id: def.id, title: def.title },
       chars,
       threeThings: three,
@@ -327,6 +339,7 @@ export function buildEnding(state, pack) {
   return {
     type: s.war.endingType || 'wiped',
     day: s.day,
+    title: story.title, // C-6：结局对象自带题名（二周目实测 UI/报告侧都得自己去 storyline 里翻）
     chars,
     threeThings: three,
     docs: s.docsSeen,

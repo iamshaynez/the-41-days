@@ -12,6 +12,9 @@ export function mainlineTick(ctx) {
   const step = pickStep(ctx);
   const pens = samplePens(ctx);
   const mirrors = fireMirrors(ctx);
+  // 主线×玩家回声（ME-2）：大事落定的那天，翻一遍这个家的因果账——
+  // 你做过的事在史书的这一天留了影子。钩子长在内容包（echoHooks），内核只对账，零发明。
+  const echo = step ? matchStepEcho(ctx, step) : null;
   if (step?.sense?.moodAll) ctx.moodAll(step.sense.moodAll, 'ml_' + step.id, { helpMul: false });
   if (step) {
     s.firedOnce['ml_' + step.id] = true;
@@ -19,9 +22,29 @@ export function mainlineTick(ctx) {
   }
   if (!step && !pens.length && !mirrors.length) return;
   const entry = { day: s.day, stepId: step?.id || null, pens, mirrors };
+  if (echo) entry.echo = echo;
   (s.mainline ||= []).push(structuredClone(entry));
   ctx.emit('MAINLINE_STEP', entry);
   ctx.fact('mainline_step', { day: s.day, stepId: entry.stepId, pens: pens.length, mirrors: mirrors.length });
+  if (echo) ctx.fact('mainline_echo', { step: step.title, text: echo }); // 进当日叙事轨——史与你要在同一页上
+}
+
+/** 回声钩子匹配（内容即数据：step.echoHooks = [{when:{...}, text}]，命中即用，先挂先得）
+ *  when 支持：{verb, target?}（因果账）、{verb, minCount}、{flag}、{dissolveGte}、{cardShown} */
+function matchStepEcho(ctx, step) {
+  const s = ctx.s;
+  for (const hook of step.echoHooks || []) {
+    const w = hook.when || {};
+    if (w.verb) {
+      const hits = (s.causality?.entries || []).filter((e) =>
+        e.verb === w.verb && (!w.target || e.target === w.target));
+      if (w.minCount ? hits.length >= w.minCount : hits.length > 0) return hook.text;
+    }
+    if (w.flag && s.eventFlags?.[w.flag]) return hook.text;
+    if (w.dissolveGte !== undefined && (s.dissolve || 0) >= w.dissolveGte) return hook.text;
+    if (w.cardShown && (s.cardCount?.[w.cardShown] || 0) > 0) return hook.text;
+  }
+  return null;
 }
 
 function stepWhenOk(s, st) {
@@ -121,6 +144,7 @@ export function buildChronicle(state, pack, annalsByDay = null) {
       title: step?.title || '闲笔',
       text,
       anchor: !!step,
+      ...(e.echo ? { echo: e.echo } : {}), // 主线×玩家回声（ME-2）：史册步下带一行"你"的影子
       pens: (e.pens || []).map((id) => figureMap[id]).filter(Boolean).map((f) => ({ name: f.name, line: f.line })),
       mirrors: (e.mirrors || []).map((id) => mirrorMap[id]).filter(Boolean).map((m) => m.line),
       digest: e.day <= state.day ? dayDigest(state, e.day) : null

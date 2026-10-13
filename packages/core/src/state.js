@@ -107,6 +107,8 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     whispers: [],
     musicLastDay: -99, shovelReturnDay: 0, assistTonight: false, heatedTonight: false,
     rainCollected: 0, weatherForecast: null,
+    // 二周目反馈批次二：晨报慢性问题连报账（衰减）/ 知晓度里程碑已提示档（卡出场账复用 cardCount）
+    problemStreak: {}, knowledgeShown: [],
     report: [], over: false, ending: null,
     morningSeed: 0
   };
