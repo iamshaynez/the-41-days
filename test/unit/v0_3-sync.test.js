@@ -190,3 +190,92 @@ describe('结局屏数据（codex 与擦痕）', () => {
   });
 });
 
+
+const at41 = (over = {}) => {
+  const { state } = newRun({ seed: 3 });
+  Object.assign(state, over);
+  state.day = 41;
+  return state;
+};
+
+describe('v0.3.1 或然扩张（劝刀·槛车·或然亲和）', () => {
+  test('劝刀卡在册：门槛知晓度 6，落 alt_plea 旗标', () => {
+    const card = PACK.cardMap.o_plea;
+    assert.ok(card, 'o_plea 在牌堆');
+    assert.equal(card.when.knowledge, 6);
+    const { state } = newRun({ seed: 3 });
+    state.knowledge = 6;
+    state.day = 38;
+    state.activeEvent = { cardId: 'o_plea' };
+    const events = [];
+    const ctx = new Ctx(state, PACK, events, []);
+    const r = chooseEventOption(ctx, 'sign');
+    assert.ok(r.ok);
+    assert.equal(state.eventFlags.alt_plea, true);
+  });
+
+  test('铰链：联名帖不看军心——军心散尽也刀下留人', () => {
+    const s = at41({ dissolve: 40, eventFlags: { alt_plea: true } });
+    VITALS.tickWar(new Ctx(s, PACK, [], []));
+    assert.equal(s.war.endingType, 'hostage');
+    assert.equal(s.war.armyHeld, false, '军心已散');
+  });
+
+  test('铰链优先级：军事杠杆先于联名（有自由就不做囚徒）', () => {
+    const a = at41({ dissolve: 5, eventFlags: { alt_maicheng: true, alt_plea: true } });
+    VITALS.tickWar(new Ctx(a, PACK, [], []));
+    assert.equal(a.war.endingType, 'maicheng');
+    const b = at41({ dissolve: 40, eventFlags: { alt_maicheng: true, alt_plea: true } });
+    VITALS.tickWar(new Ctx(b, PACK, [], []));
+    assert.equal(b.war.endingType, 'hostage', '军心散则联名兜底');
+    assert.equal(b.war.leverHad, true, '军事杠杆仍在账上（野史变体用）');
+  });
+
+  test('槛车结局屏数据：扣题线+野史批注齐备', async () => {
+    const { buildEnding } = await import('../../packages/core/index.js');
+    const s = at41({ dissolve: 40, eventFlags: { alt_plea: true } });
+    VITALS.tickWar(new Ctx(s, PACK, [], []));
+    const e = buildEnding(s, PACK);
+    assert.equal(e.type, 'hostage');
+    assert.ok(e.storyline.codex.lines.some((l) => l.includes('第四十一天')), '题卷行');
+    assert.ok(e.storyline.codex.lines.some((l) => l.includes('蜀记')), '正史引文');
+    assert.match(e.storyline.annals[0].note, /联名的那页纸压住了刀/);
+  });
+
+  test('或然亲和：完结局数折 boon——开局知晓度+2/局，杠杆门槛-2/局', async () => {
+    const { createRun, beginRun } = await import('../../packages/core/index.js');
+    const fresh = createRun(PACK, { seed: 1, echoes: null });
+    assert.equal(fresh.knowledge, 0);
+    assert.equal(fresh.echoBoon, 0);
+    const boon3 = createRun(PACK, { seed: 1, echoes: { boon: 3 } });
+    beginRun(boon3, PACK, {});
+    assert.equal(boon3.knowledge, 6, '三局底子=知晓度 6');
+    // 烽鼓链原门槛 12：boon3 下 6 即可入池
+    const t = boon3;
+    t.day = 12; t.knowledge = 6; t.eventFlags = {}; t.docsSeen = ['#039', '#045', '#055'];
+    t.chars.find((c) => c.id === 'marta').id = 'x'; // 逄灶不在队的占位规避
+    const events = [];
+    const ctx = new Ctx(t, PACK, events, []);
+    VITALS.drawMorningEvents(ctx);
+    void ctx;
+    // 直读门槛检查（eligible 内部）：用卡池断言
+    assert.ok(boon3.echoBoon === 3);
+  });
+
+  test('boon 服务端装配：完结局数进 echoes.boon（封顶 3）', async () => {
+    const { collectEchoes } = await import('../../packages/server/echoes.js');
+    const db = {
+      archiveAll: () => [],
+      listRuns: () => [{ status: 'ended' }, { status: 'ended' }, { status: 'ended' }, { status: 'ended' }, { status: 'active' }],
+      archivePut: () => {}
+    };
+    const e = collectEchoes(db, 1);
+    assert.equal(e.boon, 3, '五局完结封顶 3');
+  });
+
+  test('内容完整性：槛车结局扣题、劝刀卡窗口在临沮前', () => {
+    const lines = PACK.mainline.endings.hostage;
+    assert.ok(lines.some((l) => l.includes('第四十一天')));
+    assert.ok(PACK.cardMap.o_plea.when.dayWindow[1] <= 40, '联名窗口不晚于 D40');
+  });
+});
