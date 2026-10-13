@@ -270,6 +270,7 @@ export function buildEnding(state, pack) {
     }
     story.codex = {
       lines: pack.mainline?.endings?.[s.war.endingType] || [],
+      futures: pack.mainline?.futures?.[s.war.endingType] || [],
       tracks
     };
   }

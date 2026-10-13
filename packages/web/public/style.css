@@ -1425,3 +1425,10 @@ body.motion-off { scroll-behavior: auto; }
 .chron-track { font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-right: 4px; letter-spacing: .1em; }
 .chron-track.gen { color: #d8b36a; border: 1px solid #6a5327; }
 .chron-track.city { color: #9fc0d8; border: 1px solid #33506a; }
+
+/* 0.21.0 终局改写：变与不变对照 + 后日谈 */
+.finale-line.flip-chg { color: var(--brass, #b08d57); padding-left: 1.2em; border-left: 2px solid var(--brass, #8a6d3b); }
+.finale-line.flip-keep { color: var(--ink-3, #8a8a8a); padding-left: 1.2em; border-left: 2px solid var(--ink-4, #3a3a3a); }
+.finale-act.futures { border-top: 1px dashed var(--brass, #6a5327); }
+.future-line { font-family: var(--font-kai); font-size: 14px; line-height: 2; color: var(--ink-2, #aaa); margin: 4px auto; max-width: 36em; }
+.future-line.blank { color: var(--ink-4, #555); font-style: italic; }
