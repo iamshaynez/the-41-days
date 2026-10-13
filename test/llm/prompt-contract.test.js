@@ -23,3 +23,26 @@ describe('裁判提示词 · 主语解析铁律', () => {
     assert.match(seg, /clarify|追问/, '继承规则附近要落到 clarify 出口');
   });
 });
+
+// —— 自由输入裁决策略（用户实测反馈：条件不绝对满足就追问+清空输入框，体验差）——
+describe('裁判提示词 · 默认裁决与愿望拒绝', () => {
+  test('写了"默认裁决，不追问"的总则', () => {
+    assert.match(referee, /默认裁决，不追问/, '裁决总则存在');
+    assert.match(referee, /宁可执行最合理的解释，也不要把问题抛回给玩家/, '裁决倾向明确');
+  });
+  test('追问只留给两种高危情形', () => {
+    const seg = referee.slice(referee.indexOf('clarify 只留给'), referee.indexOf('clarify 只留给') + 120);
+    assert.match(seg, /出人命|不可逆/, '情形一：人命/不可逆');
+    assert.match(seg, /无法辨认/, '情形二：完全无法辨认');
+  });
+  test('语境补齐规则具体（懂医给药/厨子做饭/点名优先）', () => {
+    assert.match(referee, /懂医的给药/, '配药规则');
+    assert.match(referee, /厨子做饭/, '炊事规则');
+    assert.match(referee, /点名者优先/, '点名优先');
+  });
+  test('离谱愿望走趣味拒绝（echo），且带金样本与人命关天', () => {
+    assert.match(referee, /有趣的拒绝/, '拒绝轨存在');
+    assert.match(referee, /人命关天/, '点题人命关天');
+    assert.ok(/变身超人|超人/.test(referee) && /手枪/.test(referee), '金样本覆盖变身与手枪');
+  });
+});
