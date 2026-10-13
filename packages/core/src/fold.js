@@ -45,6 +45,7 @@ function apply(s, ev) {
     case 'BREAKDOWN_START': { const c = ch(s, d.char); if (c) c.breakdown = { stage: 1 }; break; }
     case 'BREAKDOWN_STAGE': { const c = ch(s, d.char); if (c && c.breakdown) c.breakdown.stage = d.stage; break; }
     case 'BREAKDOWN_RECOVERED': { const c = ch(s, d.char); if (c) { c.breakdown = null; c.soothed = 0; } break; }
+    case 'BREAKDOWN_CALM': { const c = ch(s, d.char); if (c) { c.breakdown = null; c.soothed = 0; } break; } // 自伤收场：崩溃态清零的镜像
     case 'NIGHT_STARTED': {
       if (d.home) s.night = { home: true };
       else s.night = clone(d.night);

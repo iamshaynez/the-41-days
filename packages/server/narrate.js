@@ -1,7 +1,49 @@
 // 直读叙事器 + 世界简报（技术架构 §7.2 降级路径）：把 facts 渲染成文字，与 LLM 叙事者同一输入。
-import { moodLevel, HUNGER_NAMES, HARM_NAMES, SICK_NAMES, FATIGUE_NAMES, aliveChars, charById, policyOf } from '../core/index.js';
+import { moodLevel, HUNGER_NAMES, HARM_NAMES, SICK_NAMES, FATIGUE_NAMES, aliveChars, charById, policyOf, validateTextMarkers, stripMarkers } from '../core/index.js';
+import { markerSyntaxErrors } from '../core/src/markers.js';
 
 const weatherName = { clear: '晴', fog: '雾', rain: '雨', snow: '雪', cold: '严寒' };
+
+/** 事实人名化（B-4）：facts 里的 id 值（角色/物品/地点/商人代号）就地换成中文名——
+ *  叙事者拿到裸 id 会现编人名（一周目实测：franko→"弗兰科"16 处、emil→"埃米尔"）。
+ *  k（事实代号）保留：正文守门会拦英文照抄；值层先消掉最大风险面。纯函数。 */
+export function humanFacts(state, pack, facts) {
+  const alias = new Map();
+  for (const c of state.chars) alias.set(c.id, c.name);
+  for (const [id, def] of Object.entries(pack.charMap || {})) alias.set(id, def.name);
+  for (const it of pack.items || []) alias.set(it.id, it.name);
+  for (const l of pack.locations || []) alias.set(l.id, l.name);
+  alias.set('franko', '鲁舟');
+  alias.set('player', '你');
+  alias.set('home', '家里');
+  const walk = (v) => {
+    if (typeof v === 'string') return alias.has(v) ? alias.get(v) : v;
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    return v;
+  };
+  return (facts || []).map((f) => (f && typeof f === 'object' ? walk(f) : f));
+}
+
+/** 内部 id 的常见音译（玩家侧永远不该见到）：franko=鲁舟、emil=老甑……
+ *  一周目实测 LLM 把 franko_left 的代号音译成「弗兰科」16 处——纯中文，
+ *  西文守门拦不住，这里按词拦（黑名单均不在正典文本中，已核）。 */
+const TRANSLIT_BAN = [
+  '弗兰科', '法兰科', '弗兰克', '弗朗哥', '埃米尔', '艾米丽', '玛尔塔', '马尔塔',
+  '帕维尔', '巴维尔', '索菲亚', '苏菲亚', '格里戈里', '格里高利', '卡秋莎',
+  '达尼洛', '阿列克谢', '亚历克谢', '尤拉', '安东', '卡佳', '布隆', '薇拉'
+];
+
+/** 叙事后守门（B-4）：中文书页不收西文串、不收野标记、不收音译名。返回 reasons（空=过）。 */
+export function narrationLint(text, pack) {
+  const reasons = [];
+  const t = String(text || '');
+  if (/[A-Za-z]{3,}/.test(t)) reasons.push('西文串泄漏');
+  if (TRANSLIT_BAN.some((w) => t.includes(w))) reasons.push('内部代号音译');
+  if (markerSyntaxErrors(t).length) reasons.push('标记语法不对');
+  if (validateTextMarkers(t, pack).length) reasons.push('名词不在册');
+  return reasons;
+}
 
 /** 世界简报（裁判/叙事者共享的只读上下文） */
 export function worldBrief(state, pack) {

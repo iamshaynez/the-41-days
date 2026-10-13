@@ -2041,6 +2041,136 @@
           }
         }
       ]
+    },
+    {
+      "id": "n_washer",
+      "kind": "knock",
+      "weight": 5,
+      "when": {
+        "phase": "any",
+        "minDay": 5,
+        "chance": 1,
+        "cooldown": 12
+      },
+      "title": "敲门：浣衣妇",
+      "actor": "neighbor",
+      "text": "一个挎着湿木盆的妇人站在门外，手背皴得裂口。她不讨，她换：\"给我一份吃食，你们两家的衣裳我包了——水我来提，碱我来省。\"\n她男人在降卒营，家里三个孩子。她的手泡在冷水里的日子，比围城长得多。\n[[要|一份吃食，换一冬的干净衣裳]]。",
+      "options": [
+        {
+          "key": "swap",
+          "label": "换。给她一份吃的",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "reputation": {
+              "neighbor": 1
+            },
+            "text": "她把两家的衣裳都浆洗了一遍，晾在檐下。晚上收衣的时候，每个人身上都是皂角味——这个冬天第一次，屋里闻着像个家。"
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "自家都吃不饱，回绝",
+          "effects": {
+            "mood": {
+              "softHearted": -1,
+              "default": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "n_herbal",
+      "kind": "knock",
+      "weight": 5,
+      "when": {
+        "phase": "any",
+        "minDay": 7,
+        "chance": 1,
+        "cooldown": 12
+      },
+      "title": "敲门：讨水的采药人",
+      "actor": "stranger",
+      "text": "一个背着竹篓的老人敲门讨一口热水。他的篓子里是半干的草药——城外的坡他天不亮就去，露水未干时采的药才够性。\n\"一口热水，一把草药。你们熬着，我采着，谁也不欠谁。\"\n[[要|滚水换草药，公道的买卖]]。",
+      "options": [
+        {
+          "key": "swap",
+          "label": "烧水给他，换两把草药",
+          "requires": {
+            "item": "water"
+          },
+          "effects": {
+            "consumeChoice": [
+              "water"
+            ],
+            "items": {
+              "herb": 2
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "老人捧着碗坐门槛上喝完，从篓里抓了两把草药搁在窗台：「熬浓点。咳嗽的、外伤的，都使得。」"
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "水也是省着的，回绝",
+          "effects": {
+            "mood": {
+              "default": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "n_storyteller",
+      "kind": "knock",
+      "weight": 4,
+      "when": {
+        "phase": "any",
+        "minDay": 9,
+        "chance": 1,
+        "cooldown": 14
+      },
+      "title": "敲门：说书人",
+      "actor": "stranger",
+      "text": "门环响了两下。是个抱着醒木的说书人——南市的书场散了，他一路换着人家借宿，宿钱就是半个时辰的书。\n\"讲段旧的。讲建安七年前的事，讲那时候的[[地|南市]]，讲没有围城的年月。\"\n[[要|一根柴，换半个没有围城的时辰]]。",
+      "options": [
+        {
+          "key": "host",
+          "label": "添根柴，听他讲",
+          "cost": [
+            {
+              "item": "firewood",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "all": 2
+            },
+            "text": "醒木一拍，满屋都是建安六年的人间。讲到旧年南市的上元灯，辛夷他们不自觉地朝彼此挪了挪凳子。散场时没人说话——有些好日子是借来的，借的也是真的。"
+          }
+        },
+        {
+          "key": "sendoff",
+          "label": "不留，赠他一句路上小心",
+          "effects": {
+            "mood": {
+              "default": 0
+            }
+          }
+        }
+      ]
     }
   ],
   "broadcasts": {

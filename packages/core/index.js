@@ -1,6 +1,8 @@
 // 内核对外出口（分层边界：core 是零 I/O 纯函数包）。
 export { Rng, clamp, hashStr } from './src/rng.js';
 export { loadPack, loadPrompt, DEFAULT_PACK_DIR } from './src/content.js';
+export { normalizeProposal } from './src/ge.js';
+export { REJECT_TEXT, rejectText } from './src/rejects.js';
 export {
   createRun, newChar, moodLevel, apMaxOf, combatModOf, aliveChars, charById, homeValue, bestWeapons,
   MOOD_LEVELS, HUNGER_NAMES, HARM_NAMES, SICK_NAMES, FATIGUE_NAMES, difficultyCfg,

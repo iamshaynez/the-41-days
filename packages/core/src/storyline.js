@@ -292,6 +292,7 @@ export function memoirLint(text, story, pack) {
   const t = text.trim();
   if (t.length < 80 || t.length > 2400) return false;
   if (t.includes('{{') || t.includes('}}')) return false;
+  if (/[A-Za-z]{3,}/.test(t)) return false; // 中文书页不收西文串（B-4：franko 式代号音译）
   // 提到的天数不得超出本局（防"第 99 天"式幻觉）
   for (const m of t.matchAll(/第\s*(\d+)\s*天/g)) {
     if (Number(m[1]) > story.days) return false;
@@ -377,6 +378,7 @@ export function biographyLint(text, ep, story) {
   const t = text.trim();
   if (t.length < 60 || t.length > 800) return false;
   if (t.includes('{{') || t.includes('}}')) return false;
+  if (/[A-Za-z]{3,}/.test(t)) return false; // 中文书页不收西文串（B-4）
   if (!t.includes(ep.name)) return false;
   const days = new Set((ep.timeline || []).map((x) => x.day));
   let cited = false;
