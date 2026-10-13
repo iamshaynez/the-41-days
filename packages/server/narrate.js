@@ -27,9 +27,27 @@ export function worldBrief(state, pack) {
   return `第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${night}${sealNote}${dirTxt}`;
 }
 
+/** 模板变体选条（文案丰满批次一）：模板值可为字符串或数组——数组按
+ *  （种子 × 日期 × 模板路径）确定性取一。纯函数：同局同日同模板必得同条（回放一致），
+ *  跨日自然换条，叙事有呼吸感。 */
+function pickVariants(node, state, path = '') {
+  if (Array.isArray(node)) {
+    if (!node.length) return node;
+    let h = (state.seed || 0) ^ ((state.day || 0) * 97);
+    for (const ch of path) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    return node[Math.abs(h) % node.length];
+  }
+  if (node && typeof node === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(node)) out[k] = pickVariants(v, state, path + '/' + k);
+    return out;
+  }
+  return node;
+}
+
 /** 直读渲染：facts → 模板文（每条 fact 至少一行；缺模板时用通用行） */
 export function renderDirect(state, facts, pack) {
-  const t = pack.narrations;
+  const t = pickVariants(pack.narrations, state);
   const lines = [];
   // 死者仍在 chars 里但 alive=false——charById 只查活人，会漏成内部 id（"bron的病"）。
   // 人名先查本局名册（含死者），再查内容包，最后才落 id。

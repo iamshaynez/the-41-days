@@ -912,7 +912,8 @@ function syncAsks(s) {
       node.classList.add('ask-urgent');
       node.innerHTML = askHead('急件', v.title, evIcon);
       const body = el('div', 'ask-body');
-      for (const p of String(v.text).split('\n').filter(Boolean)) body.appendChild(el('p', '', esc(p)));
+      // 卡面正文走 rich：内容包的 [[要|]] 朱批与名词标注在事件卡上同样生效（文案丰满批次一）
+      for (const p of String(v.text).split('\n').filter(Boolean)) { const elp = el('p', '', rich(p)); markNouns(elp); body.appendChild(elp); }
       node.appendChild(body);
       const opts = el('div', 'ask-opts');
       v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendIntents([{ type: 'event_choice', option: o.key }], o.label), '', o.ok === false ? (o.why || '条件不够') : '')));
@@ -970,7 +971,7 @@ function syncAsks(s) {
       if (s.duskView.fate) {
         const fate = el('div', 'fate-box');
         fate.appendChild(el('p', 'fate-title', esc(s.duskView.fate.title)));
-        for (const p of String(s.duskView.fate.text).split('\n').filter(Boolean)) fate.appendChild(el('p', '', esc(p)));
+        for (const p of String(s.duskView.fate.text).split('\n').filter(Boolean)) { const elp = el('p', '', rich(p)); markNouns(elp); fate.appendChild(elp); }
         const fopts = el('div', 'ask-opts');
         s.duskView.fate.options.forEach((o) => fopts.appendChild(optBtn(o.label, '◆', () => sendIntents([{ type: 'event_choice', option: o.key }], o.label), '', o.ok === false ? (o.why || '条件不够') : '')));
         fate.appendChild(fopts);
@@ -1101,7 +1102,7 @@ function renderPrologue(s) {
   const v = s.eventView;
   const box = el('div', 'prologue');
   box.innerHTML = `<span class="kicker">${esc(v.title)}</span>`;
-  for (const p of String(v.text).split('\n').filter(Boolean)) box.appendChild(el('p', '', esc(p)));
+  for (const p of String(v.text).split('\n').filter(Boolean)) { const elp = el('p', '', rich(p)); markNouns(elp); box.appendChild(elp); }
   const opts = el('div', 'prologue-opts');
   v.options.forEach((o, i) => {
     const b = el('button', 'opt', `<span class="key">${i + 1}</span><span>${esc(o.label)}</span>`);
