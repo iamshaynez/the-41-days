@@ -208,7 +208,9 @@ export async function healthCheck(cfg) {
   const t0 = Date.now();
   try {
     const p = makeProvider(cfg);
-    const r = await p.call({ user: '请只回复两个字：正常', maxTokens: 16 });
+    // 预算必须留足：思维链模型（GLM-5.3-Flash 实测）会把小预算烧在 thinking 块上，
+    // 正文一个字没出就 stop=max_tokens，空正文守卫把好端点误报成故障
+    const r = await p.call({ user: '请只回复两个字：正常', maxTokens: 512 });
     return { ok: true, provider: cfg.name || cfg.model, model: cfg.model, latencyMs: Date.now() - t0, echo: (r.text || '').slice(0, 40), usage: r.usage, at: new Date().toISOString() };
   } catch (e) {
     return { ok: false, provider: cfg.name || cfg.model, model: cfg.model, latencyMs: Date.now() - t0, error: String(e.message || e).slice(0, 300), at: new Date().toISOString() };
