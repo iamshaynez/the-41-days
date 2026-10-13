@@ -1007,6 +1007,9 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .cover h1 em { font-style: normal; color: var(--accent); text-shadow: none; }
 .cover .subtitle { font-size: 14px; letter-spacing: .5em; text-indent: .5em; color: var(--ink-2); margin-bottom: 24px; }
 .cover .lede { max-width: 40em; }
+/* 封面的信息层：氛围句之后、表单之前的白话前提段——字色重半度，与抒情区分 */
+.cover .lede.premise { color: var(--ink); margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--rule); }
+.cover .lede.premise .mk-y { font-weight: 700; }
 /* 封泥：一方朱泥白文印，压住这卷帛书的卷首 */
 .seal {
   position: absolute; top: 38px; right: 42px; width: 84px; height: 84px; z-index: 2;
