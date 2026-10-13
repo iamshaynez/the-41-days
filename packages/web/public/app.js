@@ -301,6 +301,8 @@ async function sendIntents(intents, label) {
 }
 async function send(payload, displayText) {
   if (state.busy || !state.runId) return;
+  // 草稿账：自由输入被追问（clarify）时原句回填输入行——别让玩家重打一遍
+  state.lastDraft = typeof payload.input === 'string' && payload.input.trim() ? payload.input : null;
   state.busy = true;
   setCardsEnabled(false);
   hideCharPop();
@@ -350,12 +352,26 @@ function handleSse(block) {
   const data = dataRaw ? JSON.parse(dataRaw) : {};
   if (ev === 'narration-delta') streamNarrate(data.d || '');
   if (ev === 'memoir-delta') streamMemoir(data.d || '');
-  if (ev === 'clarify') narrateRaw('……' + data.text, { cls: 'clarify' });
+  if (ev === 'clarify') {
+    narrateRaw('……' + data.text, { cls: 'clarify' });
+    if (state.lastDraft) state.restoreDraft = state.lastDraft; // 状态落定后把原句放回输入行
+  }
   if (ev === 'echo') narrateRaw(data.text, { cls: 'clarify' }); // 世界接住狂语的一笔（零状态变化）
   if (ev === 'stage') narrateRaw(data.text); // 戏文轨：舞台导演接的一拍，落进正文
   if (ev === 'ensemble') narrateEnsemble(data); // 堂屋：晨间对话块（内核先裁决，台词是演出）
-  if (ev === 'state-patch') applyState(data.state);
-  if (ev === 'done') { if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' }); }
+  if (ev === 'state-patch') { applyState(data.state); restoreDraft(); }
+/** 被追问的那句话放回输入行：在原句上改，比重打一遍体面 */
+function restoreDraft() {
+  if (!state.restoreDraft) return;
+  const draft = state.restoreDraft;
+  state.restoreDraft = null;
+  const inp = document.querySelector('.opt-free input');
+  if (inp) { inp.value = draft; inp.focus({ preventScroll: true }); inp.setSelectionRange(draft.length, draft.length); }
+}
+  if (ev === 'done') {
+    if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' });
+    restoreDraft(); // 追问轮不发 state-patch（state 挂在 done 里）——回填挂这里才追得上
+  }
   if (ev === 'error') narrateRaw('（出错：' + esc(data.error) + '）', { cls: 'sys' });
 }
 
