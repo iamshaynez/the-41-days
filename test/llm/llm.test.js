@@ -33,6 +33,14 @@ before(async () => {
         return;
       }
       if (req.url === '/v1/messages') { // 协议约定路径（GLM 实测裸 /messages 是 200 包 404）
+        // 模拟思维链模型（GLM-5.3-Flash 实测）：thinking 块先烧 token，探测预算不足时正文被烧空
+        if (payload.messages?.[0]?.content?.includes('正常')) {
+          const burned = (payload.max_tokens ?? 0) < 512
+            ? { content: [], stop_reason: 'max_tokens' }
+            : { content: [{ type: 'text', text: '正常' }] };
+          res.writeHead(200, { 'content-type': 'application/json' });
+          return res.end(JSON.stringify(burned));
+        }
         res.writeHead(200, { 'content-type': 'application/json' });
         return res.end(JSON.stringify({ content: [{ type: 'text', text: '（anthropic 桩）' }] }));
       }
@@ -67,6 +75,11 @@ describe('Provider 适配器（L4-1）', () => {
     const h = await healthCheck({ adapter: 'openai-compat', baseUrl: `http://127.0.0.1:${port}/x`, model: 'stub', apiKey: 'k' });
     assert.equal(h.ok, false);
     assert.ok(h.error);
+  });
+  test('连通性测试为思维链模型留足预算（GLM-5.3-Flash 实测：16 token 被 thinking 烧尽 → 空正文误报）', async () => {
+    const h = await healthCheck({ adapter: 'anthropic-compat', baseUrl: `http://127.0.0.1:${port}`, model: 'stub', apiKey: 'k', name: '思维链桩' });
+    assert.equal(h.ok, true, h.error || '探测应成功');
+    assert.equal(h.echo, '正常');
   });
 });
 
