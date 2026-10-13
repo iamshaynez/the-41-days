@@ -676,6 +676,16 @@
           }
         },
         {
+          "key": "bypass",
+          "label": "不动他，去翻别的铺面",
+          "effects": {
+            "npcState": {
+              "m_looter": "ignored"
+            },
+            "text": "你退出这间铺子，从街那头重新摸进去。刀没有追出来——他的腿和他的手一样在抖。"
+          }
+        },
+        {
           "key": "retreat",
           "label": "退出南市",
           "effects": {

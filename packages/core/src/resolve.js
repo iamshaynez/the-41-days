@@ -95,6 +95,14 @@ export function resolveInput(state, pack, intents) {
   }
   // 夜晚在家 → 立即走完晨线
   if (state.phase === 'night' && state.night?.home) toDawn(ctx);
+  // 夜未收工且无待决事件、不停在岔路上：方针/微操自愈续跑——
+  // 玩家答完事件或点了单步岔路选项（按钮只带一个 night 动作）后，
+  // 夜不能停在半途等人再点「继续」；同一批输入里走到底（到下一个岔路或收工）
+  if (state.phase === 'night' && state.night && !state.night.home && !state.activeEvent
+    && state.night.slots > 0 && !state.night.atFork) {
+    if (state.night.directive) runDirectiveNight(ctx, rejects, state.night.directive.stance);
+    else if (state.night.micro) runAutoNight(ctx, rejects, {});
+  }
   // 夜晚时间槽耗尽 → 收尾
   if (state.phase === 'night' && state.night && !state.night.home && state.night.slots <= 0) {
     endNightReturn(ctx, 'slots_out');
@@ -131,7 +139,13 @@ function runAutoNight(ctx, rejects, autoIntent) {
     }
     if (step.stop) {
       if (step.stop.kind === 'event') break; // 事件卡接管叙事
-      ctx.fact('night_fork', { kind: step.stop.kind, text: step.stop.text, options: step.stop.options.map((o) => o.label) });
+      // 同一岔路只问一次：选项自带的 auto_night 续跑、收尾段自愈都可能再次规划到
+      // 同一个停点——atFork 标记「已问过」，不重复落 night_fork 账
+      if (!s.night.atFork) {
+        s.night.atFork = true;
+        ctx.emit('NIGHT_PATCH', { atFork: true });
+        ctx.fact('night_fork', { kind: step.stop.kind, text: step.stop.text, options: step.stop.options.map((o) => o.label) });
+      }
       break;
     }
     ctx.delegated = true;
@@ -175,7 +189,8 @@ function applyOne(ctx, intent) {
       if (s.night?.home) return { ok: false, reason: 'HOME_NIGHT' };
       const r = applyNightAction(ctx, intent);
       if (r.ok && s.night && !s.night.home) {
-        ctx.emit('NIGHT_PATCH', { room: s.night.room, slots: s.night.slots, noise: s.night.noise, pack: [...s.night.pack], packSlots: s.night.packSlots, observed: { ...s.night.observed }, unlocked: { ...s.night.unlocked }, cleared: { ...s.night.cleared }, sawed: { ...s.night.sawed }, lowSlotsAck: !!s.night.lowSlotsAck, micro: true, ...(s.night.directive ? { directive: s.night.directive } : {}) });
+        s.night.atFork = false; // 手动作答 = 玩家接过了这个岔路（收尾段可继续自走）
+        ctx.emit('NIGHT_PATCH', { room: s.night.room, slots: s.night.slots, noise: s.night.noise, pack: [...s.night.pack], packSlots: s.night.packSlots, observed: { ...s.night.observed }, unlocked: { ...s.night.unlocked }, cleared: { ...s.night.cleared }, sawed: { ...s.night.sawed }, lowSlotsAck: !!s.night.lowSlotsAck, atFork: false, micro: !!s.night.micro, ...(s.night.directive ? { directive: s.night.directive } : {}) });
       }
       return r;
     }
@@ -407,7 +422,9 @@ function runDirectiveNight(ctx, rejects, stance) {
 /** 岔路选项按立场排序挑选（确定性：平分取先出现者） */
 function pickForkOptionByStance(options, stance) {
   const PRIORITY = {
-    cautious: ['retreat', 'ignore', 'push_on', 'dialogue', 'attack', 'backstab'],
+    // 谨慎 =「见人就绕」：遇人先绕开（ignore）接着翻；绕不开（敌意无绕行项）才撤；
+    // 火柴见底、有人警觉也是先撤——撤退仍然排在硬撑（push_on）前面
+    cautious: ['ignore', 'retreat', 'push_on', 'dialogue', 'attack', 'backstab'],
     normal: ['dialogue', 'ignore', 'retreat', 'push_on', 'attack', 'backstab'],
     bold: ['backstab', 'attack', 'push_on', 'dialogue', 'ignore', 'retreat']
   };
@@ -423,14 +440,18 @@ function pickForkOptionByStance(options, stance) {
   return [...options].sort((a, b) => rank(a) - rank(b))[0] || options[0];
 }
 
-/** 事件卡按立场自动应：谨慎挑无代价无风险项，放手挑有收益/敢冒险的项 */
+/** 事件卡按立场自动应：谨慎挑无代价无风险项，放手挑有收益/敢冒险的项。
+ *  弃夜选项（effects.abortNight）是"就此收工"的保底，不是立场首选——
+ *  只有别无可行项时才自动撤（否则照常/谨慎方针在南市首访会"到达即退出"，整夜零探索）。 */
 function pickEventOptionByStance(card, ctx, stance) {
   const opts = (card.options || []).filter((o) => optionAvailable(ctx, o) && optionCostOk(ctx, o));
   if (!opts.length) return null;
   const risk = (o) => (o.riskCheck ? 1 : 0) + (o.cost?.length ? 1 : 0);
   const gain = (o) => Object.keys(o.effects?.items || {}).length;
-  const pick = stance === 'cautious' ? opts.sort((a, b) => risk(a) - risk(b))[0]
-    : stance === 'bold' ? opts.sort((a, b) => (gain(b) - gain(a)) || (risk(b) - risk(a)))[0]
-    : opts.find((o) => risk(o) === 0) || opts[0];
+  const stay = opts.filter((o) => !o.effects?.abortNight);
+  const pool = stay.length ? stay : opts;
+  const pick = stance === 'cautious' ? pool.sort((a, b) => risk(a) - risk(b))[0]
+    : stance === 'bold' ? pool.sort((a, b) => (gain(b) - gain(a)) || (risk(b) - risk(a)))[0]
+    : pool.find((o) => risk(o) === 0) || pool.sort((a, b) => risk(a) - risk(b))[0];
   return pick || null;
 }
