@@ -43,16 +43,14 @@ async function sendInput(id, payload) {
 const view = (id) => api('GET', `/api/runs/${id}`).then((r) => r.body);
 
 describe('序章三幕 · HTTP 全链', () => {
-  test('开场选「完整」：三幕全量推进；推到第 1 天即有史卷与舆图', async () => {
+  test('首局：完整三幕直接开始、不可跳；推到第 1 天即有史卷与舆图', async () => {
     const r = await api('POST', '/api/runs', { mode: 'direct', seed: 7, roster: ['zofia', 'anton', 'marta'] });
     assert.equal(r.status, 200);
     const id = r.body.id;
     let s = r.body.state;
     assert.equal(s.phase, 'prologue');
-    assert.equal(s.preludeView.id, 'openingChoice', '第一拍是开场二选一');
-    await sendInput(id, { intents: [{ type: 'prelude_full' }] });
-    s = (await view(id)).state;
-    assert.equal(s.preludeView.canSkip, false, '选了完整三幕就不可跳');
+    assert.notEqual(s.preludeView.id, 'openingChoice', '未通关不设选择，直接进三幕');
+    assert.equal(s.preludeView.canSkip, false, '完整三幕不可跳');
     assert.ok(s.preludeView.total >= 10, '全量节拍在册');
     assert.ok(s.mapView.places.some((p) => p.id === 'home' && p.state === 'known'), '舆图就位');
     let guard = 0;
@@ -78,34 +76,34 @@ describe('序章三幕 · HTTP 全链', () => {
     assert.equal(s.chronicle.entries[0]?.title, '大胜之秋');
   });
 
-  test('开场二选一（拍板 v4）：每一局都从「完整 or 精简」开始，与账号历史无关', async () => {
-    // 新账号的第一局：第一拍就是选择，选「完整」翻全卷、选「精简」单句天下
+  test('开场二选一门（拍板 v5）：本账号活到战争收束才有选择，未通关一律完整三幕', async () => {
+    // 新账号第一局：无选择，直接完整三幕（不可跳）
     const r1 = await api('POST', '/api/runs', { mode: 'direct', seed: 11, roster: ['anton', 'marta', 'bron'] });
-    assert.equal(r1.body.state.preludeView.id, 'openingChoice', '首局也有开场二选一');
-    // 拣「精简开场」：下一拍是单句天下
-    await sendInput(r1.body.id, { intents: [{ type: 'advance' }] });
-    let s1 = (await view(r1.body.id)).state;
-    assert.equal(s1.preludeView.id, 'heavenLine', '精简开场进单句版');
-    assert.equal(s1.preludeView.canSkip, true, '精简版可跳');
-    // 局一人为收束为全灭（wiped）——下一局仍有开场选择（旧首局门废止）
+    assert.notEqual(r1.body.state.preludeView.id, 'openingChoice', '未通关不见开场选择');
+    assert.equal(r1.body.state.preludeMode, 'full', '默认完整三幕');
+    assert.equal(r1.body.state.preludeView.canSkip, false, '完整三幕不可跳');
+    // 局一人为收束为全灭（wiped）——不算完结，下一局仍无选择
     const st1 = app.db.getRun(r1.body.id).state;
     st1.over = true; st1.ending = { type: 'wiped' };
     app.db.finishRun(r1.body.id, st1, st1.ending);
     const r2 = await api('POST', '/api/runs', { mode: 'direct', seed: 12, roster: ['anton', 'marta', 'bron'] });
-    assert.equal(r2.body.state.preludeView.id, 'openingChoice', '全灭之后的新局同样从选择开始');
-    // 拣「完整开场」：模式翻全、此后不可跳、拍数多于精简版
-    await sendInput(r2.body.id, { intents: [{ type: 'prelude_full' }] });
-    const s2 = (await view(r2.body.id)).state;
-    assert.equal(s2.preludeMode, 'full', '模式翻全');
-    assert.equal(s2.preludeView.canSkip, false, '完整三幕不设快门');
-    assert.ok(s2.preludeView.total > s1.preludeView.total, '完整版拍数更多');
-    // 通关（ceasefire）之后的新局：不因通关被夺走选择——仍然从二选一开始
+    assert.notEqual(r2.body.state.preludeView.id, 'openingChoice', '全灭不算完结，仍无选择');
+    // 局二活到开城（ceasefire）——账号有完结记录，此后每一局从选择开始
     const st2 = app.db.getRun(r2.body.id).state;
     st2.over = true; st2.ending = { type: 'ceasefire' };
     app.db.finishRun(r2.body.id, st2, st2.ending);
     const r3 = await api('POST', '/api/runs', { mode: 'direct', seed: 13, roster: ['anton', 'marta', 'bron'] });
-    assert.equal(r3.body.state.preludeView.id, 'openingChoice', '通关之后仍从选择开始');
-    assert.equal(r3.body.state.preludeView.canSkip, true, '选择拍本身可跳（选定精简后即可翻过）');
+    assert.equal(r3.body.state.preludeView.id, 'openingChoice', '完结之后才有开场二选一');
+    // 选择拍两条路都走得通：拣「精简」进单句版，再开一局拣「完整」翻全三幕
+    await sendInput(r3.body.id, { intents: [{ type: 'advance' }] });
+    let s3 = (await view(r3.body.id)).state;
+    assert.equal(s3.preludeView.id, 'heavenLine', '精简开场进单句版');
+    const r4 = await api('POST', '/api/runs', { mode: 'direct', seed: 14, roster: ['anton', 'marta', 'bron'] });
+    await sendInput(r4.body.id, { intents: [{ type: 'prelude_full' }] });
+    const s4 = (await view(r4.body.id)).state;
+    assert.equal(s4.preludeMode, 'full', '完整开场翻全三幕');
+    assert.equal(s4.preludeView.canSkip, false, '完整三幕不设快门');
+    assert.ok(s4.preludeView.total > s3.preludeView.total, '完整版拍数更多');
     assert.ok(r3.body.state.chronicle, '史卷在卷');
   });
 

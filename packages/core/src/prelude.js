@@ -24,7 +24,7 @@ export function preludeBeats(pack, s) {
   const short = (s.preludeMode || 'full') === 'short';
   const beats = [];
   if (short) {
-    // 开场二选一（拍板 v4）：第一拍二选一——完整三幕 or 精简版；玩家局由 server 默认 short 进入
+    // 开场二选一（拍板 v5）：第一拍二选一——完整三幕 or 精简版；server 仅对本账号完结过一周目的玩家放行 short
     if (p.openingChoice) beats.push({ t: 'text', id: p.openingChoice.id || 'openingChoice', source: 'openingChoice', title: p.openingChoice.title || '开场', text: p.openingChoice.text });
     if (p.heavenLine) beats.push({ t: 'text', id: 'heavenLine', source: 'heavenLine', title: '天下', text: p.heavenLine });
   } else {
