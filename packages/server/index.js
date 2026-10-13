@@ -465,7 +465,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         // 开场二选一门（拍板 v5 = v4 的选择形式 + v2 的账号门回归）：本账号「完结一周目」
         // ——活到战争收束的结局（全灭/别传不算：死过的人，还配听一遍完整的开场）——
         // 才给「完整三幕 or 精简版」选择；未通关一律直接完整三幕。body.preludeMode 仍是测试/开发后门。
-        const WAR_ENDINGS = ['ceasefire', 'contract_end', 'maicheng', 'pyrrhic', 'alt_both', 'lighthouse', 'join_table'];
+        const WAR_ENDINGS = ['ceasefire', 'contract_end', 'maicheng', 'pyrrhic', 'alt_both', 'lighthouse', 'join_table', 'hostage'];
         const cleared = db.listRuns(s.userId).some((r) => r.status === 'ended' && WAR_ENDINGS.includes(r.ending_type));
         const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : (cleared ? 'short' : 'full');
         const state = createRun(pack, { seed: body.seed || Math.floor(Math.random() * 1e9), difficulty: body.difficulty || 'documentary', roster: body.roster, prologue, preludeMode, echoes, sidestory: sideDef?.id || null });

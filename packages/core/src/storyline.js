@@ -228,6 +228,7 @@ export function buildStoryline(state, pack) {
     alt_both: { text: '门没有开到底，军没有散尽，将军没有死。', note: '这个秋天没有照任何一本书里写的走。你们就是野史。' },
     lighthouse: { text: '真相比刀快：烽鼓之信入麦城，羽收兵，全军而退。', note: '荆州没有被救——它只是换了一种被战争使用的方式。可这座城知道了真话。' },
     join_table: { text: '有舟夜发，符传三张。江陵册上，此后无名。', note: '你活着离开了江陵——这句话，往后要对自己说很多年。' },
+    hostage: { text: '十二月，吴人获羽于章乡，不杀，槛送武昌。荆州入吴，将军为质。', note: '杀降不祥——联名的那页纸压住了刀。你们救下的不是对错，是一条命。' },
     contract_end: { text: '契书用印，城易其主。', note: '章比刀兵体面，一样凉。' }
   };
   const annals = ANNALS[s.war.endingType] ? [{ ...ANNALS[s.war.endingType], ending: s.war.endingType }] : [];

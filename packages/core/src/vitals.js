@@ -243,13 +243,17 @@ export function tickWar(ctx) {
     war.ended = true;
     const th = ctx.pack.manifest.war.dissolveThreshold ?? 22;
     const armyHeld = (s.dissolve || 0) < th;
-    const lever = (s.eventFlags.alt_maicheng && s.eventFlags.alt_jiangling) ? 'alt_both'
+    // 军事杠杆（须军心未散才撬得动大势）：麦城鼓 / 火线证据 / 双杠杆叠加
+    const mil = (s.eventFlags.alt_maicheng && s.eventFlags.alt_jiangling) ? 'alt_both'
       : s.eventFlags.alt_maicheng ? 'maicheng'
       : s.eventFlags.alt_jiangling ? 'pyrrhic'
       : null;
-    war.endingType = (lever && armyHeld) ? lever : 'ceasefire';
+    // 人心杠杆（《蜀记》"权欲活羽"的争论）：一页联名帖压秤——不看军心，
+    // 配合到底的家只要读够了这座城，也救得下那条命
+    const plea = s.eventFlags.alt_plea ? 'hostage' : null;
+    war.endingType = armyHeld ? (mil || plea || 'ceasefire') : (plea || 'ceasefire');
     war.armyHeld = armyHeld;      // 野史批注用：军心未散而刀仍落 → 「你拦过，史官不知道」
-    war.leverHad = !!lever;       // 有杠杆而军心已散 → 「机关拆了，军队散了」
+    war.leverHad = !!mil;         // 军事杠杆而军心已散 → 「机关拆了，军队散了」（联名帖不在此列）
     ctx.emit('WAR_ENDED', { type: war.endingType, day: s.day });
   }
   if (!war.ended && s.day >= ctx.pack.manifest.war.forceEndDay) {
@@ -366,7 +370,7 @@ export function drawMorningEvents(ctx) {
     if (w.requiresDocs && !w.requiresDocs.every((d) => s.docsSeen.includes(d))) return false;
     if (w.requiresAnyDoc && !w.requiresAnyDoc.some((d) => s.docsSeen.includes(d))) return false;
     if (w.requiresFacility && !s.facilities[w.requiresFacility]) return false;
-    if (w.knowledge && s.knowledge < w.knowledge) return false;
+    if (w.knowledge && s.knowledge < w.knowledge - (s.echoBoon || 0) * 2) return false; // 或然亲和：读过城的人，门槛让二分
     if (w.flagDayGte && s.day < (s.eventFlags[w.flagDayGte] || 0)) return false; // "几天后"相对门（"+N"旗标配套）
     if (w.minDay && s.day < w.minDay) return false;
     if (w.maxDay && s.day > w.maxDay) return false; // 或然 B 的 D30 截止

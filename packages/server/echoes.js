@@ -19,6 +19,10 @@ export function collectEchoes(db, userId) {
     }
   }
   if (arch.some((e) => e.kind === 'closure' && e.key === 'closed')) echoes.closureClosed = true;
+  // 或然亲和（v0.3.1）：完结过的周目折算成新局的"读城"底子——开局知晓度+2/局，
+  // 杠杆卡的知晓度门槛-2/局（上限 3 局）。档案馆的记忆就是玩家的记忆。
+  const done = db.listRuns(userId).filter((r) => r.status === 'ended').length;
+  if (done > 0) echoes.boon = Math.min(done, 3);
   return Object.keys(echoes).length ? echoes : null;
 }
 
