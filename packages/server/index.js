@@ -246,6 +246,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   function enrich(state, annalsByDay = null) {
     const view = { ...state };
     view.itemNames = Object.fromEntries(pack.items.map((i) => [i.id, i.name]));
+    view.itemFlavors = Object.fromEntries(pack.items.filter((i) => i.flavor).map((i) => [i.id, i.flavor]));
     // 叙事双轴三视图（叙事双轴-v0.1）：序章节拍 / 舆图（三态+走向+留痕）/ 史卷（步+闲笔+digest）
     if (state.phase === 'prologue' && !state.over) view.preludeView = preludeBeatView(pack, state);
     view.mapView = mapView(state, pack);
@@ -456,10 +457,12 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const prologue = body.sidestory ? false : body.prologue !== false; // 玩家局默认带序章（围城头九天）；测试/sim 显式关闭
         // —— 跨周目回响装配（长线体验 EC 系）：档案馆里有什么，新局就从什么里长出来 ——
         const echoes = collectEchoes(db, s.userId);
-        // 开场二选一（拍板 v4，取代首局门 v2）：每一局都从「完整三幕 or 精简版」的选择开始——
-        // 选择本身就是入场礼，与账号通关与否无关。默认 short（选择拍只在 short 节拍册里）；
-        // 拣「完整开场」由 prelude_full 翻全。body.preludeMode 仍是测试/开发后门。
-        const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : 'short';
+        // 开场二选一门（拍板 v5 = v4 的选择形式 + v2 的账号门回归）：本账号「完结一周目」
+        // ——活到战争收束的结局（全灭/别传不算：死过的人，还配听一遍完整的开场）——
+        // 才给「完整三幕 or 精简版」选择；未通关一律直接完整三幕。body.preludeMode 仍是测试/开发后门。
+        const WAR_ENDINGS = ['ceasefire', 'contract_end', 'maicheng', 'pyrrhic', 'alt_both', 'lighthouse', 'join_table'];
+        const cleared = db.listRuns(s.userId).some((r) => r.status === 'ended' && WAR_ENDINGS.includes(r.ending_type));
+        const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : (cleared ? 'short' : 'full');
         const state = createRun(pack, { seed: body.seed || Math.floor(Math.random() * 1e9), difficulty: body.difficulty || 'documentary', roster: body.roster, prologue, preludeMode, echoes, sidestory: sideDef?.id || null });
         const { events } = beginRun(state, pack, { prologue });
         db.createRun({ id, userId: s.userId, seed: state.seed, packId, difficulty: state.difficulty, mode, state });

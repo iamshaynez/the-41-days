@@ -223,12 +223,12 @@ loadResume();
    ════════════════════════════════════════════════════════════════ */
 const rich = (() => {
   const esc1 = (t) => esc(t);
-  const MK_CLS = { 人: 'p', 地: 'l', 物: 'i', 事: 'e', 决: 'd', 伏: 'f' };
+  const MK_CLS = { 人: 'p', 地: 'l', 物: 'i', 事: 'e', 决: 'd', 伏: 'f', 要: 'y' };
   return (t) => esc1(t)
     .replace(/\*\*(.+?)\*\*/g, '<b class="ink-em">$1</b>')
     .replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<i class="em-kai">$1</i>')
-    // 高亮标注（叙事双轴 §6）：六类 [[类|词]] → 色标 span（人朱/地青/物金/事玄/决绛/伏暗金）
-    .replace(/\[\[([人地物事决伏])\|([^\]]+)\]\]/g, (m, t, n) => `<span class="mk mk-${MK_CLS[t] || 'p'}">${n}</span>`);
+    // 高亮标注（叙事双轴 §6）：七类 [[类|词]] → 色标 span（人朱/地青/物金/事玄/决绛/伏暗金/要朱批）
+    .replace(/\[\[([人地物事决伏要])\|([^\]]+)\]\]/g, (m, t, n) => `<span class="mk mk-${MK_CLS[t] || 'p'}">${n}</span>`);
 })();
 class Typist {
   /** hooks.makePara：自定义段落容器（默认正文叙事流）；hooks.mark=false 关闭名词标注 */
@@ -687,7 +687,7 @@ function renderInvGrid(box, inv) {
     if (!cats.has(cat)) continue;
     grid.appendChild(el('div', 'inv-cat', cat));
     for (const it of cats.get(cat)) {
-      grid.appendChild(el('div', 'item', `${svgUse(it.id)}<span class="item-name">${esc(it.name)}</span><b class="item-qty">×${it.n}</b>`));
+      grid.appendChild(el('div', 'item', `${svgUse(it.id)}<span class="item-name">${esc(it.name)}</span><b class="item-qty">×${it.n}</b>`)).title = (state.s?.itemFlavors || {})[it.id] || '';
     }
   }
   box.appendChild(grid);
@@ -912,7 +912,8 @@ function syncAsks(s) {
       node.classList.add('ask-urgent');
       node.innerHTML = askHead('急件', v.title, evIcon);
       const body = el('div', 'ask-body');
-      for (const p of String(v.text).split('\n').filter(Boolean)) body.appendChild(el('p', '', esc(p)));
+      // 卡面正文走 rich：内容包的 [[要|]] 朱批与名词标注在事件卡上同样生效（文案丰满批次一）
+      for (const p of String(v.text).split('\n').filter(Boolean)) { const elp = el('p', '', rich(p)); markNouns(elp); body.appendChild(elp); }
       node.appendChild(body);
       const opts = el('div', 'ask-opts');
       v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendIntents([{ type: 'event_choice', option: o.key }], o.label), '', o.ok === false ? (o.why || '条件不够') : '')));
@@ -970,7 +971,7 @@ function syncAsks(s) {
       if (s.duskView.fate) {
         const fate = el('div', 'fate-box');
         fate.appendChild(el('p', 'fate-title', esc(s.duskView.fate.title)));
-        for (const p of String(s.duskView.fate.text).split('\n').filter(Boolean)) fate.appendChild(el('p', '', esc(p)));
+        for (const p of String(s.duskView.fate.text).split('\n').filter(Boolean)) { const elp = el('p', '', rich(p)); markNouns(elp); fate.appendChild(elp); }
         const fopts = el('div', 'ask-opts');
         s.duskView.fate.options.forEach((o) => fopts.appendChild(optBtn(o.label, '◆', () => sendIntents([{ type: 'event_choice', option: o.key }], o.label), '', o.ok === false ? (o.why || '条件不够') : '')));
         fate.appendChild(fopts);
@@ -1059,13 +1060,15 @@ function renderPrologue(s) {
     const kicker = pv.kind === 'prequel' ? `前传 · ${pv.title}` : (pv.title || '卷首');
     box.innerHTML = `<span class="kicker">${esc(kicker)}</span>`;
     for (const p of String(pv.text).split('\n').filter(Boolean)) {
-      const para = el('p', '', rich(p));
+      // 引文块：以「> 」开头的行按史书引文排版（序章引《三国志》原文与《演义》回目用）
+      const isQuote = p.startsWith('> ');
+      const para = el(isQuote ? 'blockquote' : 'p', '', rich(isQuote ? p.slice(2) : p));
       markNouns(para);
       box.appendChild(para);
     }
     const opts = el('div', 'prologue-opts');
     if (pv.id === 'openingChoice') {
-      // 开场二选一（拍板 v4）：每一局都从「完整三幕 or 精简版」开始，与通关与否无关
+      // 开场二选一（拍板 v5）：本账号完结一周目后才出现——完整三幕 or 精简版
       const full = el('button', 'opt', '<span class="key">全</span><span>完整开场——从天下讲起</span>');
       full.type = 'button';
       full.addEventListener('click', () => sendIntents([{ type: 'prelude_full' }], '完整开场'));
@@ -1099,7 +1102,7 @@ function renderPrologue(s) {
   const v = s.eventView;
   const box = el('div', 'prologue');
   box.innerHTML = `<span class="kicker">${esc(v.title)}</span>`;
-  for (const p of String(v.text).split('\n').filter(Boolean)) box.appendChild(el('p', '', esc(p)));
+  for (const p of String(v.text).split('\n').filter(Boolean)) { const elp = el('p', '', rich(p)); markNouns(elp); box.appendChild(elp); }
   const opts = el('div', 'prologue-opts');
   v.options.forEach((o, i) => {
     const b = el('button', 'opt', `<span class="key">${i + 1}</span><span>${esc(o.label)}</span>`);
@@ -1414,18 +1417,20 @@ async function abandonRun() {
    ════════════════════════════════════════════════════════════════ */
 const LOC_NAMES = { home: '橘里九号', market: '南市', church: '里社', hospital: '医棚', post: '驿亭', villas: '宅区', frontline: '水门渡旧垒', sewer: '城濠水窦', beacon: '北津台' };
 const LOC_LINE = {
-  home: '家。门、床、炉火，和墙上的名字。',
-  market: '坍过的公共建筑，货被翻过几轮。',
-  church: '听得见钟声的地方。',
-  hospital: '还有药的地方，也还有排队的人。',
-  post: '死信堆积的角落。',
-  villas: '上城。值钱东西多，锁也多。',
-  frontline: '炮声从那里来。'
+  home: '家。门、床、炉火，和墙上的名字。白天在这里做事，夜里从这里出发。',
+  market: '被焚过的南市。铺面塌了，货被翻过几轮——白天别去，夜里小心人。',
+  church: '府库里社。听得见钟声的地方，也是这座城还剩不多的讲理的地方。',
+  hospital: '杜仲的医棚。还有药，也还有排队的人。别在这儿提捷报。',
+  post: '驿亭，死信库。几千封没能送到的信——有人的一整个秋天都压在里面。',
+  villas: '大族宅区。值钱东西多，锁也多——大族带走了符传，带不走的都在这儿。',
+  frontline: '水门渡旧垒。炮声从那里来；滩涂上叠着旧垒，最贵的东西在没人敢去的地方。',
+  sewer: '城濠水窦。濠里的人知道所有墙根的洞——吃的换话，是他们唯一的市。',
+  beacon: '北津台，江边第三台。鼓架还在，薪柴还干——像有人一直在等它再响。'
 };
 const CAT_LINE = {
-  '食物': '能吃。做熟的更顶饿。', '水': '渴的时候它比什么都贵。', '燃料': '火与暖的来路。',
-  '医疗': '伤病时的指望。', '材料': '修修补补的原料。', '工具': '手上的力气，门后的底气。',
-  '嗜好': '不是必需品——所以才金贵。', '值钱': '饿不死人的东西，能换饿死人的东西。'
+  '食物': '能吃。做熟的更顶饿——生粮伤胃，熟饭养人。', '水': '渴的时候它比什么都贵。烧开了再喝。', '燃料': '火与暖的来路。严冬里，柴就是命。',
+  '医疗': '伤病时的指望。药可以省，干净不能省。', '材料': '修修补补的原料。家什都从这儿长出来。', '工具': '手上的力气，门后的底气。别外借过头。',
+  '嗜好': '不是必需品——所以才金贵。人心也要吃饭。', '值钱': '饿不死人的东西，能换饿死人的东西。留给鲁舟。'
 };
 /** 名词索引：人名恒收；地名恒收；物品名只收双字以上（单字词误伤散文） */
 function nounIndex() {
@@ -1490,7 +1495,7 @@ function nounIntel(entry) {
     const [name, cat] = ITEM_META[entry.id] || [];
     if (!name) return null;
     const n = (s.inventory || {})[entry.id] || 0;
-    return { kicker: '物', title: name + (n ? ` ×${n}` : ''), lines: [cat, CAT_LINE[cat] || ''] };
+    return { kicker: '物', title: name + (n ? ` ×${n}` : ''), lines: [cat, (state.s.itemFlavors || {})[entry.id] || CAT_LINE[cat] || ''] };
   }
   if (entry.kind === 'loc') {
     const known = (s.knownLocs || []).includes(entry.id);

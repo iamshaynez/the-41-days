@@ -1007,6 +1007,9 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .cover h1 em { font-style: normal; color: var(--accent); text-shadow: none; }
 .cover .subtitle { font-size: 14px; letter-spacing: .5em; text-indent: .5em; color: var(--ink-2); margin-bottom: 24px; }
 .cover .lede { max-width: 40em; }
+/* 封面的信息层：氛围句之后、表单之前的白话前提段——字色重半度，与抒情区分 */
+.cover .lede.premise { color: var(--ink); margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--rule); }
+.cover .lede.premise .mk-y { font-weight: 700; }
 /* 封泥：一方朱泥白文印，压住这卷帛书的卷首 */
 .seal {
   position: absolute; top: 38px; right: 42px; width: 84px; height: 84px; z-index: 2;
@@ -1363,7 +1366,7 @@ body.motion-off { scroll-behavior: auto; }
 .chron-day.chron-end { border-left-color: var(--accent); }
 .chron-day.chron-end .chron-text { color: var(--ink); }
 
-/* —— 高亮标注（叙事双轴 §6）：人朱 / 地青 / 物金 / 事玄 / 决绛 / 伏暗金 —— */
+/* —— 高亮标注（叙事双轴 §6）：人朱 / 地青 / 物金 / 事玄 / 决绛 / 伏暗金 / 要朱批 —— */
 .mk { padding: 0 1px; }
 .mk-p { color: var(--accent-2); }
 .mk-l { color: #8fb8c9; }
@@ -1371,10 +1374,24 @@ body.motion-off { scroll-behavior: auto; }
 .mk-e { color: var(--ink); font-weight: 700; }
 .mk-d { color: var(--accent-2); background: var(--accent-wash); border-bottom: 1px solid var(--accent); }
 .mk-f { color: var(--brass); text-decoration: underline dotted rgba(212, 175, 55, .5); text-underline-offset: 3px; }
+/* 要点朱批：规则/任务/危险等关键信息——底衬一线淡金，视觉上一眼可辨 */
+.mk-y {
+  color: var(--accent); font-weight: 700;
+  background: var(--accent-wash);
+  box-shadow: inset 0 -0.6em 0 rgba(212, 175, 55, .12);
+}
 
 /* —— 序章文本幕：卷首/前传/合流的排版（与卡拍同宗，长文居中书页） —— */
 .prelude-beat p { margin: 0 0 .9em; }
 .prelude-beat p:first-of-type { margin-top: .2em; }
+/* 引文块：史书原文与回目（《三国志》/《三国演义》）——楷体、左缘一线、退半格 */
+.prelude-beat blockquote {
+  margin: 0 0 .9em; padding: .3em 0 .3em 1em;
+  border-left: 2px solid var(--gold-dim);
+  font-family: var(--font-kai); color: var(--ink-2);
+  font-size: .95em; line-height: 1.75;
+}
+.prelude-beat blockquote + blockquote { margin-top: -.55em; }
 .opt.opt-ghost .key { color: var(--ink-3); }
 .opt.opt-ghost span:last-child { color: var(--ink-3); }
 

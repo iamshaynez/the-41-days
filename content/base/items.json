@@ -1,50 +1,360 @@
 {
   "$comment": "内核设计-v0.2 §3.1 物品总目录（荆州卷汉化，id 不变）。slots=背包格 stack=每格堆叠 value=交易参考价值点 fuel=燃烧值 eat=进食饥饿增量 read=可读",
   "items": [
-    { "id": "parts", "name": "杂件", "cat": "材料", "slots": 1, "stack": 10, "value": 1 },
-    { "id": "wood", "name": "板材", "cat": "材料", "slots": 1, "stack": 10, "value": 2 },
-    { "id": "comp", "name": "铁件", "cat": "材料", "slots": 1, "stack": 5, "value": 3 },
-    { "id": "elec", "name": "铜件", "cat": "材料", "slots": 1, "stack": 3, "value": 8 },
-    { "id": "chem", "name": "漆", "cat": "材料", "slots": 1, "stack": 5, "value": 9 },
-    { "id": "powder", "name": "硝石", "cat": "材料", "slots": 1, "stack": 5, "value": 10 },
-
-    { "id": "firewood", "name": "薪柴", "cat": "燃料", "slots": 1, "stack": 5, "value": 3, "fuel": 1 },
-    { "id": "fuel", "name": "膏油", "cat": "燃料", "slots": 1, "stack": 3, "value": 6, "fuel": 2 },
-    { "id": "book", "name": "简册", "cat": "燃料", "slots": 1, "stack": 3, "value": 4, "fuel": 1, "read": true },
-
-    { "id": "water", "name": "水", "cat": "食物", "slots": 1, "stack": 5, "value": 1 },
-    { "id": "veg", "name": "葵菜", "cat": "食物", "slots": 1, "stack": 5, "value": 3, "eat": 1 },
-    { "id": "raw", "name": "糙米", "cat": "食物", "slots": 1, "stack": 5, "value": 4, "eat": 1 },
-    { "id": "meat", "name": "彘肩", "cat": "食物", "slots": 1, "stack": 5, "value": 5, "eat": 1, "cookAs": "raw" },
-    { "id": "canned", "name": "肉脯", "cat": "食物", "slots": 1, "stack": 3, "value": 12, "eat": 2 },
-    { "id": "sugar", "name": "饴蜜", "cat": "食物", "slots": 1, "stack": 5, "value": 7 },
-    { "id": "meal", "name": "熟食", "cat": "食物", "slots": 1, "stack": 3, "value": 8, "eat": 2, "noTrade": true },
-
-    { "id": "herb", "name": "草药", "cat": "药品", "slots": 1, "stack": 5, "value": 4 },
-    { "id": "herbmed", "name": "汤药", "cat": "药品", "slots": 1, "stack": 3, "value": 16 },
-    { "id": "bandage", "name": "裹创布", "cat": "药品", "slots": 1, "stack": 3, "value": 22 },
-    { "id": "meds", "name": "良药", "cat": "药品", "slots": 1, "stack": 2, "value": 28 },
-
-    { "id": "tobacco", "name": "艾草", "cat": "嗜好", "slots": 1, "stack": 5, "value": 5 },
-    { "id": "cigs", "name": "艾条", "cat": "嗜好", "slots": 1, "stack": 3, "value": 11 },
-    { "id": "coffee", "name": "蜜水", "cat": "嗜好", "slots": 1, "stack": 3, "value": 11 },
-    { "id": "moonshine", "name": "浊酒", "cat": "嗜好", "slots": 1, "stack": 3, "value": 15 },
-
-    { "id": "jewel", "name": "珠玑", "cat": "贵重", "slots": 1, "stack": 2, "value": 18 },
-    { "id": "wine", "name": "醇醪", "cat": "贵重", "slots": 1, "stack": 2, "value": 16 },
-    { "id": "brocade", "name": "蜀锦", "cat": "贵重", "slots": 1, "stack": 2, "value": 22 },
-
-    { "id": "lockpick", "name": "拨针", "cat": "工具", "slots": 1, "stack": 2, "value": 8 },
-    { "id": "crowbar", "name": "铁撬", "cat": "工具", "slots": 1, "stack": 1, "value": 9, "weapon": 1 },
-    { "id": "shovel", "name": "锸", "cat": "工具", "slots": 1, "stack": 1, "value": 8 },
-    { "id": "saw", "name": "锯", "cat": "工具", "slots": 1, "stack": 1, "value": 8 },
-    { "id": "axe", "name": "斧", "cat": "工具", "slots": 1, "stack": 1, "value": 14, "weapon": 1 },
-    { "id": "knife", "name": "环首刀", "cat": "武器", "slots": 1, "stack": 1, "value": 11, "weapon": 1, "backstab": true },
-
-    { "id": "pistol", "name": "手弩", "cat": "武器", "slots": 1, "stack": 1, "value": 38, "weapon": 2, "loud": 2, "ammo": true },
-    { "id": "rifle", "name": "强弩", "cat": "武器", "slots": 1, "stack": 1, "value": 50, "weapon": 3, "loud": 2, "ammo": true },
-    { "id": "bullet", "name": "弩箭", "cat": "武器", "slots": 1, "stack": 10, "value": 5 },
-
-    { "id": "doc", "name": "文档", "cat": "情报", "slots": 0, "stack": 99, "value": 8, "docOnly": true }
+    {
+      "id": "parts",
+      "name": "杂件",
+      "cat": "材料",
+      "slots": 1,
+      "stack": 10,
+      "value": 1,
+      "flavor": "什么都是，什么都不是——全看手艺。修家什的人眼里，这是半个百宝箱。"
+    },
+    {
+      "id": "wood",
+      "name": "板材",
+      "cat": "材料",
+      "slots": 1,
+      "stack": 10,
+      "value": 2,
+      "flavor": "板材。修修补补的原料，也是门板的原料。门板厚一分，夜里睡得沉一分。"
+    },
+    {
+      "id": "comp",
+      "name": "铁件",
+      "cat": "材料",
+      "slots": 1,
+      "stack": 5,
+      "value": 3,
+      "flavor": "铁件。成器的金属，从废墟上拆下来的。做工具缺的就是它。"
+    },
+    {
+      "id": "elec",
+      "name": "铜件",
+      "cat": "材料",
+      "slots": 1,
+      "stack": 3,
+      "value": 8,
+      "flavor": "铜件。精工的东西，从旧机巧上拆的。能修锁，能修弩机，能换半袋米。"
+    },
+    {
+      "id": "chem",
+      "name": "漆",
+      "cat": "材料",
+      "slots": 1,
+      "stack": 5,
+      "value": 9,
+      "flavor": "漆。防腐的、粘合的、有毒的——药性与毒性只差一道工序，交给懂的人。"
+    },
+    {
+      "id": "powder",
+      "name": "硝石",
+      "cat": "材料",
+      "slots": 1,
+      "stack": 5,
+      "value": 10,
+      "flavor": "硝石。能入药，能引火，能做别的。收好，别潮。"
+    },
+    {
+      "id": "firewood",
+      "name": "薪柴",
+      "cat": "燃料",
+      "slots": 1,
+      "stack": 5,
+      "value": 3,
+      "fuel": 1,
+      "flavor": "薪柴。火与暖的来路。严冬里，柴就是命——省着烧。"
+    },
+    {
+      "id": "fuel",
+      "name": "膏油",
+      "cat": "燃料",
+      "slots": 1,
+      "stack": 3,
+      "value": 6,
+      "fuel": 2,
+      "flavor": "膏油。比柴经烧。灯要它，火要它，北津台的烽燧也要它。"
+    },
+    {
+      "id": "book",
+      "name": "简册",
+      "cat": "燃料",
+      "slots": 1,
+      "stack": 3,
+      "value": 4,
+      "fuel": 1,
+      "read": true,
+      "flavor": "简册。能烧火——但先读一遍：这年头，字比柴贵。"
+    },
+    {
+      "id": "water",
+      "name": "水",
+      "cat": "食物",
+      "slots": 1,
+      "stack": 5,
+      "value": 1,
+      "flavor": "水。烧开了再喝——痢疾比饥饿杀得快。"
+    },
+    {
+      "id": "veg",
+      "name": "葵菜",
+      "cat": "食物",
+      "slots": 1,
+      "stack": 5,
+      "value": 3,
+      "eat": 1,
+      "flavor": "葵菜。维生素与士气，一样补。饭桌上有点绿，人就觉得还是过日子。"
+    },
+    {
+      "id": "raw",
+      "name": "糙米",
+      "cat": "食物",
+      "slots": 1,
+      "stack": 5,
+      "value": 4,
+      "eat": 1,
+      "flavor": "糙米。冷着吃伤胃，熟着吃顶饿——能煮就煮。"
+    },
+    {
+      "id": "meat",
+      "name": "彘肩",
+      "cat": "食物",
+      "slots": 1,
+      "stack": 5,
+      "value": 5,
+      "eat": 1,
+      "cookAs": "raw",
+      "flavor": "彘肩。蛋白质是力气，力气是活路。给伤员和出门的人先吃。"
+    },
+    {
+      "id": "canned",
+      "name": "肉脯",
+      "cat": "食物",
+      "slots": 1,
+      "stack": 3,
+      "value": 12,
+      "eat": 2,
+      "flavor": "肉脯。封着的口粮，封着的日子。开一包少一包——留着撑最坏的那几天。"
+    },
+    {
+      "id": "sugar",
+      "name": "饴蜜",
+      "cat": "食物",
+      "slots": 1,
+      "stack": 5,
+      "value": 7,
+      "flavor": "饴蜜。不是必需品——所以金贵。人心也要吃饭，孩子尤其要。"
+    },
+    {
+      "id": "meal",
+      "name": "熟食",
+      "cat": "食物",
+      "slots": 1,
+      "stack": 3,
+      "value": 8,
+      "eat": 2,
+      "noTrade": true,
+      "flavor": "熟食。热的。这城里「热乎」两个字，本身就值钱。"
+    },
+    {
+      "id": "herb",
+      "name": "草药",
+      "cat": "药品",
+      "slots": 1,
+      "stack": 5,
+      "value": 4,
+      "flavor": "草药。药材的原料。药圃没了，草还在墙根——认得的人看得到。"
+    },
+    {
+      "id": "herbmed",
+      "name": "汤药",
+      "cat": "药品",
+      "slots": 1,
+      "stack": 3,
+      "value": 16,
+      "flavor": "汤药。煎好的药。不是正经药，是没药时的药——辛夷的手艺。"
+    },
+    {
+      "id": "bandage",
+      "name": "裹创布",
+      "cat": "药品",
+      "slots": 1,
+      "stack": 3,
+      "value": 22,
+      "flavor": "裹创布。干净布条。伤口不裹，几天就坏；用过的煮过还能用。"
+    },
+    {
+      "id": "meds",
+      "name": "良药",
+      "cat": "药品",
+      "slots": 1,
+      "stack": 2,
+      "value": 28,
+      "flavor": "良药。正经药。比金子难找，比金子救命——谁病重给谁。"
+    },
+    {
+      "id": "tobacco",
+      "name": "艾草",
+      "cat": "嗜好",
+      "slots": 1,
+      "stack": 5,
+      "value": 5,
+      "flavor": "艾草。点一根，烟味压住城里的潮气。老人的定神汤。"
+    },
+    {
+      "id": "cigs",
+      "name": "艾条",
+      "cat": "嗜好",
+      "slots": 1,
+      "stack": 3,
+      "value": 11,
+      "flavor": "艾条。卷好的。能换东西，也能让人缓一口气——紧绷的弦也要松。"
+    },
+    {
+      "id": "coffee",
+      "name": "蜜水",
+      "cat": "嗜好",
+      "slots": 1,
+      "stack": 3,
+      "value": 11,
+      "flavor": "蜜水。甜的热水。孩子发烧、老人心慌、有人崩溃的时候，端一碗。"
+    },
+    {
+      "id": "moonshine",
+      "name": "浊酒",
+      "cat": "嗜好",
+      "slots": 1,
+      "stack": 3,
+      "value": 15,
+      "flavor": "浊酒。能换东西，能让人睡着。也能让人烂掉——看谁在喝。"
+    },
+    {
+      "id": "jewel",
+      "name": "珠玑",
+      "cat": "贵重",
+      "slots": 1,
+      "stack": 2,
+      "value": 18,
+      "flavor": "珠玑。饿不死人的东西，能换饿死人的东西。留给鲁舟。"
+    },
+    {
+      "id": "wine",
+      "name": "醇醪",
+      "cat": "贵重",
+      "slots": 1,
+      "stack": 2,
+      "value": 16,
+      "flavor": "醇醪。好酒。红白事都用得上——这年头，多是白事。"
+    },
+    {
+      "id": "brocade",
+      "name": "蜀锦",
+      "cat": "贵重",
+      "slots": 1,
+      "stack": 2,
+      "value": 22,
+      "flavor": "蜀锦。一匹锦，一户人家一年的嚼用。大族走得急，带不走的都在宅区。"
+    },
+    {
+      "id": "lockpick",
+      "name": "拨针",
+      "cat": "工具",
+      "slots": 1,
+      "stack": 2,
+      "value": 8,
+      "flavor": "拨针。细巧的活。开别人的锁，开的是别人家的存粮——想清楚再下手。"
+    },
+    {
+      "id": "crowbar",
+      "name": "铁撬",
+      "cat": "工具",
+      "slots": 1,
+      "stack": 1,
+      "value": 9,
+      "weapon": 1,
+      "flavor": "铁撬。夜里开箱撬板的家伙，白天也是防身的底气。"
+    },
+    {
+      "id": "shovel",
+      "name": "锸",
+      "cat": "工具",
+      "slots": 1,
+      "stack": 1,
+      "value": 8,
+      "flavor": "锸。挖土、清墟、翻地。活命的力气活，全靠它。"
+    },
+    {
+      "id": "saw",
+      "name": "锯",
+      "cat": "工具",
+      "slots": 1,
+      "stack": 1,
+      "value": 8,
+      "flavor": "锯。木工的眼睛。门板、家具、棺材——都要先过它这一道。"
+    },
+    {
+      "id": "axe",
+      "name": "斧",
+      "cat": "工具",
+      "slots": 1,
+      "stack": 1,
+      "value": 14,
+      "weapon": 1,
+      "flavor": "斧。劈柴是正业。别的用途，用一次记一辈子。"
+    },
+    {
+      "id": "knife",
+      "name": "环首刀",
+      "cat": "武器",
+      "slots": 1,
+      "stack": 1,
+      "value": 11,
+      "weapon": 1,
+      "backstab": true,
+      "flavor": "环首刀。切菜是它，防身也是它。别露白，露白招祸。"
+    },
+    {
+      "id": "pistol",
+      "name": "手弩",
+      "cat": "武器",
+      "slots": 1,
+      "stack": 1,
+      "value": 38,
+      "weapon": 2,
+      "loud": 2,
+      "ammo": true,
+      "flavor": "手弩。近处一发。响声会招人——用它之前，想好响过之后。"
+    },
+    {
+      "id": "rifle",
+      "name": "强弩",
+      "cat": "武器",
+      "slots": 1,
+      "stack": 1,
+      "value": 50,
+      "weapon": 3,
+      "loud": 2,
+      "ammo": true,
+      "flavor": "强弩。架上窗台能守住一条巷子。用它的人，也得守得住自己。"
+    },
+    {
+      "id": "bullet",
+      "name": "弩箭",
+      "cat": "武器",
+      "slots": 1,
+      "stack": 10,
+      "value": 5,
+      "flavor": "弩箭。数着用，数着活。装填要稳，手抖的人先绑稳自己。"
+    },
+    {
+      "id": "doc",
+      "name": "文档",
+      "cat": "情报",
+      "slots": 0,
+      "stack": 99,
+      "value": 8,
+      "docOnly": true,
+      "flavor": "文档。带字的纸。这年头纸比粮贵——读一遍再决定怎么用。"
+    }
   ]
 }
