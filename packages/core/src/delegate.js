@@ -253,6 +253,10 @@ export function dawnProblems(state, pack) {
   const fuel = (s.inventory.firewood || 0) + (s.inventory.fuel || 0);
   if (s.winterActive && fuel < 2 && (s.facilities.heater || s.facilities.heater_iron)) out.push({ sev: 2, text: '取暖的柴快烧完了。' });
   if (s.franko) out.push({ sev: 0, text: '鲁舟的船靠在渡口边。' });
+  // 或然亲和的暗提示（二周目起）：读过城的人记得哪里有纸——不指路，只提醒城有夹层
+  if (s.echoBoon && s.day >= 24 && (s.docsSeen || []).length < 3) {
+    out.push({ sev: 0, text: '你记得这座城的墙里有夹层——有些纸，上一局没来得及翻出来。' });
+  }
   if (s.war?.telegraphed) out.push({ sev: 0, text: '炮声稀了——懂行的人说，可能快了。' });
   return out.sort((a, b) => b.sev - a.sev);
 }

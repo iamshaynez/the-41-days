@@ -1120,7 +1120,7 @@ function renderPrologue(s) {
 function renderEnding(s) {
   const box = $('narration');
   closePara();
-  const END_TITLE = { ceasefire: '第四十一天', maicheng: '麦城得脱', pyrrhic: '惨　胜', alt_both: '另一种三国', contract_end: '交割日', lighthouse: '还　师', join_table: '出江陵记', sidestory: '别传' };
+  const END_TITLE = { ceasefire: '第四十一天', maicheng: '麦城得脱', pyrrhic: '惨　胜', alt_both: '另一种三国', contract_end: '交割日', lighthouse: '还　师', join_table: '出江陵记', hostage: '槛　车', sidestory: '别传' };
   const title = s.ending.type === 'sidestory' ? (s.ending.storyline?.title || '别传') : (END_TITLE[s.ending.type] || '无人幸免');
   const story = s.ending.storyline;
   const codex = story?.codex || {};
