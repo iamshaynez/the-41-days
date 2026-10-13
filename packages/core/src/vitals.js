@@ -198,6 +198,17 @@ export function tickProduction(ctx) {
 /** 战争与季节推进（§9 W 系 + T-01） */
 export function tickWar(ctx) {
   const s = ctx.s, war = s.war;
+  // ── v0.3 军心环境账（同步日历）：日子过得越体面，"家里都好"传得越远 ──
+  // 家里有存粮的每一天，家访的簿子上就多一笔安。这是历史的暗河：
+  // 吕蒙不需要说服任何人，他只需要让每家都过得去。（溶解阈值见 manifest.war.dissolveThreshold）
+  if (!s.sidestory) {
+    const foodTotal = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
+    const drift = foodTotal >= 6 ? 0.5 : 0;
+    if (drift) {
+      s.dissolve = (s.dissolve || 0) + drift;
+      ctx.emit('FLAG', { key: 'dissolve', val: s.dissolve });
+    }
+  }
   if (!s.winterActive && s.day >= s.winterStart) {
     s.winterActive = true;
     ctx.emit('WINTER_START', { end: s.winterEnd });
@@ -216,29 +227,32 @@ export function tickWar(ctx) {
     ctx.emit('WAR_ENDED', { type: 'lighthouse', day: s.day });
     ctx.fact('war_lighthouse', {});
   }
-  // 或然 B《惨胜》（正典圣经-v0.2 §8.2）：第二把火没着——交割机关被拆，开城推迟六日
-  if (!war.ended && s.eventFlags.alt_jiangling && !war.altShift) {
-    war.altShift = true; war.endDay += 6;
-    ctx.emit('FLAG', { key: 'warEndDay', val: war.endDay });
-    ctx.fact('war_alt_shift', {});
-  }
-  // 出江陵记（W-04，v0.2）：接了券局的价，当夜解缆——局在次日破晓终结
-  // （v0.1 是"等到第 41 天魔咒日"；荆州卷没有魔咒，你活着离开了江陵，江陵没有）
+  // 出江陵记（W-04）：接了券局的价，当夜解缆——你离席了，剩下的天数由别人数
   if (!war.ended && s.eventFlags.join_table) {
     war.ended = true; war.endingType = 'join_table';
     ctx.emit('WAR_ENDED', { type: 'join_table', day: s.day });
     ctx.fact('war_join_table', {});
-  } else if (!war.ended && s.day >= war.endDay) {
+  }
+  // ── D41 铰链（正典圣经 v0.3 §8：三刀）─────────────────────────────
+  // 刀落/刀偏须同时满足两件事：手上有历史杠杆（证据/烽鼓/机关），且军心未散
+  // （dissolve < 阈值——家访与家书四十一天累积的暗河没有漫过河床）。
+  // 只有杠杆而军心已散：刀照样落——一个人拦不住已经化掉的大军，史册连你拦过都不记。
+  // 没有杠杆而军心未散：刀也落——个人的沉默拦得住一封家书，拦不住大势。
+  // 这两条都归入正史，但野史批注会记下你拦过。
+  if (!war.ended && s.day >= war.endDay) {
     war.ended = true;
-    // 或然结局（正典圣经-v0.2 §8 / RND-11）：不改正史锚点——城照样开或被围，
-    // 被改写的只有那一瞬间；叠加态《另一种三国》是全游戏最稀有的一页
-    war.endingType = s.eventFlags.alt_jiangling
-      ? (s.eventFlags.alt_maicheng ? 'alt_both' : 'pyrrhic')
-      : (s.eventFlags.alt_maicheng ? 'maicheng' : 'ceasefire');
+    const th = ctx.pack.manifest.war.dissolveThreshold ?? 22;
+    const armyHeld = (s.dissolve || 0) < th;
+    const lever = (s.eventFlags.alt_maicheng && s.eventFlags.alt_jiangling) ? 'alt_both'
+      : s.eventFlags.alt_maicheng ? 'maicheng'
+      : s.eventFlags.alt_jiangling ? 'pyrrhic'
+      : null;
+    war.endingType = (lever && armyHeld) ? lever : 'ceasefire';
+    war.armyHeld = armyHeld;      // 野史批注用：军心未散而刀仍落 → 「你拦过，史官不知道」
+    war.leverHad = !!lever;       // 有杠杆而军心已散 → 「机关拆了，军队散了」
     ctx.emit('WAR_ENDED', { type: war.endingType, day: s.day });
   }
-  // 或然 B 推迟时，强制线随交割日一并后移六日（否则 forceEndDay 会抢在推迟后的结局前触发）
-  if (!war.ended && s.day >= ctx.pack.manifest.war.forceEndDay + (war.altShift ? 6 : 0)) {
+  if (!war.ended && s.day >= ctx.pack.manifest.war.forceEndDay) {
     war.ended = true; war.endingType = 'contract_end';
     ctx.emit('WAR_ENDED', { type: 'contract_end', day: s.day });
   }

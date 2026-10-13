@@ -115,7 +115,8 @@ export class Ctx {
   die(c, cause) {
     if (!c.alive) return;
     c.alive = false;
-    this.emit('CHAR_DIED', { char: c.id, cause });
+    this.s.deathDays = { ...(this.s.deathDays || {}), [c.id]: this.s.day };
+    this.emit('CHAR_DIED', { char: c.id, cause, day: this.s.day });
     this.fact('death', { char: c.id, cause });
     // CY-04 重事：死亡是灭失级以下最重的账，在场者人人有份（外出者之死，家人天亮即知）
     recordCausal(this, 'witness_death', { actor: 'world', target: c.id, note: cause });

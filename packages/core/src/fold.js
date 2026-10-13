@@ -33,7 +33,7 @@ function apply(s, ev) {
     case 'FATIGUE_CHANGED': { const c = ch(s, d.char); if (c) c.fatigue = d.to; break; }
     case 'MOOD_DELTA': { const c = ch(s, d.char); if (c) c.moodPts = d.pts; break; }
     case 'AP_SPENT': { const c = ch(s, d.char); if (c) c.ap = d.left; break; }
-    case 'CHAR_DIED': { const c = ch(s, d.char); if (c) { c.alive = false; } break; }
+    case 'CHAR_DIED': { const c = ch(s, d.char); if (c) { c.alive = false; s.deathDays = { ...(s.deathDays || {}), [d.char]: ev.day }; } break; }
     case 'DEED': s.deeds.push({ day: ev.day, ...d }); break;
     case 'KNOWLEDGE': s.knowledge = d.to; break;
     case 'REPUTATION': s.reputation[d.key] = d.to; break;

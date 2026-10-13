@@ -82,6 +82,9 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     knownLocs: [...pack.manifest.startKnowledgeLocations, ...(ids.includes('alexey') ? ['beacon'] : [])], // 逄灶开局识北津台
     locState: {},
     night: null, lastScavenger: null,
+    // v0.3 同步日历：军心溶解账（家访配合/家书报平安为正；如实与沉默为负或零）。
+    // D41 铰链读它：溶解超阈值 → 大军散尽 → 刀落（正史）；握有杠杆且未超 → 刀偏（或然）
+    dissolve: 0, deathDays: {},
     franko: null, frankoNextDay: pack.manifest.franko.firstVisitDay,
     activeEvent: null, eventCooldowns: {}, firedOnce: {}, cardCount: {},
     // 跨周目回响（长线体验 EC）：鲁舟认出你 / 时间胶囊 / 在办遗愿

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { newRun, step, PACK } from '../helpers.js';
 import { fold, preludeBeats, preludeBeatView } from '../../packages/core/index.js';
 
-const PICK = { p1_water: 'tried', p3_shelling: 'share', p4_door: 'open', p2_house: 'ours', p5_dawn9: 'begin' };
+const PICK = { p1_water: 'tried', p3_shelling: 'share', p4_door: 'open', p2_house: 'ours', p5_dawn9: 'begin', p6_white: 'begin' };
 
 /** 走完序章：文本幕 advance 翻页，卡拍按 PICK 选 */
 function playPrelude(s, pick = (c) => PICK[c.id] ?? c.options[0].key) {
@@ -22,8 +22,8 @@ describe('序章三幕 · 节拍引擎', () => {
     let s = state;
     assert.equal(s.phase, 'prologue');
     assert.equal(s.prelude.i, 0, '开局在幕一第一拍');
-    // 幕一（天下/荆州/这一年/大胜的账）+ 幕二（关城/白日/夜）：七翻
-    for (let i = 0; i < 7; i++) {
+    // 幕一（天下×4）+ 幕二（关城/白日/夜/白衣）：八翻
+    for (let i = 0; i < 8; i++) {
       assert.ok(!s.activeEvent, '文本幕不带卡');
       s = step(s, [{ type: 'advance' }]).state;
     }
@@ -47,9 +47,12 @@ describe('序章三幕 · 节拍引擎', () => {
     s = step(s, [{ type: 'event_choice', option: 'ours' }]).state;
     assert.equal(s.activeEvent?.cardId, 'p5_dawn9');
     s = step(s, [{ type: 'event_choice', option: 'begin' }]).state;
+    assert.equal(s.activeEvent?.cardId, 'p6_white', '第九天早晨之后是白衣之夜');
+    s = step(s, [{ type: 'event_choice', option: 'begin' }]).state;
     assert.equal(s.phase, 'day');
     assert.equal(s.day, 1);
-    assert.equal(s.mainline[0]?.stepId, 'm_d01', '序章落幕即落 D1 大事步');
+    assert.ok(s.eventFlags.handover_seen, '白衣落旗：城开被亲眼看见');
+    assert.equal(s.mainline[0]?.stepId, 'm1_flag', '序章落幕即落 D1 大事步（易帜）');
   });
 
   test('守卫：文本幕只有翻页合法，白天行动仍被挡', () => {
@@ -61,7 +64,7 @@ describe('序章三幕 · 节拍引擎', () => {
   test('卡拍上 advance 被挡——选择才有旗标与因果账', () => {
     const { state } = newRun({ prologue: true });
     let s = state;
-    for (let i = 0; i < 7; i++) s = step(s, [{ type: 'advance' }]).state; // 幕一×4 + 幕二×3
+    for (let i = 0; i < 8; i++) s = step(s, [{ type: 'advance' }]).state; // 幕一×4 + 幕二×4（含白衣）
     assert.equal(s.activeEvent?.cardId, 'p1_water');
     const r = step(s, [{ type: 'advance' }]);
     assert.ok(r.rejects.some((x) => x.reason === 'IN_PROLOGUE'), '卡拍必须选');
@@ -116,7 +119,7 @@ describe('序章三幕 · 节拍引擎', () => {
     // 跳过：直接落地第 1 天，D1 大事步照落
     const r = step(state, [{ type: 'skip_prelude' }]);
     assert.equal(r.state.phase, 'day');
-    assert.equal(r.state.mainline[0]?.stepId, 'm_d01');
+    assert.equal(r.state.mainline[0]?.stepId, 'm1_flag');
     assert.ok(r.facts.some((f) => f.k === 'prologue_skipped'), '跳过入账');
   });
 
@@ -131,7 +134,7 @@ describe('序章三幕 · 节拍引擎', () => {
     assert.equal(s.preludeMode, 'full', '模式翻全');
     assert.equal(s.prelude.i, 0, '从「天下」重读');
     assert.ok(!s.activeEvent, '重回文本幕');
-    for (let i = 0; i < 7; i++) s = step(s, [{ type: 'advance' }]).state; // 完整幕一×4 + 幕二×3
+    for (let i = 0; i < 8; i++) s = step(s, [{ type: 'advance' }]).state; // 完整幕一×4 + 幕二×4
     assert.equal(s.activeEvent?.cardId, 'p3_shelling', '已答的 p1 跳过，p3 接上');
   });
 
@@ -152,7 +155,7 @@ describe('序章三幕 · 节拍引擎', () => {
     const { state, events } = newRun({ prologue: true });
     let s = state;
     const all = [...events];
-    for (const opt of ['tried', 'share', 'open', 'ours', 'begin']) {
+    for (const opt of ['tried', 'share', 'open', 'ours', 'begin', 'begin']) {
       while (s.phase === 'prologue' && !s.activeEvent) {
         const r = step(s, [{ type: 'advance' }]);
         all.push(...r.events); s = r.state;
@@ -161,7 +164,8 @@ describe('序章三幕 · 节拍引擎', () => {
       const r = step(s, [{ type: 'event_choice', option: opt }]);
       all.push(...r.events); s = r.state;
     }
-    while (s.phase === 'prologue') { const r = step(s, [{ type: 'advance' }]); all.push(...r.events); s = r.state; }
+    let tail = 0;
+    while (s.phase === 'prologue' && tail++ < 20) { const r = step(s, [{ type: 'advance' }]); all.push(...r.events); s = r.state; }
     const rebuilt = fold(all);
     assert.equal(rebuilt.phase, 'day');
     assert.equal(rebuilt.prelude.i, rebuilt.prelude.i);

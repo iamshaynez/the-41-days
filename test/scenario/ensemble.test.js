@@ -12,7 +12,7 @@ describe('堂屋：主线日必评史', () => {
     assert.ok(s.ensemble?.scenes?.length >= 1, '次晨应有堂屋场');
     const sc = s.ensemble.scenes[0];
     assert.equal(sc.kind, 'comment');
-    assert.equal(sc.topic.stepId, 'm_d01');
+    assert.equal(sc.topic.stepId, 'm1_flag');
     assert.ok(sc.participants.length >= 2, '至少两人说话');
     for (const p of sc.participants) assert.ok(ch(s, p).alive, `死人 ${p} 不得进场`);
   });
@@ -21,7 +21,7 @@ describe('堂屋：主线日必评史', () => {
     const { state } = newRun({ seed: 5, roster: ['anton', 'marta', 'bron'] });
     let s = state;
     for (let i = 0; i < 9; i++) s = skipDayAtHome(s);
-    for (const sid of ['m_d01', 'm_d03', 'm_d06', 'm_d08']) {
+    for (const sid of ['m1_flag', 'm2_visit', 'm3_fire', 'm4_yujin']) {
       assert.ok(s.ensemble.coveredSteps.includes(sid), `${sid} 应有评史场`);
     }
   });
@@ -86,8 +86,9 @@ describe('堂屋：随机场（性格与关系驱动）', () => {
     // 三人局的数学极限：三对全在 5 日冷却内时无从避让——场景会打 pairForced 标记，
     // 冷却断言只对"有得选却没避"的场景生效。
     const forced = new Set(scenes.filter((x) => x.pairForced).map((x) => x.id));
-    // 随机场（有选择自由）：五天内同对子不重演
-    const randos = scenes.filter((x) => x.kind !== 'comment');
+    // 随机场（有选择自由）：五天内同对子不重演。
+    // bond/shadow 是照顾场——对子避不开时按设计退回第一人（pickScene 有注），不计违例
+    const randos = scenes.filter((x) => x.kind === 'friction' || x.kind === 'idle');
     for (let i = 0; i < randos.length; i++) {
       for (let j = i + 1; j < randos.length; j++) {
         if (randos[j].day - randos[i].day > 5) break;
@@ -101,6 +102,7 @@ describe('堂屋：随机场（性格与关系驱动）', () => {
     for (let i = 1; i < scenes.length; i++) {
       if (scenes[i].day - scenes[i - 1].day !== 1) continue;
       if (scenes[i].kind !== 'comment' && scenes[i - 1].kind !== 'comment') continue;
+      if (['bond', 'shadow'].includes(scenes[i].kind) || ['bond', 'shadow'].includes(scenes[i - 1].kind)) continue;
       if (forced.has(scenes[i].id)) continue;
       const a = scenes[i - 1].participants.slice(0, 2).sort().join('|');
       const b = scenes[i].participants.slice(0, 2).sort().join('|');
