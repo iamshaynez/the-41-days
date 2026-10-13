@@ -1,4 +1,4 @@
-// 叙事双轴 e2e（叙事双轴-v0.1）：序章三幕 HTTP 全链、首局门、舆图/史卷视图、跳过
+// 叙事双轴 e2e（叙事双轴-v0.1）：序章三幕 HTTP 全链、开场二选一（拍板 v4）、舆图/史卷视图、跳过
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../../packages/server/index.js';
@@ -43,13 +43,16 @@ async function sendInput(id, payload) {
 const view = (id) => api('GET', `/api/runs/${id}`).then((r) => r.body);
 
 describe('序章三幕 · HTTP 全链', () => {
-  test('首局：三幕全量、不可跳；推到第 1 天即有史卷与舆图', async () => {
+  test('开场选「完整」：三幕全量推进；推到第 1 天即有史卷与舆图', async () => {
     const r = await api('POST', '/api/runs', { mode: 'direct', seed: 7, roster: ['zofia', 'anton', 'marta'] });
     assert.equal(r.status, 200);
     const id = r.body.id;
     let s = r.body.state;
     assert.equal(s.phase, 'prologue');
-    assert.equal(s.preludeView.canSkip, false, '首局不可跳');
+    assert.equal(s.preludeView.id, 'openingChoice', '第一拍是开场二选一');
+    await sendInput(id, { intents: [{ type: 'prelude_full' }] });
+    s = (await view(id)).state;
+    assert.equal(s.preludeView.canSkip, false, '选了完整三幕就不可跳');
     assert.ok(s.preludeView.total >= 10, '全量节拍在册');
     assert.ok(s.mapView.places.some((p) => p.id === 'home' && p.state === 'known'), '舆图就位');
     let guard = 0;
@@ -75,23 +78,34 @@ describe('序章三幕 · HTTP 全链', () => {
     assert.equal(s.chronicle.entries[0]?.title, '大胜之秋');
   });
 
-  test('首局门（拍板 v2）：全灭不算通关，活到战争收束才进单句版', async () => {
-    // 局一：人为收束为全灭（wiped）——账号仍算没通关
-    const r1 = await api('POST', '/api/runs', { mode: 'direct', seed: 11, prologue: false, roster: ['anton', 'marta', 'bron'] });
+  test('开场二选一（拍板 v4）：每一局都从「完整 or 精简」开始，与账号历史无关', async () => {
+    // 新账号的第一局：第一拍就是选择，选「完整」翻全卷、选「精简」单句天下
+    const r1 = await api('POST', '/api/runs', { mode: 'direct', seed: 11, roster: ['anton', 'marta', 'bron'] });
+    assert.equal(r1.body.state.preludeView.id, 'openingChoice', '首局也有开场二选一');
+    // 拣「精简开场」：下一拍是单句天下
+    await sendInput(r1.body.id, { intents: [{ type: 'advance' }] });
+    let s1 = (await view(r1.body.id)).state;
+    assert.equal(s1.preludeView.id, 'heavenLine', '精简开场进单句版');
+    assert.equal(s1.preludeView.canSkip, true, '精简版可跳');
+    // 局一人为收束为全灭（wiped）——下一局仍有开场选择（旧首局门废止）
     const st1 = app.db.getRun(r1.body.id).state;
     st1.over = true; st1.ending = { type: 'wiped' };
     app.db.finishRun(r1.body.id, st1, st1.ending);
     const r2 = await api('POST', '/api/runs', { mode: 'direct', seed: 12, roster: ['anton', 'marta', 'bron'] });
-    assert.equal(r2.body.state.preludeView.canSkip, false, '全灭之后仍是完整三幕');
-    assert.ok(r2.body.state.preludeView.total >= 12, '全量拍数');
-    // 局二：活到开城（ceasefire）——账号通关，此后续局进单句版
+    assert.equal(r2.body.state.preludeView.id, 'openingChoice', '全灭之后的新局同样从选择开始');
+    // 拣「完整开场」：模式翻全、此后不可跳、拍数多于精简版
+    await sendInput(r2.body.id, { intents: [{ type: 'prelude_full' }] });
+    const s2 = (await view(r2.body.id)).state;
+    assert.equal(s2.preludeMode, 'full', '模式翻全');
+    assert.equal(s2.preludeView.canSkip, false, '完整三幕不设快门');
+    assert.ok(s2.preludeView.total > s1.preludeView.total, '完整版拍数更多');
+    // 通关（ceasefire）之后的新局：不因通关被夺走选择——仍然从二选一开始
     const st2 = app.db.getRun(r2.body.id).state;
     st2.over = true; st2.ending = { type: 'ceasefire' };
     app.db.finishRun(r2.body.id, st2, st2.ending);
     const r3 = await api('POST', '/api/runs', { mode: 'direct', seed: 13, roster: ['anton', 'marta', 'bron'] });
-    assert.equal(r3.body.state.preludeView.canSkip, true, '通关之后进单句版');
-    assert.ok(r3.body.state.preludeView.total < r2.body.state.preludeView.total, '单句版拍数更少');
-    // 入局引在线上也在卷（{{names}} 已插值）
+    assert.equal(r3.body.state.preludeView.id, 'openingChoice', '通关之后仍从选择开始');
+    assert.equal(r3.body.state.preludeView.canSkip, true, '选择拍本身可跳（选定精简后即可翻过）');
     assert.ok(r3.body.state.chronicle, '史卷在卷');
   });
 
