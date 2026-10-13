@@ -1,5 +1,6 @@
 // 直读叙事器 + 世界简报（技术架构 §7.2 降级路径）：把 facts 渲染成文字，与 LLM 叙事者同一输入。
-import { moodLevel, HUNGER_NAMES, HARM_NAMES, SICK_NAMES, FATIGUE_NAMES, aliveChars, charById, policyOf, validateTextMarkers, stripMarkers } from '../core/index.js';
+import { moodLevel, HUNGER_NAMES, HARM_NAMES, SICK_NAMES, FATIGUE_NAMES, aliveChars, charById, policyOf, validateTextMarkers, stripMarkers, optionAvailable, optionCostOk } from '../core/index.js';
+import { planNightStep } from '../core/src/delegate.js';
 import { markerSyntaxErrors } from '../core/src/markers.js';
 
 const weatherName = { clear: '晴', fog: '雾', rain: '雨', snow: '雪', cold: '严寒' };
@@ -70,7 +71,23 @@ export function worldBrief(state, pack) {
   ).join('；');
   const inv = Object.entries(state.inventory).map(([k, v]) => `${pack.itemMap[k]?.name || k}×${v}`).join('、') || '空';
   const locs = state.knownLocs.map((id) => `${pack.locMap[id]?.name || id}(${id})`).join('、');
-  const ev = state.activeEvent ? `（门口有未决事件：${pack.cardMap[state.activeEvent.cardId]?.title}）` : '';
+  // 待决事件/岔路把选项摆给裁判（key=label）：只给标题时自由文本只能瞎猜 option
+  // ——BAD_OPTION「没有这个选项」或解析成游离动作，答非所问就是这么来的
+  const roCtx = { s: state, hasItem: (i, n = 1) => (state.inventory[i] || 0) >= n }; // 只读鸭子 ctx（与 eventOptionsView 同款）
+  const evCard = state.activeEvent ? (pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId]) : null;
+  const evOptLine = (evCard?.options || [])
+    .filter((o) => optionAvailable(roCtx, o) && optionCostOk(roCtx, o))
+    .map((o) => `${o.key}=${o.label}`)
+    .join('；');
+  const ev = evCard
+    ? `（门口有未决事件：《${evCard.title}》。玩家若在作答，只能选：${evOptLine || '（当前无可行选项——只能另想办法或等待）'}）`
+    : '';
+  const nightFork = (state.night && !state.night.home && !state.activeEvent)
+    ? planNightStep(state, pack, { approach: state.night.directive?.stance })
+    : null;
+  const forkTxt = (nightFork?.stop && nightFork.stop.kind !== 'event')
+    ? `【岔路待答】${nightFork.stop.text} 可选：${nightFork.stop.options.map((o) => o.label).join('；')}`
+    : '';
   const nightScav = state.night && !state.night.home ? charById(state, state.night.charId) : null;
   const night = state.night && !state.night.home
     ? `【夜访中】${nightScav ? `${nightScav.name}独行·` : ''}${pack.locMap[state.night.locId]?.name}·当前房间${pack.locMap[state.night.locId]?.rooms.find((r) => r.id === state.night.room)?.name}·剩余火柴${state.night.slots}根`
@@ -90,7 +107,7 @@ export function worldBrief(state, pack) {
   const castTxt = lastScav
     ? `【人物分工·铁律】昨夜出门夜访的是${lastScav}，夜访段落的唯一主语；鲁舟是渡口商人，只在自己的摊上做买卖，从不替这个家出门、搜刮、办事。`
     : '';
-  return `第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${night}${castTxt}${sealNote}${dirTxt}`;
+  return `第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${forkTxt}${night}${castTxt}${sealNote}${dirTxt}`;
 }
 
 /** 模板变体选条（文案丰满批次一）：模板值可为字符串或数组——数组按

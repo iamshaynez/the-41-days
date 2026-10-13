@@ -3,6 +3,7 @@
 // 自动化不发明第二条状态通道。bots.js 是这些策略的对抗性参考，本文件是游戏内正式版。
 import { aliveChars, apMaxOf, policyOf, moodLevel } from './state.js';
 import { DAY_ACTIONS, AP_COST } from './dayActions.js';
+import { LOC_ALIAS } from './parser.js';
 
 const itemName = (pack, id) => pack.itemMap[id]?.name || id;
 const has = (s, id, n = 1) => (s.inventory[id] || 0) >= n;
@@ -355,8 +356,30 @@ export function planDusk(state, pack) {
     else if (risky && has(s, 'axe')) gear.push('axe');
     return gear;
   };
+  // —— 念头提级（v3 命运导演）：活念头点名的地方/家什，方案卡照着走 ——
+  // 世界记着玩家种下的方向（direction），管家也要记着：晨报挂着「种下的念头」，
+  // 黄昏就该有一条照着它走的路——否则念头只剩每三天一声回声（实测 8 天零消费）
+  const aliveDirs = Object.values(s.directions || {}).filter((d) => d.alive);
+  // 玩家说地方用短名（南市/医棚/宅区），与直读解析器同一张别名表——念头的措辞就是玩家的话。
+  // 一句话可能点名两处（「去大族宅区……天黑前回府库里社」）：取最早提及的那个当目的地
+  const locMentioned = (text) => {
+    let best = null, bestAt = Infinity;
+    for (const [alias, id] of Object.entries(LOC_ALIAS)) {
+      if (id === 'home' || !known.includes(id)) continue;
+      const at = Math.min(...[text.indexOf(alias), text.indexOf(pack.locMap[id].name)].filter((i) => i >= 0));
+      if (at >= 0 && at < bestAt) { best = id; bestAt = at; }
+    }
+    return best;
+  };
+  const dirHit = aliveDirs.find((d) => locMentioned(d.text)) || null;
+  const dirLoc = dirHit ? locMentioned(dirHit.text) : null;
+  const NIGHT_TOOLS = ['lockpick', 'crowbar', 'shovel', 'saw', 'axe', 'knife'];
+  const dirGear = aliveDirs
+    .flatMap((d) => NIGHT_TOOLS.filter((id) => d.text.includes(pack.itemMap[id]?.name || '\u0000')))
+    .filter((id) => has(s, id));
   const mkPlan = (key, scavId, locId) => {
     const gear = gearOf(locId);
+    if (dirLoc === locId) for (const g of dirGear) if (!gear.includes(g)) gear.push(g); // 照念头带家什
     const guard = guardOf(scavId);
     const others = {};
     for (const c of alive) others[c.id] = (guard && c.id === guard.id) ? 'guard' : 'sleep';
@@ -367,12 +390,18 @@ export function planDusk(state, pack) {
     // 情绪风险前置：抑郁者今晚可能不肯动身（50%）——玩家点卡之前就该看见
     const scavChar = s.chars.find((c) => c.id === scavId);
     const mindWarn = scavChar && lowMind(scavChar) ? `；${scavName}情绪很低，今晚可能不肯出门` : '';
-    return { key, label: lines.join('，'), hint: `${LOC_BLURB[locId] || ''}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
+    const dirNote = dirLoc === locId && dirHit ? `惦记着念头「${dirHit.text.slice(0, 14)}」；` : '';
+    return { key, label: lines.join('，'), hint: `${dirNote}${LOC_BLURB[locId] || ''}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
   };
 
   const plans = [];
   if (scav && known.length) {
     const ranked = LOC_RANK.filter((l) => known.includes(l));
+    if (dirLoc) { // 念头点名的地方排第一（不在常规排序里也照排——念头优先于habit）
+      const i = ranked.indexOf(dirLoc);
+      if (i >= 0) ranked.splice(i, 1);
+      ranked.unshift(dirLoc);
+    }
     plans.push(mkPlan('a', scav.id, ranked[0]));
     const second = ranked[1] || ranked[0];
     const altScav = fit[1] || scav;
