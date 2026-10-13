@@ -41,6 +41,36 @@ async function fetchWithRetry(url, init, timeoutMs) {
   }
 }
 
+/**
+ * 流式文本净化（线上教训："让辛夷��素徽说话"式乱码）：
+ * 1. 剥 U+FFFD——上游流设施把多字节字符截断后送来的替换符，进了正文就成了永久的墨点；
+ *    本作正文是中文散文，U+FFFD 永远不合法，剥掉比留着一个方框好。
+ * 2. 代理对 holdback——上游把一个增广平面的字拆在两个 delta JSON 里时，
+ *    先扣住结尾的孤立高代理，等下一个 delta 拼齐再放行；流结束仍凑不齐就丢弃半个字。
+ *    onDelta 的每个消费者拿到的永远是完整字符。
+ */
+export function makeDeltaFilter() {
+  let pendingHigh = '';
+  return {
+    push(raw) {
+      let t = pendingHigh + String(raw).replace(/\ufffd/g, '');
+      pendingHigh = '';
+      const last = t.charCodeAt(t.length - 1);
+      if (last >= 0xd800 && last <= 0xdbff) { // 结尾是孤立高代理：扣住
+        pendingHigh = t.slice(-1);
+        t = t.slice(0, -1);
+      }
+      return t;
+    },
+    flush() { // 流结束：凑不齐的半个字丢弃——永不让孤立代理入文
+      pendingHigh = '';
+      return '';
+    }
+  };
+}
+
+function cleanText(t) { return String(t || '').replace(/\ufffd/g, ''); }
+
 export function openaiCompat(cfg) {
   const url = cfg.baseUrl.replace(/\/$/, '') + '/chat/completions';
   async function call({ system, user, json = false, stream = false, onDelta, signal, maxTokens, maxTimeout, thinking }) {
@@ -69,10 +99,12 @@ export function openaiCompat(cfg) {
     if (!res.ok) throw new Error(`${cfg.model} HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     if (stream && onDelta) {
       let text = '';
+      const df = makeDeltaFilter();
       for await (const chunk of sseChunks(res)) {
-        const delta = chunk.choices?.[0]?.delta?.content || '';
+        const delta = df.push(chunk.choices?.[0]?.delta?.content || '');
         if (delta) { text += delta; onDelta(delta); }
       }
+      df.flush();
       return { text, usage: null };
     }
     const data = await res.json();
@@ -80,7 +112,7 @@ export function openaiCompat(cfg) {
     if (!Array.isArray(data.choices) || !data.choices.length) {
       throw new Error(`${cfg.model} 响应无 choices：${JSON.stringify(data).slice(0, 160)}`);
     }
-    return { text: data.choices?.[0]?.message?.content || '', usage: data.usage || null };
+    return { text: cleanText(data.choices?.[0]?.message?.content || ''), usage: data.usage || null };
   }
   return { adapter: 'openai-compat', model: cfg.model, call };
 }
@@ -115,14 +147,19 @@ export function anthropicCompat(cfg) {
     if (!res.ok) throw new Error(`${cfg.model} HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     if (stream && onDelta) {
       let text = '';
+      const df = makeDeltaFilter();
       for await (const ev of sseEvents(res)) {
-        if (ev.type === 'content_block_delta' && ev.delta?.text) { text += ev.delta.text; onDelta(ev.delta.text); }
+        if (ev.type === 'content_block_delta' && ev.delta?.text) {
+          const delta = df.push(ev.delta.text);
+          if (delta) { text += delta; onDelta(delta); }
+        }
       }
+      df.flush();
       return { text, usage: null };
     }
     const data = await res.json();
     // 思维链模型可能把 max_tokens 全烧在 thinking 块上——空正文按错误处理，别静默吞
-    const text = (data.content || []).map((c) => c.text || '').join('');
+    const text = cleanText((data.content || []).map((c) => c.text || '').join(''));
     if (!text.trim()) {
       throw new Error(`${cfg.model} 空正文（stop=${data.stop_reason ?? '?'}——若是思维链模型，max_tokens 可能被 thinking 烧尽）`);
     }

@@ -62,6 +62,23 @@ function pickScene(ctx, rng, alive) {
     for (let i = a.length - 1; i > 0; i--) { const j = rng.int(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
     return a;
   };
+  /** 领衔对子从冷对里挑：shuffle 切片可能把昨天那对原样切回来（两人局无替补时无解，
+   *  有第三人却连日顶同一对是调度漏洞）——先在全员里找一对不在冷却里的做前两位，
+   *  余下的人跟在后面；全员皆热（对子用尽）才允许回退原序。 */
+  function pickColdPairFirst(rng, en, alive, n, day) {
+    const ids = shuffle(alive).map((c) => c.id);
+    const cold = (a, b) => (en.pairLast[[a, b].sort().join('|')] || -99) < day - PAIR_COOLDOWN;
+    const lead = [];
+    for (const a of ids) {
+      const b = ids.find((x) => x !== a && cold(a, x));
+      if (b) { lead.push(a, b); break; }
+    }
+    // 三人局的数学极限：三对全在冷却里，无从避让——打上 pairForced，
+    // 让"连日同对"从隐性巧合变成显式豁免（测试与演出层都能识别）
+    if (!lead.length) return { ids: ids.slice(0, n), forced: true };
+    const rest = ids.filter((x) => !lead.includes(x));
+    return { ids: [...lead, ...rest].slice(0, Math.max(n, 2)), forced: false };
+  }
   const beat = (kind) => {
     const pool = ctx.pack.ensembleTemplates?.beats?.[kind];
     return pool?.length ? pool[rng.int(pool.length)] : '话说了，日子照旧。';
@@ -92,8 +109,10 @@ function pickScene(ctx, rng, alive) {
   // 2 交心场：崩溃链上/心绪见底的人，得有人陪（+2 救急——堂屋的心情账救急不添堵）
   const low = alive.find((c) => c.breakdown || (c.moodPts ?? 0) <= -12);
   if (low && stepBacklog.length < BACKLOG_LIMIT) {
-    const partner = shuffle(alive.filter((c) => c.id !== low.id))[0];
-    if (partner && cooldownOk([low.id, partner.id])) {
+    // 陪的人优先挑冷对（刚同过场的两人次日又面对面，避让不开才退回第一位）
+    const cand = shuffle(alive.filter((c) => c.id !== low.id));
+    const partner = cand.find((c) => cooldownOk([low.id, c.id])) || cand[0];
+    if (partner) {
       return {
         id: `en_${s.day}_${en.scenes.length + 1}`, day: s.day, kind: 'bond',
         participants: [low.id, partner.id],
@@ -107,9 +126,10 @@ function pickScene(ctx, rng, alive) {
   if (stepBacklog.length) {
     const entry = stepBacklog[stepBacklog.length - 1];
     const n = alive.length >= 3 && rng.chance(0.4) ? 3 : Math.min(2, alive.length);
-    const participants = orderParticipants(en, shuffle(alive).slice(0, n).map((c) => c.id), s.day);
+    const pick = pickColdPairFirst(rng, en, alive, n, s.day);
+    const participants = pick.ids;
     return {
-      id: `en_${s.day}_${en.scenes.length + 1}`, day: s.day, kind: 'comment', participants,
+      id: `en_${s.day}_${en.scenes.length + 1}`, day: s.day, kind: 'comment', participants, pairForced: pick.forced,
       topic: { stepId: entry.stepId, stepDay: entry.day },
       outcome: {
         beat: beat('comment'),
@@ -139,10 +159,11 @@ function pickScene(ctx, rng, alive) {
     // 5 闲话场
     if (rng.chance(0.6)) {
       const n = alive.length >= 3 && rng.chance(0.5) ? 3 : Math.min(2, alive.length);
-      const participants = orderParticipants(en, shuffle(alive).slice(0, n).map((c) => c.id), s.day);
+      const pick = pickColdPairFirst(rng, en, alive, n, s.day);
+      const participants = pick.ids;
       const lucky = participants[rng.int(participants.length)];
       return {
-        id: `en_${s.day}_${en.scenes.length + 1}`, day: s.day, kind: 'idle', participants,
+        id: `en_${s.day}_${en.scenes.length + 1}`, day: s.day, kind: 'idle', participants, pairForced: pick.forced,
         topic: {},
         outcome: {
           beat: beat('idle'),
@@ -153,23 +174,6 @@ function pickScene(ctx, rng, alive) {
     }
   }
   return null;
-}
-
-/** 头对避让（评史/闲话等必开或轻量场用）：把不在冷却中的对子排到前两位；
- *  全对子都在冷却（三人局的数学极限）则维持原样——堂屋的日子密起来，对子总会有重逢。 */
-function orderParticipants(en, ids, day) {
-  if (ids.length < 2) return ids;
-  const hot = (a, b) => (en.pairLast[[a, b].sort().join('|')] || -99) >= day - PAIR_COOLDOWN;
-  for (let i = 0; i < ids.length; i++) {
-    for (let j = i + 1; j < ids.length; j++) {
-      if (!hot(ids[i], ids[j])) {
-        [ids[0], ids[i]] = [ids[i], ids[0]];
-        [ids[1], ids[j]] = [ids[j], ids[1]];
-        return ids;
-      }
-    }
-  }
-  return ids;
 }
 
 // —— LLM 台词校验（server 在落库前执行；三道闸：归属/句数/封印禁词） ——
