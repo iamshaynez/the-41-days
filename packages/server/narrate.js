@@ -191,7 +191,7 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'no_tool': lines.push(`没有${f.tool}。`); break;
       case 'need_facility': lines.push(`得先有${f.facility}。`); break;
       case 'waste_warning': lines.push(`${name(f.char)} 已经吃饱了，再吃就是浪费。`); break;
-      case 'franko_incoming': lines.push(f.dark ? t.franko.arrive_dark : t.franko.arrive); break;
+      case 'franko_incoming': lines.push((f.dark ? t.franko.arrive_dark : t.franko.arrive) + (f.news ? `他捎来城里的一句话——都在说：「${f.news}。」` : '')); break;
       case 'franko_left': lines.push(t.franko.leave); break;
       case 'trade_done': lines.push(t.trade.deal); break;
       case 'trade_reject': lines.push(t.trade.reject); break;

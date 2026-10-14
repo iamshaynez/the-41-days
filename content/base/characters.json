@@ -8,7 +8,7 @@
       "frail": true, "desc": "教了一辈子书，账本上记过谁家欠半匹布的束脩。现在他记的是另一本账：还剩几顿饭，女儿还在不在江那边。",
       "persona": {
         "epithet": "用秩序对抗崩塌",
-        "knot": "女儿在公安，等他去找",
+        "knot": "女儿在公安，等他去找", "knotCard": "i_anton_ledger",
         "taboo": "绝不烧字纸",
         "sensitive": { "burn_book": 3, "deny_food": 1.5 },
         "protests": [
@@ -54,7 +54,7 @@
       "softHearted": true, "desc": "见过太多不该发生的死，她不允许眼前再发生一次。规矩是那一夜立的：先来后到，不问来路。",
       "persona": {
         "epithet": "用忙碌压住记忆",
-        "knot": "建安十三年疫营那场分诊，和那个名字",
+        "knot": "建安十三年疫营那场分诊，和那个名字", "knotCard": "i_marta_name",
         "taboo": "绝不放弃任何伤员",
         "sensitive": { "refuse_help": 2, "kill_civ": 1.5, "witness_death": 1.3 },
         "protests": [
@@ -100,7 +100,7 @@
       "desc": "从火里背出来过七个人，肩膀比门框结实。夜里他总在查门闩——查的不是门，是当年那扇没推开的门。",
       "persona": {
         "epithet": "用肩膀抵债",
-        "knot": "那次大火，第七个和第一个之间",
+        "knot": "那次大火，第七个和第一个之间", "knotCard": "i_bron_locks",
         "taboo": "绝不谈那次大火",
         "sensitive": { "volunteer": 1.5, "witness_death": 1.3, "guard_night": 1.3 },
         "protests": [],
@@ -145,7 +145,7 @@
       "canonKey": true, "desc": "职业本能是核对。这座城不想回答的问题，他都记在心里——包括他自己誊过的那六个字。",
       "persona": {
         "epithet": "用追问赎罪",
-        "knot": "降卒进城前，他誊过的那版榜",
+        "knot": "降卒进城前，他誊过的那版榜", "knotCard": "i_katya_tape",
         "taboo": "从不说「据说」",
         "sensitive": { "trade_evidence": 2, "refuse_help": 0.8, "listen_radio": 1.5 },
         "protests": [
@@ -192,7 +192,7 @@
       "desc": "跑赢过所有人，现在只想跑赢流矢。腿上的劲还在，心里的事没人问过。",
       "persona": {
         "epithet": "用玩笑包裹恐惧",
-        "knot": "逃难那一夜，他跑得最快的一次",
+        "knot": "逃难那一夜，他跑得最快的一次", "knotCard": "i_pavel_night",
         "taboo": "绝不独自睡觉",
         "sensitive": { "volunteer": 1.5, "witness_death": 1.3 },
         "protests": [],
@@ -236,7 +236,7 @@
       "desc": "能把三样破烂做成一顿像样的晚饭，也能闻出仓米里掺了几成沙。他的鼻子，是这个家的账房。",
       "persona": {
         "epithet": "用一口热饭对抗非人化",
-        "knot": "大仓的掺法，和他留下的徒弟",
+        "knot": "大仓的掺法，和他留下的徒弟", "knotCard": "i_emil_grain",
         "taboo": "绝不做喂不饱人的饭",
         "sensitive": { "deny_food": 2, "feed": 1.5 },
         "protests": [
@@ -282,7 +282,7 @@
       "canonKey": true, "desc": "哥哥被征走那天，琴弦断了一根。她一直在听——听所有像箭声又不像箭声的声音，等一个熟悉的换气。",
       "persona": {
         "epithet": "用倾听代替存在",
-        "knot": "三短一长的箭声，和这栋房子",
+        "knot": "三短一长的箭声，和这栋房子", "knotCard": "i_zofia_hum",
         "taboo": "不在更鼓里练琴",
         "sensitive": { "play_music": 1.5, "kill_civ": 1.5, "witness_death": 1.3 },
         "protests": [],
@@ -327,7 +327,7 @@
       "desc": "想给家里人打一口像样的棺，木料一直没凑够。他家的门板被征走那天，他记下了编号。",
       "persona": {
         "epithet": "用手说话",
-        "knot": "被「征发」的门版，和那个寒夜",
+        "knot": "被「征发」的门版，和那个寒夜", "knotCard": "i_grigory_door",
         "taboo": "木头绝不装在抢来的门上",
         "sensitive": { "steal_civ": 1.5, "burn_book": 1.3 },
         "protests": [
@@ -374,7 +374,7 @@
       "desc": "15 岁，屯候火夫。大人们以为他不懂；他什么都懂，只是装不懂——这样他们能好受一点。",
       "persona": {
         "epithet": "全队的镜子",
-        "knot": "津戍、水窦，和姐姐",
+        "knot": "津戍、水窦，和姐姐", "knotCard": "i_yura_smoke",
         "taboo": "从不说谎——除了「我不怕」",
         "sensitive": { "kill_civ": 2, "refuse_help": 1.5, "witness_death": 1.5 },
         "protests": [],
@@ -419,7 +419,7 @@
       "canonKey": true, "desc": "围城前一周封过四百多枚检署，认得每种符传的编号段——不管它换什么抬头。她的私人簿记里，压着 17 道说不清来路的检。",
       "persona": {
         "epithet": "用精确赎罪",
-        "knot": "412 枚检署，和第 413 枚",
+        "knot": "412 枚检署，和第 413 枚", "knotCard": "i_vera_stamps",
         "taboo": "绝不在没读完的券书上落印",
         "sensitive": { "trade_evidence": 2, "steal_civ": 1.5, "deny_food": 1.2 },
         "protests": [
@@ -466,7 +466,7 @@
       "wanted": true, "desc": "军法队的通缉令是他十年前的画像。他不担心被抓——他担心的是画像一年比一年像了。",
       "persona": {
         "epithet": "用玩世不恭执行纪律",
-        "knot": "那船药，和降卒营的冬天",
+        "knot": "那船药，和降卒营的冬天", "knotCard": "i_danilo_med",
         "taboo": "不碰平民的随身物",
         "sensitive": { "steal_civ": 1.5, "help": 0.5 },
         "protests": [
@@ -514,7 +514,7 @@
       "canonKey": true, "desc": "话少，修东西的时候比说话多。旧伤在阴天提醒他哪条腿先迈——那条腿，记得建安十三年的火。",
       "persona": {
         "epithet": "用手代替嘴",
-        "knot": "建安十三年那夜，北津台，和那一棍",
+        "knot": "建安十三年那夜，北津台，和那一棍", "knotCard": "i_alexey_leg",
         "taboo": "修好的台必须能举火",
         "sensitive": { "listen_radio": 1.5, "trade_evidence": 1.5 },
         "protests": [],
