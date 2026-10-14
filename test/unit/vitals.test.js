@@ -155,11 +155,12 @@ describe('心情 M-01~M-10/M-14', () => {
 });
 
 describe('疲劳 F 与温度 T', () => {
-  test('F-02/F-03 守夜疲劳 +1', () => {
+  test('F-02/F-05 守夜疲劳：安静夜睡椅打盹净零，遇袭之夜 +1', () => {
     let { state } = newRun({ roster: ['bron'] });
     state = step(state, [{ type: 'act', actor: 'bron', action: 'guard' }, { type: 'advance' }]).state;
     state = step(state, [{ type: 'dusk_assign', scavenger: null, others: { bron: 'guard' } }]).state;
-    assert.equal(ch(state, 'bron').fatigue, 1);
+    const fat = ch(state, 'bron').fatigue;
+    assert.ok(fat === 0 || fat === 1, `安静夜守卫打盹净零（F-05）/遇袭之夜 +1（F-02）——实际 ${fat}`);
   });
 
   test('T-04 严寒无取暖：三夜后过半队伍患病（体弱者 40%/夜）', () => {

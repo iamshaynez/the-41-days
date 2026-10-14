@@ -38,15 +38,24 @@ export function tickHealth(ctx) {
   for (const c of aliveChars(ctx.s)) {
     const woundTreated = c.woundTreatedDay === day - 1;
     const sickTreated = c.sickTreatedDay === day - 1 || c.sickTreatedHerb;
-    const rested = c.bedRest;
+    // rested 分两档（F-03 落地的平衡面）：
+    //  deepRested = 白天刻意卧床（actRest）——「治过又卧床一整日」的即刻见效只认它；
+    //  rested = 任何休养（含夜里睡床）——推进渐进恢复分支（养两日伤势降档）。
+    // 夜里睡床人人有份，若也算即刻见效，夜夜带伤的亡命徒等于自带疗养院——
+    // 乱玩曲线（赌徒/恶魔）会被治愈压平（实测 sim：赌徒存活 29%→68%）。
+    // 另：饿着肚子（hunger<2），觉也白睡——养伤养病都要求吃得饱，
+    // 守着家不往外找吃的的活法，治愈会先耗尽（平衡不变量：守家不优于外出）
+    const canHeal = c.hunger >= 2;
+    const deepRested = canHeal && (c.bedRest || ctx.nightBedRest?.has(c.id) || false);
+    const rested = deepRested || (canHeal && ctx.nightBeds?.has(c.id)) || false;
 
     // —— 伤 ——
     if (c.wound === 3) {
-      if (woundTreated && rested && healerHome) { ctx.setWound(c, 2, '治过又有人照看'); }
+      if (woundTreated && deepRested && healerHome) { ctx.setWound(c, 2, '治过又有人照看'); }
       else if (ctx.rng.chance(0.5 * deathMul)) { ctx.fact('dying_wound', { char: c.id }); ctx.die(c, '重伤不治'); continue; }
       else ctx.fact('critical_wound_hold', { char: c.id });
     } else if (c.wound === 2) {
-      if (woundTreated && rested) ctx.setWound(c, 1, '治过又静养');
+      if (woundTreated && deepRested) ctx.setWound(c, 1, '治过又卧床静养');
       else if (rested) {
         c.woundRestDays++;
         if (c.woundRestDays >= 2) { ctx.setWound(c, 1, '卧床将养'); c.woundRestDays = 0; }
@@ -54,7 +63,7 @@ export function tickHealth(ctx) {
       } else if (ctx.rng.chance(0.3 * worseMul)) { ctx.setWound(c, 3, '伤未医治，恶化了'); ctx.fact('wound_worse', { char: c.id }); }
       if (!woundTreated) c.woundUntreatedDays++;
     } else if (c.wound === 1) {
-      if (rested) ctx.setWound(c, 0, '静养好了');
+      if (rested) ctx.setWound(c, 0, '静养好了'); // 轻伤：睡好两晚就能好
       else { c.woundRestDays++; if (c.woundRestDays >= 3) ctx.setWound(c, 0, '将养数日好了'); }
       if (!woundTreated) c.woundUntreatedDays++;
     } else { c.woundUntreatedDays = 0; c.woundRestDays = 0; }
@@ -65,15 +74,15 @@ export function tickHealth(ctx) {
 
     // —— 病 ——
     if (c.sick === 3) {
-      if (sickTreated && rested && healerHome) {
+      if (sickTreated && deepRested && healerHome) {
         c.sickRestDays++;
         if (c.sickRestDays >= 2) { ctx.setSick(c, 2, '治过又有人照看'); c.sickRestDays = 0; }
-      } else if (sickTreated && rested) {
+      } else if (sickTreated && deepRested) {
         if (ctx.rng.chance(0.35 * deathMul)) { ctx.fact('dying_sick', { char: c.id }); ctx.die(c, '重病不治'); continue; }
       } else if (ctx.rng.chance(0.5 * deathMul)) { ctx.fact('dying_sick', { char: c.id }); ctx.die(c, '重病不治'); continue; }
       else ctx.fact('critical_sick_hold', { char: c.id });
     } else if (c.sick === 2) {
-      if (sickTreated && rested) ctx.setSick(c, 1, '治过又静养');
+      if (sickTreated && deepRested) ctx.setSick(c, 1, '治过又卧床静养');
       else if (rested) {
         c.sickRestDays++;
         if (c.sickRestDays >= 2) { ctx.setSick(c, 1, '卧床将养'); c.sickRestDays = 0; }
@@ -89,10 +98,40 @@ export function tickHealth(ctx) {
   }
 }
 
-/** 步骤④：疲劳结算（F 系：夜间排班已写 awakeTonight/sleptWhere） */
+/** 步骤④：疲劳结算（F-02/F-03/F-05 落地）——夜是三口人的夜：
+ *  夜访者整夜未眠 +1；守卫遇袭之夜 +1（安静夜睡椅打盹与累积相抵，净零不落账）；
+ *  安睡者恢复：睡床 −2（床位够）、地板/半宿 −1。床位分配见 assignNightBeds。
+ *  夜里排班（bedRest/guardTonight）会被 advanceDay 在 tick 之前重置——
+ *  判定用 toDawn 里存好的快照（ctx.nightBedRest / ctx.nightGuard / ctx.nightBeds）。 */
+export function assignNightBeds(ctx) {
+  const s = ctx.s;
+  const beds = (s.facilities.bed || 0) + (s.facilities.bed_good || 0);
+  if (!beds) return new Set();
+  // 床位不足时优先给：卧床养伤者 > 重伤病 > 疲惫者（F-05 床位约束）
+  const rank = (c) => (c.bedRest ? 3 : 0) + (c.wound >= 2 || c.sick >= 2 ? 2 : 0) + (c.fatigue >= 1 ? 1 : 0);
+  const sleepers = aliveChars(s)
+    .filter((c) => !c.awakeTonight && !ctx.nightHalfSlept?.has(c.id)) // 换守半宿者不占床
+    .sort((a, b) => rank(b) - rank(a));
+  return new Set(sleepers.slice(0, beds).map((c) => c.id));
+}
 export function tickFatigue(ctx) {
-  for (const c of aliveChars(ctx.s)) {
-    if (c.awakeTonight) ctx.setFatigue(c, c.fatigue + 1, '守夜未眠');
+  const s = ctx.s;
+  const out = ctx.outTonight || null;   // 今晚真正出门的人（endNightReturn 置位）
+  const quiet = !ctx.nightRaided;       // 劫掠真来了（raid.js 置位）守卫才整夜无眠
+  for (const c of aliveChars(s)) {
+    if (c.awakeTonight) {
+      const isOut = out != null && c.id === out;
+      if (quiet && !isOut) { /* F-05 守卫睡椅打盹，与 F-02 相抵——不落账 */ }
+      else ctx.setFatigue(c, c.fatigue + 1, isOut ? '夜访未眠' : '守夜未眠');
+    } else if (c.fatigue > 0) {
+      const half = !!ctx.nightHalfSlept?.has(c.id);
+      const bed = !half && ctx.nightBeds?.has(c.id);
+      const to = Math.max(0, c.fatigue - (half ? 1 : bed ? 2 : 1));
+      if (to !== c.fatigue) {
+        ctx.setFatigue(c, to, half ? '半宿将息' : bed ? '睡床安睡' : '安睡将息');
+        ctx.fact('night_rest', { char: c.id, bed: !!bed, half });
+      }
+    }
     c.awakeTonight = false;
     ctx.emit('CHAR_FLAG', { char: c.id, key: 'awakeTonight', val: false });
   }

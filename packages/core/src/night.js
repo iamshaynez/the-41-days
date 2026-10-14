@@ -1,6 +1,6 @@
 // 夜间探索引擎（内核设计 §6：时间槽/门与容器/声响/检定/战斗/NPC）。
 // 门状态记在 night.unlocked/cleared/sawed（不污染内容对象）；locState 经事件记账。
-import { charById, combatModOf, moodLevel } from './state.js';
+import { charById, combatModOf, moodLevel, aliveChars } from './state.js';
 import { findDoc, docAvailable } from './dayActions.js';
 import { recordCausal } from './causality.js';
 
@@ -34,11 +34,15 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
   const loc = pack.locMap[location];
   if (!s.locState[location]) { s.locState[location] = { searched: {}, npcState: {}, scriptsFired: {}, firstVisit: true }; ctx.emit('LOC_NEW', { loc: location }); }
   const st = s.locState[location];
-  // E-10 重访演化：搜过 ≥3 天的容器 20% 被外界重新填上（低质重抽）
+  // E-10 重访演化：搜过足够久的容器有几率被外界重新填上（低质重抽）——
+  // 参数住内容包（manifest.night），围城不该是可再生农场
+  const nc = ctx.pack.manifest.night || {};
+  const refillMinDays = nc.refillMinDays ?? 2;
+  const refillChance = nc.refillChance ?? 0.6;
   for (const r of loc.rooms) {
     for (const cont of r.containers || []) {
       const when = st.searched[cont.id];
-      if (when && s.day - when >= 2 && ctx.rng.chance(0.6)) {
+      if (when && s.day - when >= refillMinDays && ctx.rng.chance(refillChance)) {
         delete st.searched[cont.id];
         ctx.emit('LOC_REFILL', { loc: location, cont: cont.id });
         ctx.fact('container_refilled', { name: cont.name });
@@ -243,6 +247,20 @@ export function applyNightAction(ctx, intent) {
       return combatRound(ctx, npc, c, { surprise });
     }
     case 'retreat': return forceEnd(ctx, 'retreat');
+    // P2 换守：提前收工回家接守——夜访者接过门厅，原守卫去睡后半宿（半宿地板档）
+    case 'handover': {
+      const guard = aliveChars(s).find((c) => c.guardTonight);
+      const me = n ? charById(s, n.charId) : null;
+      if (!guard || !me || guard.id === me.id) return nightError(ctx, '家里没有可换的守卫');
+      guard.guardTonight = false; guard.awakeTonight = false;
+      ctx.emit('CHAR_FLAG', { char: guard.id, key: 'guardTonight', val: false });
+      ctx.emit('CHAR_FLAG', { char: guard.id, key: 'awakeTonight', val: false });
+      (ctx.nightHalfSlept ||= new Set()).add(guard.id);
+      me.guardTonight = true; // awakeTonight 已是 true（整夜在外），接守到天亮
+      ctx.emit('CHAR_FLAG', { char: me.id, key: 'guardTonight', val: true });
+      ctx.fact('guard_handover', { from: guard.id, to: me.id });
+      return forceEnd(ctx, 'handover');
+    }
     // —— 管家自动流的岔路应答（零槽消耗：它们是选择，不是动作） ——
     case 'ignore': {
       const npc = (loc.npcs || []).find((x) => x.id === intent.target);
@@ -298,10 +316,13 @@ function lootNight(ctx, cont, c) {
   const s = ctx.s;
   const entries = (cont.loot || []).filter((e) => (e.w || 0) > 0);
   if (entries.length) {
-    // 双次结算（§12 规格：平安夜 2.5-3.5 生食当量——一箱多物）
+    // 每箱掷 N 次（§12 规格）——次数与命中率住内容包（manifest.night）
+    const nc = ctx.pack.manifest.night || {};
+    const rolls = nc.lootRolls ?? 2;
+    const hitChance = nc.lootHitChance ?? 0.62;
     const gotItems = [];
-    for (let roll = 0; roll < 2; roll++) {
-      if (!ctx.rng.chance(0.62)) continue;
+    for (let roll = 0; roll < rolls; roll++) {
+      if (!ctx.rng.chance(hitChance)) continue;
       const e = ctx.rng.weighted(entries);
       const n2 = ctx.rng.range(e.count[0], e.count[1]);
       if (n2 > 0) { addItemCarried(ctx, e.item, n2); gotItems.push({ item: e.item, n: n2 }); }
@@ -436,6 +457,8 @@ export function endNightReturn(ctx, reason) {
       else ctx.addItem(g, 1, '战损归位'); // 被丢弃逻辑保护，理论不可达；防御性归还
     }
     ctx.emit('NIGHT_ENDED', { loc: n.locId, reason: reason || 'dawn', carried: n.pack.length, gear: n.gear || [] });
+    // 今晚真正出门的人（破晓疲劳结算据此区分「夜访未眠」与守卫的睡椅相抵）
+    ctx.outTonight = n.charId;
     // A-1 夜访事实带人名：叙事者不再拿渡口的鲁舟顶包（二周目实测 8+ 处主语顶替）
     ctx.fact('night_end', { char: n.charId, loc: ctx.pack.locMap[n.locId]?.name || n.locId, carried: n.pack.length, reason: reason || 'dawn' });
     // 昨夜谁出的门：晨间叙事与世界简报都靠它钉主语（fold 经 FLAG 还原）

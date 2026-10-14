@@ -1618,6 +1618,10 @@ body.motion-off .fb-chip, body.motion-off .pl-char.acting, body.motion-off .act-
 .turn-ledger .ld-tag.t-world { border-style: dashed; }
 body.motion-off .turn-ledger { animation: none; }
 
+/* 夜访卡的家里一行（夜是三口人的夜）：门后的动静也上卡 */
+#narration .ask .home-line { color: var(--ink-3); letter-spacing: .04em; }
+#narration .ask .home-line b { color: var(--accent); font-weight: 400; }
+
 /* 细目抽屉里的规矩开关 */
 .hb-policy { margin-top: 2px; }
 

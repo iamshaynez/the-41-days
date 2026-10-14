@@ -9,7 +9,7 @@ import { startNight, applyNightAction, endNightReturn } from './night.js';
 import { resolveRaid } from './raid.js';
 import { executeTrade } from './trade.js';
 import { chooseEventOption, optionAvailable, optionCostOk } from './events.js';
-import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents } from './vitals.js';
+import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents, assignNightBeds } from './vitals.js';
 import { tickAutonomous, tickDirections } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
@@ -359,6 +359,11 @@ function toDawn(ctx) {
   const s = ctx.s;
   if (s.phase !== 'dawn' && s.phase !== 'night') return;
   resolveRaid(ctx);
+  // 夜之家政快照（F-03/F-05 落地）：advanceDay 会先于各 tick 重置 bedRest/guardTonight——
+  // 床位分配与「卧床=rested/守卫打盹」的判定都要用重置前的夜里排班
+  ctx.nightBedRest = new Set(aliveChars(s).filter((c) => c.bedRest).map((c) => c.id));
+  ctx.nightGuard = new Set(aliveChars(s).filter((c) => c.guardTonight).map((c) => c.id));
+  ctx.nightBeds = assignNightBeds(ctx);
   advanceDay(ctx);           // day++、天气、AP、商人、DAY_STARTED 快照
   tickHunger(ctx);
   tickHealth(ctx);
