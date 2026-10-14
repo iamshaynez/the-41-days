@@ -49,9 +49,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
   assertSchemaCurrent(db.db);  // 传原生 DatabaseSync（pendingOf 直接 prepare）
   const pack = loadPack(PACK_DIR);
   const packId = db.seedContent(PACK_DIR, pack);
-  const sessions = new Map(); // token -> {userId, name, admin, at}
+  // 会话走库（005 迁移）：登录态跨重启/重部署存活——库里只存 sha256 摘要，cookie 存原文
   const SESSION_TTL = cfg.sessionTtlMs;
   const COOKIE_NAME = 'twom_session';
+  const tokenHash = (t) => createHash('sha256').update(t).digest('hex');
   const DUMMY_HASH = hashPassword('twom-timing-pad'); // 用户不存在时也跑一次同代价校验，抹平时间差
   const startedAt = Date.now();
   if (cfg.adminPasswordWarn) log.warn(cfg.adminPasswordWarn);
@@ -376,16 +377,22 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     return h.replace(/^Bearer\s+/i, '') || parseCookie(req.headers.cookie || '')[COOKIE_NAME] || '';
   };
   const auth = (req) => {
-    const s = sessions.get(bearerOrCookie(req));
-    if (!s) return null;
-    if (Date.now() - s.at > SESSION_TTL) { sessions.delete(bearerOrCookie(req)); return null; }
-    return s;
+    const token = bearerOrCookie(req);
+    if (!token) return null;
+    const h = tokenHash(token);
+    const row = db.sessionGet(h);
+    if (!row) return null;
+    if (Date.now() - row.last_seen_at > SESSION_TTL) { db.sessionDelete(h); return null; }
+    const u = db.userById(row.user_id);
+    if (!u) { db.sessionDelete(h); return null; } // 用户已删，会话随之作废
+    db.sessionTouch(h, Date.now()); // 滑动续期：越常来，越不用重新登录
+    return { userId: u.id, name: u.name, admin: !!u.is_admin };
   };
-  /** 签发会话：内存表 + HttpOnly cookie（浏览器自动携带；API/测试可用 Bearer） */
+  /** 签发会话：库表 + HttpOnly cookie（浏览器自动携带；API/测试可用 Bearer） */
   function issueSession(res, user) {
-    for (const [k, v] of sessions) if (Date.now() - v.at > SESSION_TTL) sessions.delete(k);
+    db.sessionDeleteExpired(Date.now() - SESSION_TTL); // 顺手清扫过期的住客
     const token = randomBytes(32).toString('base64url');
-    sessions.set(token, { userId: user.id, name: user.name, admin: !!user.is_admin, at: Date.now() });
+    db.sessionPut(tokenHash(token), user.id, Date.now());
     res.setHeader('set-cookie', sessionCookie(COOKIE_NAME, token, Math.floor(SESSION_TTL / 1000)));
     return token;
   }
@@ -457,7 +464,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
 
       if (path === '/api/auth/logout' && req.method === 'POST') {
         const token = bearerOrCookie(req);
-        if (token) sessions.delete(token);
+        if (token) db.sessionDelete(tokenHash(token));
         res.setHeader('set-cookie', clearSessionCookie(COOKIE_NAME));
         return json(res, 200, { ok: true });
       }

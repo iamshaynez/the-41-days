@@ -15,7 +15,8 @@ export function loadConfig(env = process.env) {
     adminPassword: env.ADMIN_PASSWORD || 'war-admin',
     logLevel: (env.LOG_LEVEL || (cfg_env(env) === 'production' ? 'info' : 'debug')).toLowerCase(),
     inputRatePerMin: Number(env.INPUT_RATE_PER_MIN ?? 120),
-    sessionTtlMs: Number(env.SESSION_TTL_HOURS ?? 24) * 3600 * 1000
+    // 会话时效：默认一年（8760h）——登录一次，重部署也不用再报名字；env 可收紧
+    sessionTtlMs: Number(env.SESSION_TTL_HOURS ?? 8760) * 3600 * 1000
   };
   // —— 校验（坏的配置在启动第一毫秒就死，不要在第一个请求里死）——
   if (!Number.isInteger(cfg.port) || cfg.port <= 0 || cfg.port > 65535) {
@@ -23,6 +24,9 @@ export function loadConfig(env = process.env) {
   }
   if (cfg.inputRatePerMin < 0 || Number.isNaN(cfg.inputRatePerMin)) {
     throw new Error(`INPUT_RATE_PER_MIN 无效：${env.INPUT_RATE_PER_MIN}`);
+  }
+  if (!Number.isFinite(cfg.sessionTtlMs) || cfg.sessionTtlMs <= 0) {
+    throw new Error(`SESSION_TTL_HOURS 无效：${env.SESSION_TTL_HOURS}`);
   }
   if (cfg.env === 'production' && !env.ADMIN_PASSWORD) {
     // 允许默认口令启动，但必须在日志里大声说出来
