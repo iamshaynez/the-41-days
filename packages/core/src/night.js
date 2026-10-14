@@ -372,15 +372,15 @@ export function combatRound(ctx, npc, c, { surprise = false } = {}) {
     ctx.mood(c, innocent ? -10 : -1, '夺命', { ethics: innocent ? 'killCiv' : 'killEnemy' });
     return { ok: true, combat: 'win' };
   } else if (diff >= -1) {
-    ctx.setWound(c, c.wound + 1);
-    if (ctx.rng.chance(0.3)) ctx.setWound(c, c.wound + 1);
+    ctx.setWound(c, c.wound + 1, '打斗负伤');
+    if (ctx.rng.chance(0.3)) ctx.setWound(c, c.wound + 1, '打斗负伤');
     ctx.fact('combat_hurt', { npc: npc.name });
     return { ok: true, combat: 'hurt' };
   } else {
     const fleeMod = (c.traits?.sprint ? 3 : 0) + (c.traits?.stealthy || 0);
     const rf = ctx.check('撤退', fleeMod);
     if (rf.outcome === 'fail') {
-      ctx.setWound(c, Math.max(c.wound, 2));
+      ctx.setWound(c, Math.max(c.wound, 2), '败退负伤');
       dropOnePackItem(ctx);
       ctx.fact('combat_flee_hurt', {});
     } else ctx.fact('combat_flee', {});

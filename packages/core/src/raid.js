@@ -57,17 +57,17 @@ export function resolveRaid(ctx) {
   const hurt = [];
   const awakeGuards = quiet ? [] : guards;
   if (band === 'repelled_hurt' && awakeGuards.length && ctx.rng.chance(0.5)) {
-    const g = ctx.rng.pick(awakeGuards); ctx.setWound(g, g.wound + 1); hurt.push(g.id);
+    const g = ctx.rng.pick(awakeGuards); ctx.setWound(g, g.wound + 1, '击退夜袭时挂了彩'); hurt.push(g.id);
   }
   if (band === 'theft' && awakeGuards.length && ctx.rng.chance(0.5)) {
-    const g = ctx.rng.pick(awakeGuards); ctx.setWound(g, g.wound + 1); hurt.push(g.id);
+    const g = ctx.rng.pick(awakeGuards); ctx.setWound(g, g.wound + 1, '窃贼行凶'); hurt.push(g.id);
   }
   if (band === 'bad') {
     const pool = awakeGuards.length ? awakeGuards : aliveChars(s);
     if (!pool.length) return;
     const g = ctx.rng.pick(pool);
-    ctx.setWound(g, Math.max(g.wound, ctx.rng.chance(0.5) ? 2 : 1)); hurt.push(g.id);
-    if (ctx.rng.chance(0.1)) { ctx.setWound(g, 3); ctx.fact('raid_mortal', { char: g.id }); }
+    ctx.setWound(g, Math.max(g.wound, ctx.rng.chance(0.5) ? 2 : 1), '劫掠者下了狠手'); hurt.push(g.id);
+    if (ctx.rng.chance(0.1)) { ctx.setWound(g, 3, '劫掠者下了死手'); ctx.fact('raid_mortal', { char: g.id }); }
   }
   // 门受损（B-08）
   if (band !== 'repelled' && s.doorLevel > 0) { s.doorLevel--; ctx.emit('DOOR_LEVEL', { to: s.doorLevel }); }

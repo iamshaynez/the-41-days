@@ -1588,6 +1588,28 @@ body[data-snow='3'] .snow::before { animation-duration: 9s; }
 body[data-snow='3'] .snow::after { animation-duration: 11s; }
 body.motion-off .fb-chip, body.motion-off .pl-char.acting, body.motion-off .act-divider, body.motion-off .gazette { animation: none; }
 
+/* ═══ 账卡（turn-ledger）：一轮之内，家底与人的每一笔变动——变化不许无端 ═══
+   内核事件流原账聚合（数值 + 出处），随书页落库、续局重铺同一张卡。 */
+.turn-ledger {
+  max-width: 34em; margin: 22px auto 16px; padding: 11px 20px 10px;
+  border: 1px solid var(--rule);
+  background: linear-gradient(180deg, rgba(178, 160, 130, .05), transparent 72%);
+  animation: fadeUp .7s ease both;
+}
+.turn-ledger .ld-kicker { display: block; font-family: var(--font-carved); font-size: 10.5px; letter-spacing: .4em; color: var(--ink-3); margin-bottom: 6px; }
+.turn-ledger .ld-sec { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 4px; font-size: 11px; letter-spacing: .32em; color: var(--ink-3); }
+.turn-ledger .ld-sec::after { content: ''; flex: 1; border-top: 1px solid var(--rule); }
+.turn-ledger .ld-row { display: flex; align-items: baseline; gap: 9px; margin: 3px 0; font-size: .9em; }
+.turn-ledger .ld-name { min-width: 4.5em; text-align: justify; text-align-last: justify; color: var(--ink-1); }
+.turn-ledger .ld-what { color: var(--ink-3); letter-spacing: .1em; }
+.turn-ledger .ld-num { font-weight: 700; white-space: nowrap; }
+.turn-ledger .ld-num.up { color: var(--brass); }
+.turn-ledger .ld-num.down { color: var(--accent); }
+.turn-ledger .ld-ar { font-style: normal; color: var(--ink-3); padding: 0 2px; }
+.turn-ledger .ld-pts { font-style: normal; font-weight: 400; color: var(--ink-3); }
+.turn-ledger .ld-why { margin-left: auto; padding-left: 12px; font-family: var(--font-kai); font-size: .92em; color: var(--ink-3); text-align: right; }
+body.motion-off .turn-ledger { animation: none; }
+
 /* 细目抽屉里的规矩开关 */
 .hb-policy { margin-top: 2px; }
 
