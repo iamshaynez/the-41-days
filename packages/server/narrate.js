@@ -1,5 +1,5 @@
 // 直读叙事器 + 世界简报（技术架构 §7.2 降级路径）：把 facts 渲染成文字，与 LLM 叙事者同一输入。
-import { moodLevel, HUNGER_NAMES, HARM_NAMES, SICK_NAMES, FATIGUE_NAMES, aliveChars, charById, policyOf, validateTextMarkers, stripMarkers, optionAvailable, optionCostOk } from '../core/index.js';
+import { moodLevel, MOOD_LEVELS, HUNGER_NAMES, HARM_NAMES, SICK_NAMES, FATIGUE_NAMES, aliveChars, charById, policyOf, validateTextMarkers, stripMarkers, optionAvailable, optionCostOk } from '../core/index.js';
 import { planNightStep } from '../core/src/delegate.js';
 import { markerSyntaxErrors } from '../core/src/markers.js';
 
@@ -164,7 +164,7 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       // 概述日直落黄昏：黄昏行要说清「这一天过去了」——不然玩家以为整夜没走完
       case 'phase_dusk': lines.push(prevKey === 'day_overview' ? (t.overview?.to_dusk || t.phase.to_dusk) : t.phase.to_dusk); break;
       case 'eat': lines.push(t.eat[f.item === 'meal' ? 'meal' : 'raw'].replace('{{name}}', name(f.char))); break;
-      case 'cook': lines.push(t.cook); break;
+      case 'cook': lines.push(t.cook.replace('{{name}}', name(f.char))); break;
       case 'craft': lines.push(t.craft.replace('{{name}}', name(f.char))); break;
       case 'build': lines.push(t.build.replace('{{name}}', name(f.char))); break;
       case 'build_door': lines.push(`门又加了一层板子。现在是第 ${f.level} 级加固。`); break;
@@ -339,14 +339,147 @@ export function buildBeats(state, facts, pack) {
 }
 
 /** 反馈载荷（SSE feedback 事件 / confirm-plan JSON）：
- *  beats=逐拍行文（带行动者）；moves=物品增减账（事件流原账）；ticks=破晓刻度（指名到人）。 */
-export function buildFeedback(state, facts, events, pack) {
+ *  beats=逐拍行文（带行动者）；moves=物品增减账（事件流原账）；ticks=破晓刻度（指名到人）；
+ *  ledger=账卡台账（物资/人物状态每一笔变动：变多少、为什么、谁的手）——落库为 role:ledger 书页行。
+ *  turn={choice:{by,text}, directive}：本轮归因上下文——choice 卡头引言；directive=玩家本轮亲自定过方针
+ *  （方针夜的自走步是执行你的选择，归「你」；无方针的自走才是「规矩」）。 */
+export function buildFeedback(state, facts, events, pack, inputDay, turn = {}) {
   return {
     beats: buildBeats(state, facts, pack),
-    moves: (events || []).filter((e) => e.t === 'ITEM_MOVED').map((e) => ({ item: e.d.item, delta: e.d.delta })),
+    moves: (events || []).filter((e) => e.t === 'ITEM_MOVED').map((e) => ({ item: e.d.item, delta: e.d.delta, why: e.d.why })),
     ticks: (events || []).filter((e) => ['HUNGER_CHANGED', 'WOUND_CHANGED', 'SICK_CHANGED', 'FATIGUE_CHANGED', 'MOOD_LEVEL', 'BREAKDOWN_START'].includes(e.t))
-      .map((e) => ({ t: e.t, char: e.d.char, from: e.d.from, to: e.d.to }))
+      .map((e) => ({ t: e.t, char: e.d.char, from: e.d.from, to: e.d.to })),
+    ledger: buildLedger(state, events, pack, inputDay, turn)
   };
+}
+
+/** 账卡台账：一轮之内「家底与人」的每一笔变动，纯事件流聚合（fold 同源）。
+ *  结构随 role:ledger 落库（JSON），续局重铺同一张卡——items/chars 都是人话（中文名），
+ *  每行带 why 与三源徽记 tier（you=这轮你点的 / rule=你立下、管家与作息在执行的 / world=世界的手）。 */
+const VITALS = {
+  HUNGER_CHANGED: { k: 'hunger', label: '饥饿', names: HUNGER_NAMES, good: 'up' },
+  WOUND_CHANGED: { k: 'wound', label: '伤势', names: HARM_NAMES, good: 'down' },
+  SICK_CHANGED: { k: 'sick', label: '病势', names: SICK_NAMES, good: 'down' },
+  FATIGUE_CHANGED: { k: 'fatigue', label: '疲劳', names: FATIGUE_NAMES, good: 'down' }
+};
+const MOOD_LV_NAME = Object.fromEntries(MOOD_LEVELS.map((l) => [l.key, l.name]));
+// 三源判据（why 人串都是内核手写的，词表封闭可枚举）：
+// 世界的手——时间、病痛、劫掠、瘾头、人心这些不归任何玩家决定的事
+const WORLD_WHY = new Set([
+  '过了一日', '饿出病来', '伤未医治，恶化了', '病未医治，恶化了', '伤口感染了', '冬夜受寒', '崩溃自戕', '夜里偷偷照料人',
+  '劫掠者下了狠手', '劫掠者下了死手', '窃贼行凶', '击退夜袭时挂了彩', '被窃', '失窃',
+  '严重饥饿拖累', '重伤拖累', '瘾头', '被袭失窃', '同伴崩溃自伤', '邻里守信', '良心'
+]);
+// 规矩的手——作息与既定安排的回报（破晓伤病恢复矩阵：治过、养过，账到日子才结）；
+// 常设家什的自动产出与烧用（取暖/集雨/园子/捕鼠……）也是规矩在替你干活，
+// 即便发生在方针夜也不归「你」——方案管夜路，不管炉子
+const RULE_WHY = new Set(['卧床将养', '将养数日好了', '静养好了', '治过又静养', '治过又有人照看', '安抚见了效',
+  '取暖', '化雪', '集雨', '集雪', '园子', '捕鼠', '蒸馏', '归还']);
+/** 一笔变动的三源判定：世界词表 > 作息词表 > delegated 印（方针夜升级归你）> 你的手 */
+function tierOf(rawWhy, delegated, turn) {
+  if (rawWhy && (rawWhy.startsWith('ml_') || WORLD_WHY.has(rawWhy))) return 'world';
+  if (rawWhy && RULE_WHY.has(rawWhy)) return 'rule';
+  if (delegated) return turn?.directive ? 'you' : 'rule';
+  return 'you';
+}
+export function buildLedger(state, events, pack, inputDay, turn = {}) {
+  const cname = (id) => state.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || id;
+  // why 人话化：内容包默认码兜底；事件卡 id → 《卡名》；ml_<stepId> → 城事步题
+  const whyTxt = (why) => {
+    if (!why || why === 'gain') return '得物';
+    if (why === 'use') return '用掉';
+    if (pack.cardMap?.[why]?.title) return `《${pack.cardMap[why].title}》`;
+    if (why.startsWith('ml_')) {
+      const st = (pack.mainline?.steps || []).find((x) => 'ml_' + x.id === why);
+      if (st) return `城事：${st.title}`;
+    }
+    return why;
+  };
+  // —— 家底：同物同因聚成一笔（异因分开；先来先排）——
+  const items = [];
+  const itemIx = new Map();
+  for (const e of events || []) {
+    if (e.t !== 'ITEM_MOVED') continue;
+    const key = e.d.item + '\u0000' + (e.d.why || '');
+    let row = itemIx.get(key);
+    if (!row) {
+      row = { item: e.d.item, name: pack.itemMap?.[e.d.item]?.name || e.d.item, delta: 0, why: whyTxt(e.d.why), tier: tierOf(e.d.why, e.d.delegated, turn) };
+      itemIx.set(key, row); items.push(row);
+    }
+    row.delta += e.d.delta;
+  }
+  // —— 人：刻度逐笔（同刻度相邻合并，异源并笔不落徽），心情按人聚因，崩溃单列 ——
+  const chars = [];
+  const charIx = new Map();
+  const charRow = (id) => {
+    let row = charIx.get(id);
+    if (!row) { row = { char: id, name: cname(id), rows: [] }; charIx.set(id, row); chars.push(row); }
+    return row;
+  };
+  const moodAcc = new Map(); // id -> { parts: [{raw, delta}], lvFrom, lvTo }
+  const moodOf = (id) => {
+    let m = moodAcc.get(id);
+    if (!m) { m = { parts: [], lvFrom: null, lvTo: null }; moodAcc.set(id, m); }
+    return m;
+  };
+  for (const e of events || []) {
+    const d = e.d || {};
+    if (VITALS[e.t]) {
+      const def = VITALS[e.t];
+      const rows = charRow(d.char).rows;
+      const tier = tierOf(d.why, d.delegated, turn);
+      const prev = rows[rows.length - 1];
+      // 相邻同刻度合并：吃饱又消化（同轮两次饥饿变动）并成一行，why 用「、」连；
+      // 两笔不同源时行不落徽——账不硬归一方
+      if (prev && prev.k === def.k) {
+        prev.to = def.names[d.to] ?? String(d.to);
+        prev.whys.push(whyTxt(d.why));
+        prev.why = prev.whys.join('、');
+        prev.tiers = new Set([...prev.tiers, tier]);
+        prev.tier = prev.tiers.size === 1 ? tier : undefined;
+        prev.dir = def.names[d.to] === prev.from ? 'flat' : (d.to > d.from ? 'up' : 'down') === def.good ? 'good' : 'bad';
+      } else {
+        const dir = d.to > d.from ? 'up' : 'down';
+        rows.push({
+          k: def.k, label: def.label,
+          from: def.names[d.from] ?? String(d.from), to: def.names[d.to] ?? String(d.to),
+          whys: [whyTxt(d.why)], why: whyTxt(d.why),
+          tiers: new Set([tier]), tier,
+          dir: dir === def.good ? 'good' : 'bad'
+        });
+      }
+    } else if (e.t === 'MOOD_DELTA') {
+      const m = moodOf(d.char);
+      let part = m.parts.find((p) => p.raw === d.reason);
+      if (!part) { part = { raw: d.reason, delta: 0, delegated: !!d.delegated }; m.parts.push(part); }
+      part.delta += d.delta;
+      part.delegated = part.delegated && !!d.delegated;
+    } else if (e.t === 'MOOD_LEVEL') {
+      const m = moodOf(d.char);
+      if (!m.lvFrom) m.lvFrom = MOOD_LV_NAME[d.from] || d.from;
+      m.lvTo = MOOD_LV_NAME[d.to] || d.to;
+    } else if (e.t === 'BREAKDOWN_START') {
+      charRow(d.char).rows.push({ k: 'breakdown', label: '崩溃', to: '崩溃了', why: '', tier: 'world', dir: 'bad' });
+    } else if (e.t === 'BREAKDOWN_RECOVERED') {
+      charRow(d.char).rows.push({ k: 'calm', label: '崩溃', to: '缓过来了', why: '安抚见了效', tier: 'rule', dir: 'good' });
+    }
+  }
+  for (const [id, m] of moodAcc) {
+    const total = m.parts.reduce((a, p) => a + p.delta, 0);
+    if (!total && !m.lvTo) continue;
+    // 徽记随最大一笔的原因（点数大头是谁的账，徽就是谁的）
+    const top = [...m.parts].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
+    const reasons = m.parts.map((p) => whyTxt(p.raw));
+    charRow(id).rows.push({
+      k: 'mood', label: '心情',
+      ...(m.lvFrom && m.lvTo ? { from: m.lvFrom, to: m.lvTo } : {}),
+      delta: total, reasons, why: reasons.join('、'),
+      ...(top ? { tier: tierOf(top.raw, top.delegated, turn) } : {}),
+      dir: total < 0 ? 'bad' : 'good'
+    });
+  }
+  for (const c of chars) for (const row of c.rows) { delete row.whys; delete row.tiers; if (row.tier === undefined) delete row.tier; } // 内部记账字段不落库；混合源行不落徽
+  return { day: inputDay ?? state.day, ...(turn?.choice ? { choice: turn.choice } : {}), items, chars };
 }
 
 function raidLine(f, t, name) {

@@ -195,7 +195,7 @@ function applyEffects(ctx, card, option, ev) {
   }
   if (e.text) ctx.fact('event_text', { text: String(e.text).replaceAll('{{names}}', s.chars.map((c) => c.name).join('、')) });
   if (e.wound && ev.actorId) {
-    const c = charById(s, ev.actorId); if (c) ctx.setWound(c, c.wound + e.wound);
+    const c = charById(s, ev.actorId); if (c) ctx.setWound(c, c.wound + e.wound, `《${card.title}》`);
   }
   // riskCheck（GE-03 白名单：一次检定，伤上限 1）
   if (option.riskCheck) {

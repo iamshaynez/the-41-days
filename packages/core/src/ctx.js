@@ -27,7 +27,9 @@ export class Ctx {
     return { state: this.s, events: this.events, facts: this.facts };
   }
   emit(t, d = {}) {
-    this.events.push({ i: this.events.length, day: this.s.day, t, d });
+    // 管家执行的变更事件盖 delegated 印（与 facts 同源）——账卡据此分清
+    // 「你下的令」「你立的规矩」与「世界的手」；fold 只读具名键，不受影响
+    this.events.push({ i: this.events.length, day: this.s.day, t, d: this.delegated ? { delegated: true, ...d } : d });
   }
   fact(k, d) { this.facts.push(this.delegated ? { k, ...d, delegated: true } : { k, ...d }); }
 
@@ -51,26 +53,28 @@ export class Ctx {
   }
 
   // —— 角色 ——
+  // 四把刻度锁都收 why（人话原因）：账卡据此把「变多少、为什么变」亮给玩家——变化不许无端。
+  // why 缺席时字段不落（旧调用兼容），fold 只读 from/to 不受影响。
   char(id) { return this.s.chars.find((c) => c.id === id && c.alive) || null; }
-  setHunger(c, to) {
+  setHunger(c, to, why) {
     const from = c.hunger; if (from === to) return;
     c.hunger = clamp(to, 0, 4);
-    this.emit('HUNGER_CHANGED', { char: c.id, from, to: c.hunger });
+    this.emit('HUNGER_CHANGED', { char: c.id, from, to: c.hunger, ...(why ? { why } : {}) });
   }
-  setWound(c, to) {
+  setWound(c, to, why) {
     const from = c.wound; if (from === to) return;
     c.wound = clamp(to, 0, 3);
-    this.emit('WOUND_CHANGED', { char: c.id, from, to: c.wound });
+    this.emit('WOUND_CHANGED', { char: c.id, from, to: c.wound, ...(why ? { why } : {}) });
   }
-  setSick(c, to) {
+  setSick(c, to, why) {
     const from = c.sick; if (from === to) return;
     c.sick = clamp(to, 0, 3);
-    this.emit('SICK_CHANGED', { char: c.id, from, to: c.sick });
+    this.emit('SICK_CHANGED', { char: c.id, from, to: c.sick, ...(why ? { why } : {}) });
   }
-  setFatigue(c, to) {
+  setFatigue(c, to, why) {
     const from = c.fatigue; if (from === to) return;
     c.fatigue = clamp(to, 0, 2);
-    this.emit('FATIGUE_CHANGED', { char: c.id, from, to: c.fatigue });
+    this.emit('FATIGUE_CHANGED', { char: c.id, from, to: c.fatigue, ...(why ? { why } : {}) });
   }
   /** 心情事件（M-02/M-03/M-10）：base 基值，ethicsKey 可选伦理类别 */
   mood(c, base, reason, opts = {}) {

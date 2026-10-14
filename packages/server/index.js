@@ -605,7 +605,18 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         // 玩家落笔的"书页文字"：决策卡用按钮的 label，自由输入用原文——落库的前文与玩家所见一致
         const display = String(body.display || input || '').slice(0, 500);
         const state = run.state;
-        const ink = []; // 本轮要落库的书页文字（player 批注 + narrator 正文 + sys 小字）
+        const inputDay = state.day; // 账卡日戳：本轮落笔之日（resolveInput 原地改 state，先取先得）
+        // 三源归因上下文（账卡卡头与行级徽记）：显式意图/自由文本=「你」，托管宏=「规矩」；
+        // directive=玩家本轮亲自定过方针——方针夜的自走步是执行你的选择，账归你
+        const clientIntents = Array.isArray(body.intents) ? body.intents : [];
+        const turnCtx = {
+          directive: clientIntents.some((i) => i?.type === 'night_directive'),
+          choice: display.trim() ? {
+            by: clientIntents.length === 0 || clientIntents.some((i) => i?.type && !['auto_day', 'auto_night', 'advance'].includes(i.type)) ? 'you' : 'rule',
+            text: display
+          } : null
+        };
+        const ink = []; // 本轮要落库的书页文字（player 批注 + narrator 正文 + sys 小字 + ledger 账卡）
         if (display.trim()) ink.push({ day: state.day, role: 'player', text: display });
 
         // 意图解析：决策卡直传结构化意图（v2）→ LLM 裁判 → 直读兜底（同一 schema，同一 resolve 管线）
@@ -744,9 +755,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         // 直读模板兜底。守门不过重试一次，再不过落兜底——坏一行不如少一行。
         // 堂屋事实单独走对话轨（下方），不混进散文叙事。
         const narrFacts = result.facts.filter((x) => x.k !== 'ensemble');
-        // 原地反馈载荷（体验批次三）：beats（逐拍行文+行动者）/moves（物品账）/ticks（刻度）——
-        // 先于正文下发，前端打字走到哪一拍，页面就在哪里动一下
-        const fb = buildFeedback(result.state, narrFacts, result.events, pack);
+        // 原地反馈载荷（体验批次三）：beats（逐拍行文+行动者）/moves（物品账）/ticks（刻度）/
+        // ledger（账卡台账：数值+出处+三源徽记）——先于正文下发，前端打字走到哪一拍，页面就在哪里动一下
+        const fb = buildFeedback(result.state, narrFacts, result.events, pack, inputDay, turnCtx);
         send('feedback', fb);
         let text = '';
         const gwN = run.mode === 'llm' ? gw : null;
@@ -794,6 +805,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         }
         if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
         if (result.rejects?.length) ink.push({ day: result.state.day, role: 'sys', text: '（有些事做不到：' + result.rejects.map((r) => rejectText(r.reason)).join('、') + '）' });
+        // 账卡随书页落库（role:ledger）：续局重铺时同一张卡再现——家底与人的每一笔变动都查得到出处
+        if (fb.ledger && (fb.ledger.items.length || fb.ledger.chars.length)) {
+          ink.push({ day: inputDay, role: 'ledger', text: JSON.stringify(fb.ledger) });
+        }
         db.appendNarration(id, ink);
         db.saveState(id, result.state); // 戏文微效果可能改了状态——以最终态发补丁
         send('state-patch', { state: enrich(result.state, annalsByDay) });
@@ -847,19 +862,32 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (!ctx) return;
         const { s, run } = ctx;
         const body = await readBody(req);
+        const inputDay = run.state.day;
+        const clientIntents = Array.isArray(body.intents) ? body.intents : [];
+        const display = String(body.display || '').slice(0, 500);
+        const turnCtx = {
+          directive: clientIntents.some((i) => i?.type === 'night_directive'),
+          choice: display.trim() ? {
+            by: clientIntents.length === 0 || clientIntents.some((i) => i?.type && !['auto_day', 'auto_night', 'advance'].includes(i.type)) ? 'you' : 'rule',
+            text: display
+          } : null
+        };
         const result = resolveInput(run.state, pack, Array.isArray(body.intents) ? body.intents : []);
         db.appendEvents(id, result.events);
         if (result.state.over) await finalizeEndedRun(s.userId, id, result.state, null);
         else db.saveState(id, result.state);
         const text = renderDirect(result.state, result.facts, pack);
+        const fb = buildFeedback(result.state, result.facts.filter((x) => x.k !== 'ensemble'), result.events, pack, inputDay, turnCtx);
         const ink = [];
-        const display = String(body.display || '').slice(0, 500);
         if (display.trim()) ink.push({ day: run.state.day, role: 'player', text: display });
         if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
+        if (fb.ledger && (fb.ledger.items.length || fb.ledger.chars.length)) {
+          ink.push({ day: inputDay, role: 'ledger', text: JSON.stringify(fb.ledger) });
+        }
         db.appendNarration(id, ink);
         return json(res, 200, {
           state: enrich(result.state), narration: text, rejects: result.rejects,
-          feedback: buildFeedback(result.state, result.facts.filter((x) => x.k !== 'ensemble'), result.events, pack)
+          feedback: fb
         });
       }
 

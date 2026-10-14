@@ -218,7 +218,7 @@ export function tickAutonomous(ctx) {
   if (marta && marta.fatigue < 2) { // 护栏：不把自己累死
     const refusals = yesterday('refuse_help').filter((e) => e.witnesses.includes('marta'));
     if (refusals.length) {
-      ctx.setFatigue(marta, marta.fatigue + 1);
+      ctx.setFatigue(marta, marta.fatigue + 1, '夜里偷偷照料人');
       ctx.mood(marta, -1, '良心');
       ctx.fact('auto_marta_care', { char: 'marta' });
     }
