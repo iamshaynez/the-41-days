@@ -1125,8 +1125,9 @@ function syncAsks(s) {
     });
   // 黄昏：今晚怎么安排——方案自带夜间方针（点一个方案 = 黄昏+整夜一口气走完）
   syncAsk('dusk', !!(s.duskView && !s.over),
-    s.duskView ? s.duskView.plans.map((p) => p.label).join('|') + (s.duskView.fate ? s.duskView.fate.title : '') : '', (node) => {
+    s.duskView ? s.duskView.plans.map((p) => p.label).join('|') + (s.duskView.fate ? s.duskView.fate.title : '') + (s.duskView.overviewNote ? '·ovd' : '') : '', (node) => {
       node.innerHTML = askHead('黄昏', '今晚怎么安排', 'moon');
+      if (s.duskView.overviewNote) node.appendChild(el('p', 'ask-hint', esc(s.duskView.overviewNote)));
       // 夜方针挡位（默认跟现行规矩；只影响外出方案，在家方案无需方针）
       const stances = [['cautious', '今夜谨慎'], ['normal', '照常走'], ['bold', '放手干']];
       const pol = s.policy?.nightApproach || 'normal';
