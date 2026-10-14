@@ -160,3 +160,31 @@ describe('回放一致：手动夜间动作不谎报微操', () => {
     assert.equal(replay.night?.micro ?? false, r2.state.night.micro ?? false, '回放与活局的 micro 口径要一致（修前回放被硬编码成 true）');
   });
 });
+
+describe('场景：微操夜的逃生门——剩下的一夜交给方针', () => {
+  test('微操夜停在岔路时切方针：一击走完剩余整夜（老记录续玩同享）', () => {
+    // 找一个「自己走」入夜后真的停在夜里的种子（事件卡或岔路都算停）
+    for (let seed = 400; seed <= 440; seed++) {
+      const { state } = newRun({ seed });
+      let s = state;
+      const take = (intents) => { const r = step(s, intents); s = r.state; return r; };
+      if (s.activeEvent) { const c = PACK.cardMap[s.activeEvent.cardId]; take([{ type: 'event_choice', option: c?.options?.[0]?.key || 'a' }]); }
+      take([{ type: 'advance' }]); // D1 白天收卷 → 黄昏
+      if (s.phase !== 'dusk') continue;
+      const plans = planDusk(s, PACK).plans.filter((p) => p.intent.scavenger);
+      if (!plans.length) continue;
+      take([plans[0].intent, { type: 'auto_night' }]); // 「自己走」微操入夜
+      if (s.phase !== 'night' || !s.night || s.night.home) continue;
+      if (!s.activeEvent && !s.night.atFork) take([{ type: 'auto_night' }]); // 走到第一个停点
+      if (s.phase !== 'night' || !s.night || s.night.home) continue; // 这个种子夜一口气走完了，换下一个
+      const slotsBefore = s.night.slots;
+      take([{ type: 'night_directive', stance: 'normal', text: '剩下的一夜照常走' }]);
+      assert.notEqual(s.phase, 'night', '交方针后当批就该走完整夜');
+      assert.ok(!s.night || s.night.home, '夜应收工回家');
+      assert.ok(s.day >= 2, '应已破晓次日');
+      assert.ok(s.night === null || s.night.slots <= slotsBefore);
+      return;
+    }
+    assert.ok(false, '40 个种子里没造出微操夜停点');
+  });
+});

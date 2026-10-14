@@ -294,6 +294,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       const st = state.locState[state.night.locId] || { searched: {} };
       view.nightView = {
         loc: loc.name, slots: state.night.slots, noise: state.night.noise,
+        micro: !!state.night.micro, // 微操夜（自己走）：岔路卡要给「剩下的一夜交给方针」逃生门
         room: room.name, rooms: loc.rooms.map((r, i) => ({ id: r.id, name: r.name, door: r.door, adjacent: Math.abs(i - idx) === 1 })),
         containers: (room.containers || []).map((c) => ({ id: c.id, name: c.name, locked: c.type === 'locked' && !st.searched[c.id + ':open'], searched: !!st.searched[c.id] })),
         npcs: (loc.npcs || []).map((n) => ({ id: n.id, name: n.name, stance: n.stance, state: st.npcState[n.id] || 'unknown' }))

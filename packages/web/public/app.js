@@ -1071,6 +1071,14 @@ function freeOptRow(s, kind, note = '') {
   row.append(inp, btn);
   return row;
 }
+/** 微操夜的逃生门：一路岔路问下来太累——剩下的夜交给方针，一击走完 */
+function appendDirectiveHandoff(opts, s) {
+  const stance = s.policy?.nightApproach || 'normal';
+  opts.appendChild(optBtn('剩下的一夜交给方针', '◆', () => sendIntents(
+    [{ type: 'night_directive', stance, text: '剩下的一夜照常走' }], '交给方针'
+  ), '按现行规矩的挡位走完'));
+}
+
 function syncAsks(s) {
   const inPrologue = s.phase === 'prologue';
   // 今日卡（统一交互面）：白天常驻——晨报 + 念头 + 情境选项 + 刷新命运 + 输入行。
@@ -1233,9 +1241,11 @@ function syncAsks(s) {
       } else if (nv.fork) {
         node.appendChild(el('p', 'fork-text', esc(nv.fork.text || '怎么办？')));
         for (const o of nv.fork.options) opts.appendChild(optBtn(o.label, '◆', () => sendIntents(o.intents, o.label)));
+        if (nv.micro) appendDirectiveHandoff(opts, s); // 微操夜的逃生门：剩下的夜交给方针
       } else if (!s.activeEvent) {
         opts.appendChild(optBtn('继续摸黑前进', '▸', () => sendIntents([{ type: 'auto_night' }], '继续')));
         opts.appendChild(optBtn('今晚到此为止', '←', () => sendIntents([{ type: 'night', action: 'retreat' }], '撤退')));
+        if (nv.micro) appendDirectiveHandoff(opts, s);
       }
       node.appendChild(opts);
       const rr = refreshRow('night', opts);
