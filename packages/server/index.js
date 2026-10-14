@@ -419,7 +419,12 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       if ((req.method === 'GET' || req.method === 'HEAD') && !path.startsWith('/api/')) return await staticFile(url, res);
 
       // —— 认证（多用户：注册 / 登录 / 登出 / 我是谁） ——
+      // 注册开关（管理员全局）：城门合上时，新住户进不来，老住户照常回家
+      if (path === '/api/auth/signup-open' && req.method === 'GET') {
+        return json(res, 200, { open: db.getSetting('signup_open', '1') !== '0' });
+      }
       if (path === '/api/auth/signup' && req.method === 'POST') {
+        if (db.getSetting('signup_open', '1') === '0') return json(res, 403, { error: '城门暂闭：管理员暂停了新住户登记。' });
         if (rateLimited(req.socket.remoteAddress || '?')) return json(res, 429, { error: '请求太快了，稍等一下。' });
         const body = await readBody(req);
         const name = typeof body.username === 'string' ? body.username.trim() : '';
@@ -943,6 +948,16 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
 
       if (path === '/api/admin/users' && req.method === 'GET') {
         return json(res, 200, { users: db.listUsersWithStats() });
+      }
+      if (path === '/api/admin/settings' && req.method === 'GET') {
+        return json(res, 200, { signupOpen: db.getSetting('signup_open', '1') !== '0' });
+      }
+      if (path === '/api/admin/signup-toggle' && req.method === 'POST') {
+        const b = await readBody(req);
+        const open = !!b.open;
+        db.setSetting('signup_open', open ? '1' : '0');
+        log.info(open ? '城门开：恢复新住户登记' : '城门合：暂停新住户登记', { userId: auth(req)?.userId });
+        return json(res, 200, { open });
       }
 
       if (path === '/api/admin/providers' && req.method === 'GET') {

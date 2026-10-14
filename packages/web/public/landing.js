@@ -3,6 +3,7 @@ import { injectIcons } from './icons.js';
 injectIcons();
 const $ = (id) => document.getElementById(id);
 let mode = 'login';
+let signupOpen = true; // 城门状态：管理员可合上（暂停新住户登记）
 
 async function boot() {
   const res = await fetch('/api/auth/me');
@@ -14,6 +15,17 @@ async function boot() {
     return;
   }
   $('authbox').hidden = false;
+  // 城门状态：合上则收起注册入口（管理员在后台「准入」里控制）
+  try {
+    const st = await (await fetch('/api/auth/signup-open')).json();
+    signupOpen = !!st.open;
+  } catch { /* 查不到就按开放处理，服务端还有一道闸 */ }
+  if (!signupOpen) {
+    $('tab-signup').disabled = true;
+    $('tab-signup').title = '管理员暂停了新住户登记';
+    setMode('login');
+    $('auth-hint').textContent = '暂不开放登记——已住进来的人照常回家。'; // setMode 会重写提示，压轴再落一笔
+  }
 }
 
 function setMode(m) {

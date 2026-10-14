@@ -1958,6 +1958,7 @@ async function initAdmin() {
   await loadAdmin();
 }
 async function loadAdmin() {
+  loadSignupToggle();
   const r = await (await fetch('/api/admin/providers')).json();
   loadUsers();
   const t = $('providers-table');
@@ -2010,6 +2011,29 @@ async function loadHealth() {
   $('health-history').innerHTML = (r.history || []).slice(0, 12).map((h) =>
     `<div class="row">${esc(h.provider_name || '?')} · <span class="${h.ok ? 'ok' : 'fail'}">${h.ok ? '通' : '断'}</span> · ${h.latency_ms}ms · ${esc((h.detail?.error || h.detail?.echo || '').slice(0, 60))} · ${esc(h.at?.slice(5, 16))}</div>`).join('');
 }
+/** 准入开关（管理页）：新用户注册——城门开合，全服一处 */
+async function loadSignupToggle() {
+  const btn = $('btn-signup-toggle');
+  const state = $('signup-toggle-state');
+  if (!btn) return;
+  const r = await (await fetch('/api/admin/settings')).json();
+  const paint = (open) => {
+    btn.textContent = open ? '合上城门（暂停登记）' : '开城门（恢复登记）';
+    state.textContent = open ? '开放中——新住户可以登记' : '已暂停——仅老住户可登录';
+  };
+  paint(!!r.signupOpen);
+  btn.onclick = async () => {
+    btn.disabled = true;
+    const res = await fetch('/api/admin/signup-toggle', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ open: !r.signupOpen })
+    });
+    const out = await res.json().catch(() => ({}));
+    if (res.ok) { r.signupOpen = !!out.open; paint(r.signupOpen); }
+    btn.disabled = false;
+  };
+}
+
 async function loadUsers() {
   const r = await (await fetch('/api/admin/users')).json();
   const t = $('users-table');
