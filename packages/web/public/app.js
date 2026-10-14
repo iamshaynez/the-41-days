@@ -565,22 +565,29 @@ function penNotes(box, e) {
   for (const m of e.mirrors || []) box.appendChild(el('p', 'pen-note mir', rich(m)));
 }
 
-/* ═══ 账卡（turn-ledger）：一轮之内，家底与人的每一笔变动——变多少、为什么 ═══
+/* ═══ 账卡（turn-ledger）：一轮之内，家底与人的每一笔变动——变多少、为什么、谁的手 ═══
    数据来自内核事件流原账（buildLedger 服务端聚合），随书页落库为 role:ledger，
-   续局重铺走同一副排版。变化不许无端：每一行都带出处。 */
+   续局重铺走同一副排版。三源徽记：你=这轮你点的（金）/规=你立的规矩在执行/世=世界的手。 */
 const LEDGER_SIGN = (n) => (n > 0 ? '+' : '−') + Math.abs(n);
 const ldDirCls = (d) => (d === 'good' ? 'up' : d === 'bad' ? 'down' : '');
+const LD_TAG_TXT = { you: '你', rule: '规', world: '世' };
+const ldTag = (tier) => tier && LD_TAG_TXT[tier] ? `<i class="ld-tag t-${tier}">${LD_TAG_TXT[tier]}</i>` : '';
 function renderTurnLedger(lg) {
   if (!lg || (!lg.items?.length && !lg.chars?.length)) return;
   closePara();
   const box = el('div', 'turn-ledger');
   let html = `<span class="ld-kicker">账 · 第${lg.day ?? ''}日</span>`;
+  // 卡头引言：这一轮的账，源头是你说的哪句话（display 原文截尾）
+  if (lg.choice?.text) {
+    const said = lg.choice.text.length > 26 ? lg.choice.text.slice(0, 26) + '…' : lg.choice.text;
+    html += `<p class="ld-choice"><b class="ld-by ${lg.choice.by === 'you' ? 'you' : 'rule'}">${lg.choice.by === 'you' ? '因你' : '按规矩'}</b>「${esc(said)}」</p>`;
+  }
   if (lg.items?.length) {
     html += '<p class="ld-sec">家底</p>';
     for (const it of lg.items) {
       html += `<div class="ld-row"><span class="ld-name">${esc(it.name)}</span>` +
         `<b class="ld-num ${it.delta > 0 ? 'up' : 'down'}">${LEDGER_SIGN(it.delta)}</b>` +
-        `<span class="ld-why">${esc(it.why || '')}</span></div>`;
+        `<span class="ld-why">${esc(it.why || '')}</span>${ldTag(it.tier)}</div>`;
     }
   }
   if (lg.chars?.length) {
@@ -592,7 +599,7 @@ function renderTurnLedger(lg) {
         html += `<div class="ld-row"><span class="ld-name">${esc(c.name)}</span>` +
           `<span class="ld-what">${esc(r.label)}</span>` +
           `<b class="ld-num ${ldDirCls(r.dir)}">${shift}${pts}</b>` +
-          (r.why ? `<span class="ld-why">${esc(r.why)}</span>` : '') + '</div>';
+          (r.why ? `<span class="ld-why">${esc(r.why)}</span>` : '') + ldTag(r.tier) + '</div>';
       }
     }
   }

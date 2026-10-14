@@ -27,7 +27,9 @@ export class Ctx {
     return { state: this.s, events: this.events, facts: this.facts };
   }
   emit(t, d = {}) {
-    this.events.push({ i: this.events.length, day: this.s.day, t, d });
+    // 管家执行的变更事件盖 delegated 印（与 facts 同源）——账卡据此分清
+    // 「你下的令」「你立的规矩」与「世界的手」；fold 只读具名键，不受影响
+    this.events.push({ i: this.events.length, day: this.s.day, t, d: this.delegated ? { delegated: true, ...d } : d });
   }
   fact(k, d) { this.facts.push(this.delegated ? { k, ...d, delegated: true } : { k, ...d }); }
 
