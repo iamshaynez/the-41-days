@@ -83,35 +83,52 @@ export function idTable(state, pack, { night = false } = {}) {
   return `【id 对照——意图里只准写等号右边的 id】\n角色：${chars}${localNpcs ? `\n此地遇到的人：${localNpcs}` : ''}\n地点：${locs}\n物品：${items}${stock ? `\n${stock}` : ''}`;
 }
 
-/** 现在真正能做的事（动态可行域）：由 feasibleIntent 逐动词现算——
- *  把可行域直接给模型，它就不用猜（猜的代价是点了落空的选项） */
+/** 现在真正能做的事（动态可行域）：**分工商簿**——按人列，各算各的。
+ *  旧版只按「第一个有行动力的人」算一张单人清单：做饭/治疗这类事在谁名下
+ *  模型看不见，出的方略挤在一个人身上，也没有「让累的人歇着」这种安排。
+ *  每人一行：名字（id，行动力，状态）；可行的事逐项现算；休息是常备项。 */
 export function actionMenu(state, pack) {
   const s = state;
   const alive = s.chars.filter((c) => c.alive);
-  const actor = alive.find((c) => c.ap > 0 && !c.bedRest);
-  if (!actor) return '（今天没有人还有行动力）';
-  const F = (action, extra = {}) => feasibleIntent(s, pack, { type: 'act', actor: actor.id, action, ...extra });
-  const m = [];
-  if (F('eat')) m.push('eat 吃饭（有粮）');
-  if (F('cook')) m.push('cook 做饭（灶与料都齐）');
-  const crafts = pack.recipes.filter((r) => F('craft', { target: r.id })).slice(0, 5).map((r) => r.id);
-  if (crafts.length) m.push(`craft 制造（可做：${crafts.join('、')}）`);
-  const builds = (pack.facilities ? Object.keys(pack.facilityMap) : []).filter((id) => F('build', { target: id })).slice(0, 5);
-  if (builds.length) m.push(`build 建造（材料齐：${builds.join('、')}）`);
-  if (F('treat', { target: 'bandage' })) m.push('treat 治疗（有伤员，target=bandage）');
-  if (F('treat', { target: 'meds' }) || F('treat', { target: 'herbmed' })) m.push('treat 治疗（有病患，target=meds 或 herbmed）');
-  if (alive.length > 1) m.push(`talk 交谈（对象只能是队友 id：${alive.filter((c) => c.id !== actor.id).map((c) => c.id).join('、')}）`);
-  m.push('guard 守在门厅 / sleep 补眠 / rest 卧床养伤');
-  if (F('listen_radio')) m.push('listen_radio 听更鼓');
-  const leftovers = (pack.locMap.home.rooms || []).flatMap((r) => s.house.opened[r.id] ? (r.containers || []).filter((ct) => !s.house.searched[ct.id] && (ct.type !== 'locked' || s.house.searched[ct.id + ':open'])) : []);
-  if (leftovers.length) m.push(`search_home 搜家（还有 ${leftovers.length} 处没翻${leftovers[0] ? `，如 ${leftovers[0].id}` : ''}）`);
-  const rooms = (pack.locMap.home.rooms || []).filter((r) => !s.house.opened[r.id] && F('open_room', { target: r.id }));
-  if (rooms.length) m.push(`open_room 开房（${rooms.map((r) => r.id).join('、')}）`);
-  if (F('chop')) m.push('chop 劈家具（有斧）');
-  if (F('repair')) m.push('repair 修门（门受过损）');
-  if (F('read')) m.push('read 读书');
-  if (F('play_piano')) m.push('play_piano 抚琴');
-  return m.join('\n');
+  const lines = [];
+  for (const c of alive) {
+    const tags = [];
+    if (c.bedRest) tags.push('卧床中');
+    if (c.fatigue >= 2) tags.push('力竭');
+    else if (c.fatigue >= 1) tags.push('疲惫');
+    if (c.wound >= 1) tags.push(c.wound >= 2 ? '重伤' : '带伤');
+    if (c.sick >= 1) tags.push(c.sick >= 2 ? '重病' : '患病');
+    const head = `${c.name}（${c.id}，行动力${c.ap}${tags.length ? '，' + tags.join('、') : ''}）`;
+    if (c.ap <= 0 || c.bedRest) {
+      lines.push(`${head}：今天做不了事——只能休整，或由别人来 talk 陪他说说话`);
+      continue;
+    }
+    const F = (action, extra = {}) => feasibleIntent(s, pack, { type: 'act', actor: c.id, action, ...extra });
+    const mates = alive.filter((x) => x.id !== c.id);
+    const m = [];
+    if (F('eat')) m.push('eat 吃饭');
+    if (F('cook')) m.push('cook 做饭');
+    const crafts = pack.recipes.filter((r) => F('craft', { target: r.id })).slice(0, 4).map((r) => r.id);
+    if (crafts.length) m.push(`craft 制造（可做：${crafts.join('、')}）`);
+    const builds = (pack.facilities ? Object.keys(pack.facilityMap) : []).filter((id) => F('build', { target: id })).slice(0, 4);
+    if (builds.length) m.push(`build 建造（材料齐：${builds.join('、')}）`);
+    if (F('treat', { target: 'bandage' })) m.push('treat 治疗（target=bandage，有伤员）');
+    if (F('treat', { target: 'meds' }) || F('treat', { target: 'herbmed' })) m.push('treat 治疗（target=meds 或 herbmed，有病患）');
+    if (F('comfort_soup')) m.push('comfort_soup 宽心汤（有人心绪很差）');
+    if (mates.length) m.push(`talk 交谈（对象：${mates.map((x) => x.id).join('、')}）`);
+    m.push('guard 守门 / sleep 补眠 / rest 卧床');
+    if (F('listen_radio')) m.push('listen_radio 听更鼓');
+    const leftovers = (pack.locMap.home.rooms || []).flatMap((r) => s.house.opened[r.id] ? (r.containers || []).filter((ct) => !s.house.searched[ct.id] && (ct.type !== 'locked' || s.house.searched[ct.id + ':open'])) : []);
+    if (leftovers.length) m.push(`search_home 搜家（还有 ${leftovers.length} 处没翻，如 ${leftovers[0].id}）`);
+    const rooms = (pack.locMap.home.rooms || []).filter((r) => !s.house.opened[r.id] && F('open_room', { target: r.id }));
+    if (rooms.length) m.push(`open_room 开房（${rooms.map((r) => r.id).join('、')}）`);
+    if (F('chop')) m.push('chop 劈家具');
+    if (F('repair')) m.push('repair 修门');
+    if (F('read')) m.push('read 读书');
+    if (F('play_piano')) m.push('play_piano 抚琴');
+    lines.push(`${head}：${m.join('；')}`);
+  }
+  return lines.join('\n');
 }
 
 /** 夜访可行域：当前房间的容器 id、可去的房间 id、在场 NPC id——
@@ -138,7 +155,7 @@ export function nightMenu(state, pack) {
 /** 卡面语境摘要（提示词 {{card}} 段）：给谋士看的当前卡状态（附 id 对照与可行域） */
 export function cardBrief(state, pack, card) {
   const ids = idTable(state, pack);
-  const menu = `\n\n【现在真正能做的事——act 的 action 与 target 必须从这里选，清单外的愿望用 direction】\n${actionMenu(state, pack)}`;
+  const menu = `\n\n【分工商簿——现在真正能做的事，按人一行行列；act 的 action/actor/target 从各人名下选，清单外的愿望用 direction】\n${actionMenu(state, pack)}`;
   if (card === 'dusk') {
     const known = (state.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]).map((l) => pack.locMap[l].name).join('、');
     return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。${menu}\n\n${ids}`;
@@ -150,5 +167,5 @@ export function cardBrief(state, pack, card) {
     return `深夜，${who ? `${who.name}独行` : '有人独行'}，夜访${loc?.name || ''}，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}（有人听见了）` : ''}。${solo}\n出的是**整夜方针**：一句话定方向（只拿吃的、见人绕行 / 探明虚实就回 / 放手干，值钱都拿走）。内核会按方针自己走完整夜——遇人绕不绕、锁撬不撬、手动不动，都由方针与骰子决定，不会逐件请示玩家。每个选项的 intents 只需一个：{"type":"night_directive","stance":"cautious|normal|bold","text":"方针原话"}。谨慎=不出声见人就撤；照常=看情况；放手=敢动手敢背刺。\n\n【这一夜的现场（供措辞用，不必落到具体目标）】\n${nightMenu(state, pack)}\n\n${idTable(state, pack, { night: true })}`;
   }
   // day：今日卡
-  return `白天，今日怎么过。你出的是**今日方略**：2~4 个意图、覆盖至少两个人（act/direction/policy 可混编；direction 种下的念头会在日后显形）。方略之后管家会自动补完日常并进入黄昏——不需要你自己加 auto_day，也不必覆盖每个人。全队休整类方略可以只写一两个意图。${menu}\n\n${ids}`;
+  return `白天，今日怎么过。你出的是**今日方略**：2~4 个意图、覆盖至少两个人（act/direction/policy 可混编；direction 种下的念头会在日后显形）。方略就是**分头安排**——下面这张分工商簿按人列了各自行得通的事，谁做饭、谁出力、谁陪谁说话，一人一行对着安排；力竭/带伤的人安排 sleep/rest 休整、让别人顶上，也是正经方略，别硬派活。不必覆盖每个人：剩下的生计管家会自动补完，方略执行完这一天就收卷入黄昏。全队休整的方略可以只有一两个意图。${menu}\n\n${ids}`;
 }
