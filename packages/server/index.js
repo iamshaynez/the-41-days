@@ -14,7 +14,7 @@ import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect, humanFacts, narrationLint, buildFeedback } from './narrate.js';
 import { rejectText } from '../core/src/rejects.js';
-import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
@@ -295,6 +295,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       const st = state.locState[state.night.locId] || { searched: {} };
       view.nightView = {
         loc: loc.name, locId: state.night.locId, slots: state.night.slots, noise: state.night.noise,
+        home: nightHomeView(state), // 夜是三口人的夜：守卫与安睡者点名（P0 夜之家政）
         micro: !!state.night.micro, // 微操夜（自己走）：岔路卡要给「剩下的一夜交给方针」逃生门
         room: room.name, rooms: loc.rooms.map((r, i) => ({ id: r.id, name: r.name, door: r.door, adjacent: Math.abs(i - idx) === 1 })),
         containers: (room.containers || []).map((c) => ({ id: c.id, name: c.name, locked: c.type === 'locked' && !st.searched[c.id + ':open'], searched: !!st.searched[c.id] })),

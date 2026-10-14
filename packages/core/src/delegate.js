@@ -183,9 +183,9 @@ export function planDay(state, pack) {
       use(healer2.id);
     }
   }
-  // —— 卧床：重伤/重病养伤 ——
+  // —— 卧床：重伤/重病养伤；力竭的人也该有一日卧床（F 系：夜里安睡 + 白日卧床才追得回来）——
   for (const c of aliveChars(s)) {
-    if ((c.wound >= 2 || c.sick >= 2) && !c.bedRest) intents.push(delegated({ type: 'act', actor: c.id, action: 'rest' }));
+    if ((c.wound >= 2 || c.sick >= 2 || c.fatigue >= 2) && !c.bedRest) intents.push(delegated({ type: 'act', actor: c.id, action: 'rest' }));
   }
   // —— 建造序：炉灶 → 门 → 冬前取暖 → 捕鼠笼 → 床 → 升级（参照 sim 均衡策略）——
   //    材料账预检：目标选出来先核 cost（一周目实测：没木板还天天提议捕鼠笼，
@@ -304,6 +304,17 @@ export function tickDawnLedgers(ctx) {
   }
 }
 
+/** 夜访卡的「家里」一行（P0 夜之家政）：外出者之外的守卫与安睡者点名——
+ *  夜是三口人的夜，卡面不该只有一个人 */
+export function nightHomeView(state) {
+  const s = state;
+  const alive = s.chars.filter((c) => c.alive);
+  const outId = s.night && !s.night.home ? s.night.charId : null;
+  const guard = alive.find((c) => c.guardTonight && c.id !== outId) || null;
+  const asleep = alive.filter((c) => c.id !== outId && (!guard || c.id !== guard.id)).map((c) => c.name);
+  return { guard: guard ? guard.name : null, asleep };
+}
+
 /* ════════════════════════ 黄昏：planDusk ════════════════════════
    每晚必答的决策点。给出 2~3 个完整方案（人×地点×装备×守夜），玩家点一个，或自己说。 */
 const LOC_RANK = ['market', 'villas', 'church', 'hospital', 'post', 'frontline'];
@@ -344,8 +355,9 @@ export function planDusk(state, pack) {
     .sort((a, b) => (Number(lowMind(a)) - Number(lowMind(b))) || (b.backpack - a.backpack) || ((b.combat || 0) - (a.combat || 0)));
   const scav = fit[0] || null;
   const guardOf = (excludeId) => {
+    // 疲劳感知排班：力竭的人不该再值夜（F-05 落地后守夜代价更清楚——连值会熬垮人）
     const rest = alive.filter((c) => c.id !== excludeId);
-    rest.sort((a, b) => ((b.combat || 0) - (a.combat || 0)) || (b.apMax - a.apMax));
+    rest.sort((a, b) => (a.fatigue - b.fatigue) || ((b.combat || 0) - (a.combat || 0)) || (b.apMax - a.apMax));
     return rest[0] || null;
   };
   const gearOf = (locId) => {

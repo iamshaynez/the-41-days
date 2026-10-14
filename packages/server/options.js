@@ -1,7 +1,7 @@
 // 谋士选项的验证器（统一交互面）：LLM 出的选项必须「点得动」——
 // 形状（意图白名单）→ 可行性（feasibleIntent 只读检查）→ 禁词（正典防火墙），
 // 三关全过才许渲染。纯视图数据：不碰 state、不进事件流，点了才走输入管线。
-import { validateIntentShape, feasibleIntent, normalizeIntent } from '../core/index.js';
+import { validateIntentShape, feasibleIntent, normalizeIntent, nightHomeView } from '../core/index.js';
 
 /** 防御性截断：在标点处收尾（不放残句——线上教训：「派一个人对折他，」） */
 const cutClean = (text, max) => {
@@ -141,7 +141,9 @@ export function nightMenu(state, pack) {
   const st = state.locState[n.locId] || { searched: {}, npcState: {} };
   const idx = loc.rooms.findIndex((r) => r.id === n.room);
   const room = loc.rooms[idx];
+  const home = nightHomeView(state);
   const lines = [`当前房间：${room.name}（${room.id}）`];
+  if (home.guard || home.asleep.length) lines.push(`家里（不可干预，供措辞）：${home.guard ? `${home.guard}守门` : '没人守夜'}${home.asleep.length ? `，${home.asleep.join('、')}在睡` : ''}`);
   const conts = (room.containers || []).filter((c) => !st.searched[c.id]);
   if (conts.length) lines.push(`本屋可搜容器（search@id）：${conts.map((c) => `${c.id}${c.type === 'locked' ? '（上锁，先 open@' + c.id + '）' : ''}`).join('、')}`);
   const moves = [loc.rooms[idx - 1], loc.rooms[idx + 1]].filter(Boolean);
