@@ -4,6 +4,7 @@
 import { injectIcons, svgUse } from './icons.js';
 import { splitSentences, SentenceBuffer } from './typist.js';
 import { sfx } from './sfx.js';
+import { ambience } from './ambience.js';
 injectIcons();
 
 const $ = (id) => document.getElementById(id);
@@ -12,12 +13,13 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ——— 阅读偏好（字号 / 落墨动效 / 纸色 / 声音），落在本机 ———
-const prefs = Object.assign({ font: 'm', motion: 'on', paper: 'dark', sound: 'off' }, JSON.parse(localStorage.getItem('twom.prefs') || '{}'));
+const prefs = Object.assign({ font: 'm', motion: 'on', paper: 'dark', sound: 'off', ambience: 'off' }, JSON.parse(localStorage.getItem('twom.prefs') || '{}'));
 function savePrefs() { localStorage.setItem('twom.prefs', JSON.stringify(prefs)); }
 function applyPrefs() {
   document.body.dataset.fontsize = prefs.font;
   document.body.dataset.paper = prefs.paper;
   sfx.enabled = prefs.sound === 'on';
+  ambience.setEnabled(prefs.ambience === 'on');
   document.body.classList.toggle('motion-off', prefs.motion === 'off');
 }
 applyPrefs();
@@ -628,6 +630,8 @@ function applyState(s) {
     document.body.classList.toggle('winter', !!s.season.winter);
     document.documentElement.style.setProperty('--winter-depth', String(s.season.depth));
   }
+  // 环境声基底（UI设计 §7）：天气×季节×夜访地点 → 床响度
+  ambience.scene({ weather: s.weather, winter: !!s.winterActive, phase: s.phase, locId: s.nightView?.locId || null });
   const wkey = s.day + ':' + s.weather;
   if (state.lastWKey !== wkey) {
     state.snowStreak = s.weather === 'snow' ? (state.lastSnowDay === s.day - 1 ? state.snowStreak + 1 : 1) : 0;
@@ -1571,7 +1575,10 @@ async function openMenu() {
     </span></div>
     <div class="m-row"><span class="m-label">声音</span><span class="seg" id="m-sound">
       ${[['off', '关'], ['on', '开']].map(([v, n]) => `<button type="button" data-v="${v}" class="${prefs.sound === v ? 'on' : ''}">${n}</button>`).join('')}
-    </span></div></section>`;
+    </span></div>
+    <div class="m-row"><span class="m-label">环境声</span><span class="seg" id="m-ambience">
+      ${[['off', '关'], ['on', '开']].map(([v, n]) => `<button type="button" data-v="${v}" class="${prefs.ambience === v ? 'on' : ''}">${n}</button>`).join('')}
+    </span><span class="m-note">雨声·风雪·远水，随天气与去处</span></div></section>`;
 
   // 别传（档案馆认出的门；未解锁的不点灯）
   html += `<section class="m-sec" id="m-sides"><p class="m-kicker">别传</p><div class="m-row hint">…</div></section>`;
@@ -1669,6 +1676,12 @@ async function openMenu() {
     prefs.sound = v; savePrefs(); applyPrefs();
     sheet.querySelectorAll('#m-sound button').forEach((x) => x.classList.toggle('on', x.dataset.v === v));
     if (v === 'on') sfx.drum(); // 试音：一记远鼓
+  });
+  sheet.querySelector('#m-ambience').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]');
+    if (!b) return;
+    prefs.ambience = b.dataset.v; savePrefs(); applyPrefs();
+    sheet.querySelectorAll('#m-ambience button').forEach((x) => x.classList.toggle('on', x.dataset.v === b.dataset.v));
   });
   sheet.querySelector('#m-back')?.addEventListener('click', () => { closeSheets(); switchView('play'); });
   sheet.querySelector('#m-archive')?.addEventListener('click', () => { closeSheets(); switchView('archive'); });
