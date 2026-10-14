@@ -318,6 +318,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     // 黄昏命运卡（duskFate）与方案卡同屏：方案照常，命运作为追加问题；出门即路过。
     if (state.phase === 'dusk' && !state.over && (!state.activeEvent || state.activeEvent.duskFate)) {
       view.duskView = planDusk(state, pack);
+      if (state.lastOverviewDay === state.day) {
+        // 概述日直落黄昏：把「这一天过去了」说在卡上——不然玩家以为整夜没走完
+        view.duskView.overviewNote = '这一日已一笔带过——转眼又是黄昏。';
+      }
       if (state.activeEvent?.duskFate) {
         const card = pack.cardMap[state.activeEvent.cardId] || state.geCards?.[state.activeEvent.cardId];
         if (card) view.duskView.fate = {

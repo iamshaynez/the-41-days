@@ -161,4 +161,20 @@ describe('场景：概述日——平淡日一句话收卷', () => {
     );
     assert.ok(deep.length <= line.length + 6, '连平多日概述应更省笔');
   });
+
+  test('概述日直落黄昏：黄昏行要点明这一天过去了（不然像整夜没走完）', () => {
+    const st = { seed: 5, day: 18, chars: [], inventory: {} };
+    const line = renderDirect(st, [
+      { k: 'day_overview', day: 18, streak: 1, ate: 2 },
+      { k: 'phase_dusk', day: 18 }
+    ], PACK);
+    assert.ok(/这一天就这样过去|一日无事/.test(line), `概述后的黄昏行要点明日子过去：${line}`);
+    const plain = renderDirect(st, [{ k: 'phase_dusk', day: 18 }], PACK);
+    assert.ok(!/这一天就这样过去|一日无事/.test(plain), '普通黄昏行不得混入概述措辞');
+  });
+
+  test('概述日把 lastOverviewDay 记在账上（黄昏卡认得出，fold 可回放）', () => {
+    const { r } = findQuietDawn(18);
+    assert.equal(r.state.lastOverviewDay, 18);
+  });
 });

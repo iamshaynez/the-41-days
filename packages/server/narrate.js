@@ -139,15 +139,17 @@ export function renderDirect(state, facts, pack) {
   // 死者仍在 chars 里但 alive=false——charById 只查活人，会漏成内部 id（"bron的病"）。
   // 人名先查本局名册（含死者），再查内容包，最后才落 id。
   const name = mkName(state, pack);
+  let prev = null;
   for (const f of facts) {
-    const l = directFactLine(f, t, name, state, pack);
+    const l = directFactLine(f, t, name, state, pack, prev);
     if (l) lines.push(l);
+    prev = f.k;
   }
   return lines.filter(Boolean).join('\n');
 }
 
 /** 单条事实 → 一行直读文（renderDirect 与 buildBeats 共用同一张映射；无行返回 null） */
-function directFactLine(f, t, name, state, pack) {
+function directFactLine(f, t, name, state, pack, prevKey = null) {
   const lines = [];
   switch (f.k) {
       case 'run_started': lines.push(`第 1 天。${t.dawn.header.replace('{{day}}', 1).replace('{{weather}}', '围城第 9 天')}——你们住进了橘里九号。${f.chars}，三个名字写在了门后的墙上。`); break;
@@ -159,7 +161,8 @@ function directFactLine(f, t, name, state, pack) {
       case 'dissolve_shift': lines.push(f.n > 0
         ? '北边的军心，又松了一分——家访的簿子、家书的袖子，都在替它使劲。'
         : '有一封家书没有写"都好"。北边握矛的手，紧了一紧。'); break;
-      case 'phase_dusk': lines.push(t.phase.to_dusk); break;
+      // 概述日直落黄昏：黄昏行要说清「这一天过去了」——不然玩家以为整夜没走完
+      case 'phase_dusk': lines.push(prevKey === 'day_overview' ? (t.overview?.to_dusk || t.phase.to_dusk) : t.phase.to_dusk); break;
       case 'eat': lines.push(t.eat[f.item === 'meal' ? 'meal' : 'raw'].replace('{{name}}', name(f.char))); break;
       case 'cook': lines.push(t.cook); break;
       case 'craft': lines.push(t.craft.replace('{{name}}', name(f.char))); break;
@@ -326,10 +329,11 @@ export function buildBeats(state, facts, pack) {
   const t = pickVariants(pack.narrations, state);
   const name = mkName(state, pack);
   const beats = [];
+  let prev = null;
   for (const f of facts) {
-    const line = directFactLine(f, t, name, state, pack);
-    if (!line) continue;
-    beats.push({ k: f.k, line, ...(f.char ? { char: f.char } : {}), ...(f.delegated ? { del: true } : {}) });
+    const line = directFactLine(f, t, name, state, pack, prev);
+    if (line) beats.push({ k: f.k, line, ...(f.char ? { char: f.char } : {}), ...(f.delegated ? { del: true } : {}) });
+    prev = f.k; // 与 renderDirect 同步更新——两条路径必须逐字节一致（契约测试在案）
   }
   return beats;
 }

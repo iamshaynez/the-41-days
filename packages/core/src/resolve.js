@@ -398,6 +398,7 @@ function collapseDay(ctx) {
   ctx.delegated = false;
   ctx.facts.push(...kept);
   ctx.setFlag('overviewDays', (s.overviewDays || 0) + 1);
+  ctx.setFlag('lastOverviewDay', s.day); // 黄昏卡要能认出「这一日刚被一笔带过」
   toDusk(ctx, { force: true });
 }
 
