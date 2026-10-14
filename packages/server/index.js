@@ -12,13 +12,13 @@ import { makeLogger } from './log.js';
 import { hashPassword, verifyPassword, validateUsername, validatePassword, sessionCookie, clearSessionCookie, publicUser } from './auth.js';
 import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
-import { worldBrief, renderDirect, humanFacts, narrationLint } from './narrate.js';
+import { worldBrief, renderDirect, humanFacts, narrationLint, buildFeedback } from './narrate.js';
 import { rejectText } from '../core/src/rejects.js';
 import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
-import { applySceneEffects, validateEnsemble, renderEnsembleDirect, renderBiographiesDirect, biographyLint } from '../core/index.js';
+import { applySceneEffects, validateEnsemble, renderEnsembleDirect, renderBiographiesDirect, biographyLint, applyQuickStart } from '../core/index.js';
 import { anchorPool } from '../core/src/ge.js';
 import { markerSyntaxErrors } from '../core/src/markers.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from './echoes.js';
@@ -351,6 +351,13 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       mind: c.breakdown ? `崩溃·安抚${c.soothed || 0}/4` : null
     }));
     view.packVersion = pack.manifest.semver;
+    // 季相（体验批次三·痕迹积累）：冬深几何，页缘的霜雪跟着长
+    view.season = {
+      winter: !!state.winterActive,
+      depth: state.winterActive
+        ? Math.min(1, Math.max(0.15, (state.day - state.winterStart) / Math.max(1, state.winterEnd - state.winterStart)))
+        : 0
+    };
     return view;
   }
   function moodName(pts) {
@@ -479,6 +486,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           return json(res, 403, { error: '这扇门还没认你。', hint: sideDef.unlockHint });
         }
         const prologue = body.sidestory ? false : body.prologue !== false; // 玩家局默认带序章（围城头九天）；测试/sim 显式关闭
+        // 快局（长线体验 §4.1 围城切片）：跳过序章，从预设中盘（D21）入局
+        const quick = !!body.quick && !sideDef;
         // —— 跨周目回响装配（长线体验 EC 系）：档案馆里有什么，新局就从什么里长出来 ——
         const echoes = collectEchoes(db, s.userId);
         // 开场二选一门（拍板 v5 = v4 的选择形式 + v2 的账号门回归）：本账号「完结一周目」
@@ -487,8 +496,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const WAR_ENDINGS = ['ceasefire', 'contract_end', 'maicheng', 'pyrrhic', 'alt_both', 'lighthouse', 'join_table', 'hostage'];
         const cleared = db.listRuns(s.userId).some((r) => r.status === 'ended' && WAR_ENDINGS.includes(r.ending_type));
         const preludeMode = body.preludeMode === 'short' || body.preludeMode === 'full' ? body.preludeMode : (cleared ? 'short' : 'full');
-        const state = createRun(pack, { seed: body.seed || Math.floor(Math.random() * 1e9), difficulty: body.difficulty || 'documentary', roster: body.roster, prologue, preludeMode, echoes, sidestory: sideDef?.id || null });
-        const { events } = beginRun(state, pack, { prologue });
+        const state = createRun(pack, { seed: body.seed || Math.floor(Math.random() * 1e9), difficulty: body.difficulty || 'documentary', roster: body.roster, prologue: quick ? false : prologue, preludeMode, echoes, sidestory: sideDef?.id || null });
+        if (quick) applyQuickStart(state, pack);
+        const { events } = beginRun(state, pack, { prologue: quick ? false : prologue });
         db.createRun({ id, userId: s.userId, seed: state.seed, packId, difficulty: state.difficulty, mode, state });
         db.appendEvents(id, events);
         return json(res, 200, { id, mode, state: enrich(state) });
@@ -717,6 +727,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         // 直读模板兜底。守门不过重试一次，再不过落兜底——坏一行不如少一行。
         // 堂屋事实单独走对话轨（下方），不混进散文叙事。
         const narrFacts = result.facts.filter((x) => x.k !== 'ensemble');
+        // 原地反馈载荷（体验批次三）：beats（逐拍行文+行动者）/moves（物品账）/ticks（刻度）——
+        // 先于正文下发，前端打字走到哪一拍，页面就在哪里动一下
+        const fb = buildFeedback(result.state, narrFacts, result.events, pack);
+        send('feedback', fb);
         let text = '';
         const gwN = run.mode === 'llm' ? gw : null;
         if (gwN && narrFacts.length) {
@@ -730,7 +744,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (text) send('narration-delta', { d: text });
         if (!text) {
           text = renderDirect(result.state, narrFacts, pack);
-          send('narration-delta', { d: text });
+          // 直读正文随发 beats（与 renderDirect 同一张映射逐行生成）——
+          // 前端一拍一段排版不再依赖跨事件的字符串比对
+          send('narration-delta', { d: text, beats: fb.beats });
         }
         // 堂屋（人物血肉计划 PR2）：晨间三人场——内核已裁决谁/何话题/结局拍，
         // LLM 只写台词（越界走直读拼装）；心情与信任的结算早在内核完成，LLM 挂了场子照样散不了。
@@ -824,7 +840,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         if (display.trim()) ink.push({ day: run.state.day, role: 'player', text: display });
         if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
         db.appendNarration(id, ink);
-        return json(res, 200, { state: enrich(result.state), narration: text, rejects: result.rejects });
+        return json(res, 200, {
+          state: enrich(result.state), narration: text, rejects: result.rejects,
+          feedback: buildFeedback(result.state, result.facts.filter((x) => x.k !== 'ensemble'), result.events, pack)
+        });
       }
 
       // —— 档案馆（跨局，按用户隔离） ——

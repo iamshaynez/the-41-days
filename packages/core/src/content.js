@@ -43,6 +43,9 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
   try {
     side = readJson(dir, 'sidestories.json');
   } catch { /* 无别传包 */ }
+  // 快局预设（可选文件，长线体验 §4.1）：D21 中盘切片的家底
+  let quickstart = null;
+  try { quickstart = readJson(dir, 'quickstart.json'); } catch { /* 无快局预设 */ }
 
   const itemMap = Object.fromEntries(items.map((i) => [i.id, i]));
   const charMap = Object.fromEntries(characters.map((c) => [c.id, c]));
@@ -153,7 +156,7 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     events: ej, cards: allCards, cardMap, broadcasts: ej.broadcasts,
     docs: dj.docs, docMap, layerGates: dj.layerGates, canonAnnals: dj.canonAnnals || [], narrations, kpis,
     sidestories: side.stories || [], sideMap: Object.fromEntries((side.stories || []).map((s) => [s.id, s])),
-    ge, ensembleTemplates,
+    ge, ensembleTemplates, quickstart,
     seals: sj.seals || [], sealMap,
     prelude, map, mainline, historia
   };

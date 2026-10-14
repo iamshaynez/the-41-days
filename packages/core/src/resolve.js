@@ -17,6 +17,7 @@ import { planDay, planNightStep, tickDawnLedgers } from './delegate.js';
 import { preludeBeats } from './prelude.js';
 import { mainlineTick } from './mainline.js';
 import { ensembleTick } from './ensemble.js';
+import { overviewDecision, ROUTINE_DAY_FACTS, digestOfDayFacts } from './pacing.js';
 
 /** 意图白名单（shared 契约） */
 export function validateIntentShape(intent) {
@@ -344,9 +345,9 @@ export function beginRun(state, pack, { prologue = false } = {}) {
   return { state, events, facts };
 }
 
-function toDusk(ctx) {
+function toDusk(ctx, { force = false } = {}) {
   const s = ctx.s;
-  if (s.phase !== 'day') return;
+  if (s.phase !== 'day' && !force) return; // 概述日收卷时 phase 尚在 night/dawn——内部直落黄昏
   s.phase = 'dusk';
   s.night = null;
   ctx.emit('PHASE', { to: 'dusk' });
@@ -372,9 +373,32 @@ function toDawn(ctx) {
   mainlineTick(ctx);      // 大事轴日步：破晓选步＋闲笔＋投影（叙事双轴 §4.3）
   ensembleTick(ctx);      // 堂屋（人物血肉计划 PR2）：主线日必评史＋随机场，内核先裁决结局拍
   tickDawnLedgers(ctx);   // 晨报衰减账/知晓度里程碑账（批次二 C-3/体验9；FLAG 镜像可回放）
+  // 概述日（长线体验 §4.4）：平淡日一句话收卷——白天整段交给管家，直落黄昏。
+  // 只在事件/状态突变处停下问玩家；玩家可用规矩（overviewDays=false）关掉。
+  if (overviewDecision(ctx).fire) { collapseDay(ctx); return; }
   s.phase = 'day';
   ctx.emit('PHASE', { to: 'day' });
   ctx.fact('phase_day', { day: s.day, weather: s.weather });
+}
+
+/** 概述日的白天收卷：管家照常张罗（同一 planDay、同一扣账、同一事件流），
+ *  例行流水不进正文（facts 只作叙事提示，吞掉不影响回放），只留一笔 day_overview。 */
+function collapseDay(ctx) {
+  const s = ctx.s;
+  const start = ctx.facts.length;
+  ctx.delegated = true;
+  for (const it of planDay(s, ctx.pack)) applyOne(ctx, it); // 概述日不求有功：规划落空就落空，不出噪音
+  ctx.delegated = false;
+  const dayFacts = ctx.facts.splice(start);
+  const swallowed = dayFacts.filter((f) => ROUTINE_DAY_FACTS.has(f.k));
+  const kept = dayFacts.filter((f) => !ROUTINE_DAY_FACTS.has(f.k)); // 大事（文档/封印/…）永不吞
+  const digest = digestOfDayFacts(swallowed, ctx.pack, s);
+  ctx.delegated = true;
+  ctx.fact('day_overview', { day: s.day, streak: Math.max(1, s.quietStreak || 1), ...digest });
+  ctx.delegated = false;
+  ctx.facts.push(...kept);
+  ctx.setFlag('overviewDays', (s.overviewDays || 0) + 1);
+  toDusk(ctx, { force: true });
 }
 
 export { buildEnding };

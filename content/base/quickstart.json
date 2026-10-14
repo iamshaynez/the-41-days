@@ -1,0 +1,42 @@
+{
+  "$comment": "快局（长线体验-v0.2 §4.1「围城切片」）：从 D21 入局的中盘预设——认真玩了二十天的样子：炉灶与工作台立了、门加了板、见识过半座城、人是中盘的疲惫而不是开局的白板。只补家底不烧卡：D21 之前窗口的时间轴卡按窗口规则自然沉默。交割日仍是正典 D41。",
+  "day": 21,
+  "inventory": {
+    "meal": 3,
+    "raw": 4,
+    "canned": 1,
+    "veg": 2,
+    "water": 4,
+    "firewood": 8,
+    "bandage": 1,
+    "meds": 1,
+    "herb": 1,
+    "wood": 6,
+    "parts": 8,
+    "comp": 2,
+    "book": 1
+  },
+  "facilities": {
+    "stove": 1,
+    "workbench": 1,
+    "bed": 1,
+    "trap": 1,
+    "trapBaited": true,
+    "trapDay": 18,
+    "heater": 1
+  },
+  "doorLevel": 1,
+  "homeFurniture": 3,
+  "knownLocs": [
+    "post",
+    "sewer",
+    "frontline"
+  ],
+  "searchedHome": true,
+  "chars": {
+    "*": {
+      "hunger": 3,
+      "moodPts": 0
+    }
+  }
+}

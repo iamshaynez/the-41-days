@@ -34,6 +34,7 @@ function playOne(pack, seed, policyName, maxDays) {
   const deaths = s.chars.filter((c) => !c.alive).map((c) => c.name);
   return {
     seed, policy: policyName, days: s.day,
+    overviews: s.overviewDays || 0, // 概述日（长线体验 §4.4）：平淡日被一句话收卷的天数
     alive: s.chars.filter((c) => c.alive).length,
     ending: s.ending?.type || 'wiped',
     docs: s.docsSeen.length,
@@ -144,6 +145,7 @@ function computeKpis(runs, policies) {  const by = {};
       wipe_rate: wiped.length / rs.length,
       ceasefire_rate: ceasefire.length / rs.length,
       docs_median: median(rs.map((r) => r.docs).sort((a, b) => a - b)),
+      overview_share: rs.reduce((a, r) => a + (r.overviews || 0), 0) / rs.reduce((a, r) => a + Math.max(1, r.days), 0),
       raid_wipe_unknown: null
     };
   }
@@ -161,6 +163,9 @@ export function checkGates(report, gates) {
     if (!inBand(bal.median_days, g.run_length_days_median)) failures.push(`中位局时长 ${bal.median_days} 越带 ${JSON.stringify(g.run_length_days_median)}`);
     if (!inBand(bal.any_survivor_to_end, g.any_survivor_to_end)) failures.push(`有人活到停火比例 ${bal.any_survivor_to_end.toFixed(2)} 越带 ${JSON.stringify(g.any_survivor_to_end)}`);
     if (!inBand(bal.docs_median, g.docs_per_run_median)) failures.push(`每局文档中位数 ${bal.docs_median} 越带 ${JSON.stringify(g.docs_per_run_median)}`);
+    if (g.overview_share && bal.overview_share !== undefined && !inBand(bal.overview_share, g.overview_share)) {
+      failures.push(`概述日占比 ${bal.overview_share.toFixed(3)} 越带 ${JSON.stringify(g.overview_share)}（机器人策略偏糙，下限是存在性断言——真实玩家的安静日更多）`);
+    }
     // 恶魔策略（若在样本里）：存活率应显著低于均衡
     const devil = report.kpis.devil;
     if (devil && bal.any_survivor_to_end - devil.any_survivor_to_end < 0.05) failures.push('恶魔策略未受到足够惩罚（存活率差 <5pp）');
