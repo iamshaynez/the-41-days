@@ -1622,6 +1622,11 @@ body.motion-off .turn-ledger { animation: none; }
 #narration .ask .home-line { color: var(--ink-3); letter-spacing: .04em; }
 #narration .ask .home-line b { color: var(--accent); font-weight: 400; }
 
+/* 人物浮卡的心事行（D·戏剧弧）：心结一句 + 最近一笔私账 */
+#char-pop .cp-care { margin: 6px 0 2px; padding: 6px 9px; border-left: 2px solid var(--rule); font-family: var(--font-kai); font-size: .86em; color: var(--ink-2); line-height: 1.7; }
+#char-pop .cp-care .cp-k { display: block; font-family: var(--font-carved); font-size: 9.5px; letter-spacing: .3em; color: var(--ink-3); margin-top: 3px; }
+#char-pop .cp-care .cp-k:first-child { margin-top: 0; }
+
 /* 细目抽屉里的规矩开关 */
 .hb-policy { margin-top: 2px; }
 

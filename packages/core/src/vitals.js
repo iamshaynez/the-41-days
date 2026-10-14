@@ -331,7 +331,11 @@ export function advanceDay(ctx) {
     // 回响（EC/出江陵记的跨周目代价）：接受过券局提议的人，商路第一眼就认得
     const dark = !!(s.echoes?.joinTableDark && !s.echoes.frankoGreeted);
     if (dark) s.echoes.frankoGreeted = true;
-    ctx.fact('franko_incoming', dark ? { dark: true } : {});
+    // 外客连续性（F·戏剧弧）：船牙每访捎一句城里的话——最近一件大事，
+    // 常客是城与家之间的信使，不是一张会走路的价目表
+    const stepMap = new Map((ctx.pack.mainline?.steps || []).map((x) => [x.id, x]));
+    const news = [...(s.mainline || [])].reverse().map((m) => m.stepId && stepMap.get(m.stepId)?.title).find(Boolean) || null;
+    ctx.fact('franko_incoming', { ...(dark ? { dark: true } : {}), ...(news ? { news } : {}) });
   }
   ctx.emit('DAY_STARTED', { day: s.day, weather: s.weather, snapshot: structuredClone(s) });
 }
