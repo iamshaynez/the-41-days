@@ -147,6 +147,25 @@ export class Db {
       FROM users u ORDER BY u.id`).all();
   }
   countUsers() { return this.db.prepare('SELECT COUNT(*) AS n FROM users').get().n; }
+
+  // —— 会话（跨重启的登录态：cookie 存原文 token，库存 sha256 摘要） ——
+  sessionPut(tokenHash, userId, nowMs) {
+    this.db.prepare('INSERT OR REPLACE INTO session (token_hash,user_id,created_at,last_seen_at) VALUES (?,?,?,?)')
+      .run(tokenHash, userId, nowMs, nowMs);
+  }
+  sessionGet(tokenHash) {
+    return this.db.prepare('SELECT user_id,last_seen_at FROM session WHERE token_hash=?').get(tokenHash) || null;
+  }
+  sessionTouch(tokenHash, nowMs) {
+    this.db.prepare('UPDATE session SET last_seen_at=? WHERE token_hash=?').run(nowMs, tokenHash);
+  }
+  sessionDelete(tokenHash) {
+    this.db.prepare('DELETE FROM session WHERE token_hash=?').run(tokenHash);
+  }
+  /** 顺手清扫过期会话（登录时调用；滑动窗口以 last_seen 为准） */
+  sessionDeleteExpired(cutoffMs) {
+    return this.db.prepare('DELETE FROM session WHERE last_seen_at < ?').run(cutoffMs).changes;
+  }
   /** 用户的对局列表（续局/档案馆入口；day 从快照提取，避免整列 state_json 出库） */
   listRuns(userId, limit = 20) {
     return this.db.prepare(`
