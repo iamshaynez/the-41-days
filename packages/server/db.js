@@ -148,6 +148,15 @@ export class Db {
   }
   countUsers() { return this.db.prepare('SELECT COUNT(*) AS n FROM users').get().n; }
 
+  // —— 全局设置（meta 表 KV：管理员开关等，跨重启持久） ——
+  getSetting(key, def = null) {
+    const row = this.db.prepare('SELECT value FROM meta WHERE key=?').get(key);
+    return row ? row.value : def;
+  }
+  setSetting(key, value) {
+    this.db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?,?)').run(key, String(value));
+  }
+
   // —— 会话（跨重启的登录态：cookie 存原文 token，库存 sha256 摘要） ——
   sessionPut(tokenHash, userId, nowMs) {
     this.db.prepare('INSERT OR REPLACE INTO session (token_hash,user_id,created_at,last_seen_at) VALUES (?,?,?,?)')
