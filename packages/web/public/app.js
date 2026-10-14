@@ -2106,6 +2106,27 @@ const TRACE_GLYPH = {
   lamp: '<circle cy="-1.4" r="1.1" class="tr-fl"/><path d="M0,-0.3 v3.2 M-1.4,3 h2.8" class="tr-st"/>',
   frost: '', waterline: ''
 };
+/** 舆图 SVG 内景（侧栏一览与大观全屏共用同一张手绘） */
+function mapSvgMarkup(mv) {
+  const b = mv.base || { viewBox: [0, 0, 100, 100], paths: [] };
+  const [x, y, w, h] = b.viewBox || [0, 0, 100, 100];
+  return `<svg viewBox="${x} ${y} ${w} ${h}" class="map-svg${mv.winter ? ' frost' : ''}${mv.rain ? ' rainy' : ''}" role="img" aria-label="江陵舆图">
+    ${(b.paths || []).map((p) => `<path d="${p.d}" class="mp-${p.cls}"/>${p.label ? `<text x="${p.lx}" y="${p.ly}" class="mp-label">${esc(p.label)}</text>` : ''}`).join('')}
+    ${(mv.gates || []).map((g) => `<circle cx="${g.x}" cy="${g.y}" r="0.9" class="mp-gate"><title>${esc(g.name)}</title></circle>`).join('')}
+    ${mv.route && mv.places.find((p) => p.id === mv.route.to) ? (() => {
+      const from = mv.places.find((p) => p.id === 'home') || { x: 50, y: 53 };
+      const to = mv.places.find((p) => p.id === mv.route.to);
+      return `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" class="mp-route"/>`;
+    })() : ''}
+    ${(mv.traces || []).map((t) => `<g transform="translate(${t.x},${t.y})" class="trace"><title>${esc(t.label || '')}</title>${TRACE_GLYPH[t.icon] || ''}</g>`).join('')}
+    ${mv.places.filter((p) => p.state !== 'unknown').map((p) => `
+      <g class="place ${p.state === 'tonight' ? 'tonight' : 'known'}" data-place="${esc(p.id)}" data-name="${esc(p.name)}" data-state="${p.state}"${p.who ? ` data-who="${esc(p.who)}"` : ''} tabindex="0">
+        <circle cx="${p.x}" cy="${p.y}" r="${p.state === 'tonight' ? 2.6 : 1.8}"/>
+        <text x="${p.x + 3}" y="${p.y + 1.4}">${esc(p.name)}${p.who ? `（${esc(p.who)}）` : ''}</text>
+      </g>`).join('')}
+  </svg>`;
+}
+
 function renderMap(mv) {
   const panel = $('map-panel');
   if (!mv) { panel.hidden = true; return; }
@@ -2117,27 +2138,140 @@ function renderMap(mv) {
   box.classList.toggle('frost', !!mv.winter);
   box.classList.toggle('rainy', !!mv.rain);
   box.innerHTML = '';
-  const b = mv.base || { viewBox: [0, 0, 100, 100], paths: [] };
-  const [x, y, w, h] = b.viewBox || [0, 0, 100, 100];
   const svg = el('div');
-  svg.innerHTML = `<svg viewBox="${x} ${y} ${w} ${h}" class="map-svg${mv.winter ? ' frost' : ''}${mv.rain ? ' rainy' : ''}" role="img" aria-label="江陵舆图">
-    ${(b.paths || []).map((p) => `<path d="${p.d}" class="mp-${p.cls}"/>${p.label ? `<text x="${p.lx}" y="${p.ly}" class="mp-label">${esc(p.label)}</text>` : ''}`).join('')}
-    ${(mv.gates || []).map((g) => `<circle cx="${g.x}" cy="${g.y}" r="0.9" class="mp-gate"><title>${esc(g.name)}</title></circle>`).join('')}
-    ${mv.route && mv.places.find((p) => p.id === mv.route.to) ? (() => {
-      const from = mv.places.find((p) => p.id === 'home') || { x: 50, y: 53 };
-      const to = mv.places.find((p) => p.id === mv.route.to);
-      return `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" class="mp-route"/>`;
-    })() : ''}
-    ${(mv.traces || []).map((t) => `<g transform="translate(${t.x},${t.y})" class="trace"><title>${esc(t.label || '')}</title>${TRACE_GLYPH[t.icon] || ''}</g>`).join('')}
-    ${mv.places.filter((p) => p.state !== 'unknown').map((p) => `
-      <g class="place ${p.state === 'tonight' ? 'tonight' : 'known'}">
-        <circle cx="${p.x}" cy="${p.y}" r="${p.state === 'tonight' ? 2.6 : 1.8}"/>
-        <text x="${p.x + 3}" y="${p.y + 1.4}">${esc(p.name)}${p.who ? `（${esc(p.who)}）` : ''}</text>
-      </g>`).join('')}
-  </svg>`;
+  svg.innerHTML = mapSvgMarkup(mv);
   box.appendChild(svg);
   $('map-note').textContent = mv.tonight ? `今夜：${mv.places.find((p) => p.id === mv.tonight.loc)?.name || ''}${mv.tonight.who ? ' · ' + mv.tonight.who : ''}` : '白日，全员在橘里九号。';
+  updateMapBig(mv); // 大观开着时同步换纸
 }
+
+/* ═══ 舆图 · 大观：点图全屏展开——拖动平移、滚轮/双指缩放、点地名看注 ═══
+   侧栏保持一览不抢书页；看细节进大观（桌面滚轮/手机双指，同一套手势）。 */
+const mbState = { el: null, view: null, k: 1, x: 0, y: 0, dragged: false };
+function ensureMapBig() {
+  if (mbState.el) return mbState.el;
+  const root = el('div', 'mapbig');
+  root.hidden = true;
+  root.innerHTML = `
+    <div class="mb-backdrop"></div>
+    <div class="mb-sheet" role="dialog" aria-label="舆图大观">
+      <div class="mb-head">
+        <span class="wing-kicker">舆图 · 大观</span>
+        <span class="mb-sub">拖动平移 · 滚轮/双指缩放 · 点地名看注</span>
+        <span class="mb-btns">
+          <button class="mb-btn" type="button" data-z="in" aria-label="放大">＋</button>
+          <button class="mb-btn" type="button" data-z="out" aria-label="缩小">−</button>
+          <button class="mb-btn mb-reset" type="button" data-z="reset">复位</button>
+          <button class="mb-btn mb-x" type="button" aria-label="收起">✕</button>
+        </span>
+      </div>
+      <div class="mb-stage"><div class="mb-canvas"></div></div>
+      <div class="mb-note" hidden></div>
+    </div>`;
+  document.body.appendChild(root);
+  mbState.el = root;
+  root.querySelector('.mb-backdrop').addEventListener('click', closeMapBig);
+  root.querySelector('.mb-x').addEventListener('click', closeMapBig);
+  for (const b of root.querySelectorAll('.mb-btn[data-z]')) b.addEventListener('click', () => {
+    if (b.dataset.z === 'reset') resetMapBig();
+    else zoomMapBig(b.dataset.z === 'in' ? 1.25 : 1 / 1.25);
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) closeMapBig(); });
+  bindMapBigGestures(root.querySelector('.mb-stage'));
+  // 点地名出注（挂在 sheet 上一次性绑定；tap 与拖拽以位移阈值区分）
+  root.querySelector('.mb-sheet').addEventListener('click', (e) => {
+    const g = e.target.closest('g.place');
+    if (!g || mbState.dragged) return;
+    const note = root.querySelector('.mb-note');
+    const st = g.dataset.state === 'tonight' ? `今夜在此${g.dataset.who ? ' · ' + g.dataset.who : ''}` : '已知的地方';
+    note.textContent = `${g.dataset.name} —— ${st}`;
+    note.hidden = false;
+  });
+  return root;
+}
+function openMapBig(mv) {
+  const root = ensureMapBig();
+  mbState.view = mv;
+  root.querySelector('.mb-canvas').innerHTML = mapSvgMarkup(mv);
+  root.hidden = false;
+  document.body.classList.add('mapbig-open');
+  resetMapBig();
+  root.querySelector('.mb-note').hidden = true;
+}
+function closeMapBig() {
+  if (!mbState.el) return;
+  mbState.el.hidden = true;
+  document.body.classList.remove('mapbig-open');
+}
+function updateMapBig(mv) {
+  if (!mbState.el || mbState.el.hidden) return;
+  mbState.el.querySelector('.mb-canvas').innerHTML = mapSvgMarkup(mv);
+}
+function applyMapBigTransform() {
+  const c = mbState.el?.querySelector('.mb-canvas');
+  if (c) c.style.transform = `translate(${mbState.x}px, ${mbState.y}px) scale(${mbState.k})`;
+}
+function resetMapBig() { mbState.k = 1; mbState.x = 0; mbState.y = 0; applyMapBigTransform(); }
+/** 以点(px,py)（stage 内坐标）为锚缩放 ratio 倍，钳在 1~5 */
+function zoomMapBigAt(ratio, px, py) {
+  const k0 = mbState.k;
+  const k1 = Math.min(5, Math.max(1, k0 * ratio));
+  if (k1 === k0) return;
+  mbState.x = px - (px - mbState.x) * (k1 / k0);
+  mbState.y = py - (py - mbState.y) * (k1 / k0);
+  mbState.k = k1;
+  applyMapBigTransform();
+}
+function zoomMapBig(ratio) {
+  const st = mbState.el?.querySelector('.mb-stage');
+  if (!st) return;
+  zoomMapBigAt(ratio, st.clientWidth / 2, st.clientHeight / 2);
+}
+/** 手势：单指拖 = 平移；双指捏 = 缩放（手机）；wheel = 桌面缩放 */
+function bindMapBigGestures(stage) {
+  const ptrs = new Map();
+  let pinch0 = null;
+  stage.style.touchAction = 'none';
+  stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const r = stage.getBoundingClientRect();
+    zoomMapBigAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  stage.addEventListener('pointerdown', (e) => {
+    stage.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      pinch0 = { d: Math.hypot(a.x - b.x, a.y - b.y), k: mbState.k, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, x: mbState.x, y: mbState.y };
+    }
+    mbState.dragged = false;
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (!ptrs.has(e.pointerId)) return;
+    const prev = ptrs.get(e.pointerId);
+    const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (Math.abs(dx) + Math.abs(dy) > 1) mbState.dragged = true;
+    if (ptrs.size === 1) { mbState.x += dx; mbState.y += dy; applyMapBigTransform(); }
+    else if (ptrs.size === 2 && pinch0) {
+      const [a, b] = [...ptrs.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const r = stage.getBoundingClientRect();
+      const k1 = Math.min(5, Math.max(1, pinch0.k * (d / pinch0.d)));
+      const px = pinch0.cx - r.left, py = pinch0.cy - r.top;
+      mbState.k = pinch0.k;
+      mbState.x = pinch0.x; mbState.y = pinch0.y;
+      zoomMapBigAt(k1 / pinch0.k, px, py);
+    }
+  });
+  const up = (e) => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch0 = null; };
+  stage.addEventListener('pointerup', up);
+  stage.addEventListener('pointercancel', up);
+}
+// 侧栏一览点图即入大观（含手机抽屉里那张横滚大图）
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#map-box') && state.s?.mapView) { openMapBig(state.s.mapView); }
+});
 function renderChronicle(ch) {
   const panel = $('chronicle-panel');
   if (!ch) { panel.hidden = true; return; }
