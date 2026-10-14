@@ -1644,3 +1644,6 @@ body.mapbig-open { overflow: hidden; }
   .mb-canvas .place text { font-size: 3.6px; }
   .mb-note { font-size: 15px; }
 }
+
+/* 选单行注脚（环境声行的说明小字） */
+.m-note { font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
