@@ -771,6 +771,7 @@ function fillCharPop(id) {
     <div class="cp-head">${svgUse(c.alive ? (MOOD_FIG[c.mood] || 'fig-sit') : 'fig-curl', 'pl-fig')}
       <b>${esc(c.name)}</b><span class="cp-role">${esc(c.role)} · 心情${esc(c.mood)}</span></div>
     <p class="cp-words">${esc(words.join('，') || '身上没伤，肚里有食。')}</p>
+    ${c.care?.knot ? `<p class="cp-care"><span class="cp-k">心里压着</span>${esc(c.care.knot)}${c.care.last ? `<span class="cp-k">最近记着</span>${esc(c.care.last)}` : ''}</p>` : ''}
     ${gaugeRows(c)}`;
   pop.dataset.sev = charSev(c);
 }

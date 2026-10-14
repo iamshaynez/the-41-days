@@ -273,6 +273,26 @@ export function dawnProblems(state, pack) {
   }
   const fuel = (s.inventory.firewood || 0) + (s.inventory.fuel || 0);
   if (s.winterActive && fuel < 2 && (s.facilities.heater || s.facilities.heater_iron)) chronic('fuel_low', 2, '取暖的柴快烧完了。');
+  // 冬柴倒计时（E·危机弧）：有名字的坎要有数——「还能烧几夜」比「快烧完了」更让人睡不着
+  if (s.winterActive && (s.facilities.heater || s.facilities.heater_iron)) {
+    const perNight = s.facilities.heater_iron ? 1 : 2;
+    const nights = Math.floor(fuel / perNight);
+    if (nights <= 5) out.push({ sev: 1, key: 'fuel_days', text: `冬柴只够再烧 ${nights} 夜。` });
+  }
+  // 疫病行（E·危机弧）：两个人同时病倒，就不再是「谁的病」，是「这个家的火」
+  if (aliveChars(s).filter((c) => c.sick >= 1).length >= 2) {
+    out.push({ sev: 1, key: 'plague', text: '疫病进了门——这个家在发烧。' });
+  }
+  // 军心表（B·戏剧弧）：家书投进去的暗河，给玩家一个可见的对面水位。
+  // 不给数字给档位词——D41 的刀落刀偏，要有 41 天的铺垫可循
+  if (s.day >= 3 && !s.sidestory) {
+    const th = pack.manifest.war?.dissolveThreshold ?? 22;
+    const d = s.dissolve || 0;
+    const tier = d >= th ? '大军像化雪，一夜瘦一圈'
+      : d >= th * 0.5 ? '夜里有人成队地走散'
+        : d >= th * 0.25 ? '握矛的手松了些' : '握矛的手很稳';
+    out.push({ sev: 0, key: 'dissolve', text: `北边的军心：${tier}。` });
+  }
   if (s.franko) out.push({ sev: 0, key: 'franko', text: '鲁舟的船靠在渡口边。' });
   // 或然亲和的暗提示（二周目起）：读过城的人记得哪里有纸——不指路，只提醒城有夹层
   if (s.echoBoon && s.day >= 24 && (s.docsSeen || []).length < 3) {
@@ -288,8 +308,54 @@ export function dawnProblems(state, pack) {
   return out.sort((a, b) => b.sev - a.sev);
 }
 
-/** 破晓时更新晨报衰减账与知晓度里程碑账（toDawn 管线调用；FLAG 镜像可回放） */
-export function tickDawnLedgers(ctx) {
+/** 戏剧弧破晓钩子（C/E·中盘戏剧）：危机头卡（有名字的坎，条件触发一次）与
+ *  心事保底（名册每人的心结首拍，D12 起随机池没接住就由内核兜底）。
+ *  一晨至多一张：正史停问 > 随机晨抽 > 危机 > 心事。EVENT_FIRED 入账可回放。 */
+export function tickDrama(ctx) {
+  const s = ctx.s;
+  if (s.sidestory || s.over || s.activeEvent) return;
+  const fireCard = (id) => {
+    const card = ctx.pack.cardMap[id];
+    if (!card) return false;
+    s.firedOnce[id] = true;
+    ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
+    s.activeEvent = { cardId: id };
+    ctx.emit('EVENT_FIRED', { cardId: id });
+    ctx.fact('event', { cardId: id, title: card.title });
+    return true;
+  };
+  // —— E 危机弧：冬柴告急 / 断粮算术 / 疫病进门（一局各一次）——
+  const fuel = (s.inventory.firewood || 0) + (s.inventory.fuel || 0);
+  const food = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
+  const sickN = aliveChars(s).filter((c) => c.sick >= 1).length;
+  if (s.winterActive && fuel <= 4 && !s.firedOnce['c_fuel'] && (s.facilities.heater || s.facilities.heater_iron)) {
+    if (fireCard('c_fuel')) return;
+  }
+  if (s.day >= 5 && food <= 2 && aliveChars(s).length >= 2 && !s.firedOnce['c_famine']) {
+    if (fireCard('c_famine')) return;
+  }
+  if (sickN >= 2 && !s.firedOnce['c_plague']) {
+    if (fireCard('c_plague')) return;
+  }
+  // —— C 心事线：名册每人一张心结首拍，保底显形 ——
+  if (s.day >= 12) {
+    const pending = aliveChars(s)
+      .map((c) => ctx.pack.charMap[c.id]?.persona?.knotCard)
+      .filter((id) => id && ctx.pack.cardMap[id] && !s.firedOnce[id]);
+    if (pending.length) fireCard(pending[0]);
+  }
+}
+
+/** 人物页的「他最近惦记什么」（D·戏剧弧）：心结一句 + 最近一笔私账——
+ *  内核已有的人格卡与因果账，给玩家一个随时可查的显形面 */
+export function charCare(state, pack, id) {
+  const knot = pack.charMap?.[id]?.persona?.knot || null;
+  const ledger = state.causality?.charArcs?.[id]?.privateLedger || [];
+  const last = ledger.length ? ledger[ledger.length - 1] : null;
+  return { knot, last: last?.note ? String(last.note) : null };
+}
+
+/** 破晓时更新晨报衰减账与知晓度里程碑账（toDawn 管线调用；FLAG 镜像可回放） */export function tickDawnLedgers(ctx) {
   const s = ctx.s;
   const today = new Set(dawnProblems(s, ctx.pack).map((p) => p.key).filter(Boolean));
   const next = {};

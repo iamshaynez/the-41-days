@@ -33,6 +33,11 @@ function nightToDawn(day, { seed = 1, policy = null, hunger = 4, famine = false 
     const lo = card.when?.dayWindow?.[0];
     if (lo !== undefined && lo < day) s.firedOnce[card.id] = true; // 时间轴卡窗口内必发：窗口已开即已发过
   }
+  // 戏剧弧隔离（正史停问/危机/心事卡不进本测试的现场——这里考的是概述日本身）：
+  // 心事首拍视为随机池早接走过；正史停问与危机视为已答过
+  for (const c of PACK.characters) if (c.persona?.knotCard) s.firedOnce[c.persona.knotCard] = true;
+  for (const st of PACK.mainline.steps) if (st.ask) s.firedOnce['ask_' + st.id] = true;
+  for (const id of ['c_fuel', 'c_famine', 'c_plague']) s.firedOnce[id] = true;
   if (policy) s.policy = { ...s.policy, ...policy };
   return step(s, [{ type: 'dusk_assign', scavenger: null, others: {} }]);
 }

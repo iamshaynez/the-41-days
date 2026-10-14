@@ -13,7 +13,8 @@ import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickPro
 import { tickAutonomous, tickDirections } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
-import { planDay, planNightStep, tickDawnLedgers } from './delegate.js';
+import { planDay, planNightStep, tickDawnLedgers, tickDrama } from './delegate.js';
+import { mainlineAskTick } from './mainline.js';
 import { preludeBeats } from './prelude.js';
 import { mainlineTick } from './mainline.js';
 import { ensembleTick } from './ensemble.js';
@@ -365,6 +366,7 @@ function toDawn(ctx) {
   ctx.nightGuard = new Set(aliveChars(s).filter((c) => c.guardTonight).map((c) => c.id));
   ctx.nightBeds = assignNightBeds(ctx);
   advanceDay(ctx);           // day++、天气、AP、商人、DAY_STARTED 快照
+  mainlineAskTick(ctx);      // 正史停问（A）：大事落地那晨，史书先问——先于随机晨抽
   tickHunger(ctx);
   tickHealth(ctx);
   tickFatigue(ctx);
@@ -381,6 +383,8 @@ function toDawn(ctx) {
   // 概述日（长线体验 §4.4）：平淡日一句话收卷——白天整段交给管家，直落黄昏。
   // 只在事件/状态突变处停下问玩家；玩家可用规矩（overviewDays=false）关掉。
   if (overviewDecision(ctx).fire) { collapseDay(ctx); return; }
+  tickDrama(ctx);         // 戏剧弧（C/E）：危机头卡与心事保底——一晨至多一张，让过正史、
+                          // 随机与概述收卷（平淡日收卷的日子不开卡；忙日子才轮得到心事）
   s.phase = 'day';
   ctx.emit('PHASE', { to: 'day' });
   ctx.fact('phase_day', { day: s.day, weather: s.weather });

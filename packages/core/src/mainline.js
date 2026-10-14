@@ -3,9 +3,27 @@
 // 步与闲笔一并通过 MAINLINE_STEP 事件入账（fold 镜像）；步文本的 LLM 渲染在 server（史官），
 // 直读时用 step.fallback——大事轴不掷骰，锚不换（RND-08 全程有效）。
 
-/** 破晓钩子：为 s.day 选步＋抽闲笔＋触发投影；一日至多一条 MAINLINE_STEP */
-export function mainlineTick(ctx) {
+/** 正史停问（A·戏剧弧）：带 ask 的大事步落地那晨，史书先问这个家——
+ *  挂历变对手戏。先于随机晨抽执行（正史的问题不跟敲门的事抢位），
+ *  一局一问，EVENT_FIRED 入账（fold 可回放）。 */
+export function mainlineAskTick(ctx) {
   const s = ctx.s;
+  const ml = ctx.pack?.mainline;
+  if (!ml || s.sidestory || s.over) return;
+  if (s.activeEvent) return;
+  const step = (ml.steps || []).find((st) => st.day === s.day && st.ask && !s.firedOnce['ask_' + st.id]);
+  if (!step) return;
+  const card = ctx.pack.cardMap[step.ask];
+  if (!card) return;
+  s.firedOnce['ask_' + step.id] = true;
+  ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
+  s.activeEvent = { cardId: step.ask };
+  ctx.emit('EVENT_FIRED', { cardId: step.ask });
+  ctx.fact('event', { cardId: step.ask, title: card.title });
+}
+
+/** 破晓钩子：为 s.day 选步＋抽闲笔＋触发投影；一日至多一条 MAINLINE_STEP */
+export function mainlineTick(ctx) {  const s = ctx.s;
   const ml = ctx.pack?.mainline;
   if (!ml || s.sidestory || s.over) return;
   if ((s.mainline || []).some((e) => e.day === s.day)) return; // 一日一步，幂等

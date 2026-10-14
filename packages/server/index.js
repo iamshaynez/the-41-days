@@ -14,7 +14,7 @@ import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect, humanFacts, narrationLint, buildFeedback } from './narrate.js';
 import { rejectText } from '../core/src/rejects.js';
-import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView, charCare } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
@@ -355,7 +355,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       wound: ['无', '轻伤', '重伤', '危重'][c.wound], sick: ['无', '微恙', '重病', '危重'][c.sick],
       fatigue: ['正常', '疲惫', '力竭'][c.fatigue], breakdown: !!c.breakdown,
       // 崩溃链的进度条（一周目实测：滑坡全程不可见，玩家无从干预）——安抚累计 4 可逆转
-      mind: c.breakdown ? `崩溃·安抚${c.soothed || 0}/4` : null
+      mind: c.breakdown ? `崩溃·安抚${c.soothed || 0}/4` : null,
+      // 他最近惦记什么（D·戏剧弧）：心结一句 + 最近一笔私账——人格卡与因果账的显形面
+      care: charCare(state, pack, c.id)
     }));
     view.packVersion = pack.manifest.semver;
     // 季相（体验批次三·痕迹积累）：冬深几何，页缘的霜雪跟着长
