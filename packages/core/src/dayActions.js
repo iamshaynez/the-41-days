@@ -31,7 +31,7 @@ export function applyDayAction(ctx, intent) {
       c.guardTonight = true; c.ap = Math.max(0, c.ap - 1);
       ctx.emit('GUARD_SET', { char: c.id }); ctx.fact('guard', { char: c.id });
       return { ok: true };
-    case 'sleep': ctx.setFatigue(c, c.fatigue - 1); ctx.spendAp(c, 2); ctx.fact('nap', { char: c.id }); return { ok: true };
+    case 'sleep': ctx.setFatigue(c, c.fatigue - 1, '打了个盹'); ctx.spendAp(c, 2); ctx.fact('nap', { char: c.id }); return { ok: true };
     case 'rest': return actRest(ctx, c);
     case 'listen_radio': return actRadio(ctx, c);
     case 'search_home': return actSearchHome(ctx, c, intent.target);
@@ -52,7 +52,7 @@ function actEat(ctx, c, target) {
   if (!item) { ctx.fact('no_food', {}); return { ok: false, reason: 'NO_ITEM' }; }
   if (c.hunger >= 4) { ctx.fact('waste_warning', { char: c.id }); return { ok: false, reason: 'FULL' }; }
   ctx.takeItem(item, 1, '进食');
-  ctx.setHunger(c, c.hunger + (pack.itemMap[item].eat || 1));
+  ctx.setHunger(c, c.hunger + (pack.itemMap[item].eat || 1), `吃了${pack.itemMap[item].name}`);
   ctx.fact('eat', { char: c.id, item });
   recordCausal(ctx, 'feed', { target: c.id });
   if (item === 'cigs' || item === 'coffee') {
@@ -176,8 +176,8 @@ function actTreat(ctx, c, med, patientId) {
     if (p.wound < 1) return { ok: false, reason: 'NO_NEED' };
     ctx.takeItem('bandage', 1, '治疗');
     ctx.setCharFlag(p, 'woundTreatedDay', day);
-    ctx.setWound(p, p.wound >= 2 ? p.wound - 1 : p.wound);
-    if (boost && p.wound >= 1) ctx.setWound(p, p.wound - 1);
+    ctx.setWound(p, p.wound >= 2 ? p.wound - 1 : p.wound, '换药包扎');
+    if (boost && p.wound >= 1) ctx.setWound(p, p.wound - 1, '懂医的人包扎');
     ctx.spendAp(c, 1);
     ctx.fact('treat', { char: c.id, patient: p.id, med: 'bandage' });
     return { ok: true };
@@ -186,8 +186,8 @@ function actTreat(ctx, c, med, patientId) {
     if (p.sick < 1) return { ok: false, reason: 'NO_NEED' };
     ctx.takeItem('meds', 1, '治疗');
     ctx.setCharFlag(p, 'sickTreatedDay', day);
-    ctx.setSick(p, p.sick >= 2 ? p.sick - 1 : p.sick);
-    if (boost && p.sick >= 1) ctx.setSick(p, p.sick - 1);
+    ctx.setSick(p, p.sick >= 2 ? p.sick - 1 : p.sick, '服药');
+    if (boost && p.sick >= 1) ctx.setSick(p, p.sick - 1, '懂医的人照看');
     ctx.spendAp(c, 1);
     ctx.fact('treat', { char: c.id, patient: p.id, med: 'meds' });
     return { ok: true };
@@ -195,7 +195,7 @@ function actTreat(ctx, c, med, patientId) {
   if (med === 'herbmed' && ctx.hasItem('herbmed')) {
     if (p.sick < 1) return { ok: false, reason: 'NO_NEED' };
     ctx.takeItem('herbmed', 1, '治疗');
-    if (p.sick === 1) ctx.setSick(p, 0); else ctx.setCharFlag(p, 'sickTreatedHerb', true);
+    if (p.sick === 1) ctx.setSick(p, 0, '草药汤见效'); else ctx.setCharFlag(p, 'sickTreatedHerb', true);
     ctx.spendAp(c, 1);
     ctx.fact('treat', { char: c.id, patient: p.id, med: 'herbmed' });
     return { ok: true };
@@ -245,7 +245,7 @@ function actRest(ctx, c) {
   ctx.setCharFlag(c, 'bedRest', true);
   c.ap = Math.min(c.ap, 1);
   ctx.emit('AP_SPENT', { char: c.id, n: 0, left: c.ap });
-  ctx.setFatigue(c, c.fatigue - 1);
+  ctx.setFatigue(c, c.fatigue - 1, '卧床休养');
   ctx.fact('rest', { char: c.id });
   return { ok: true };
 }

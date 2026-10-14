@@ -11,7 +11,7 @@ export function tickHunger(ctx) {
   const cfg = difficultyCfg(ctx.pack, ctx.s);
   for (const c of aliveChars(ctx.s)) {
     const to = c.hunger === 4 ? 3 : Math.max(0, c.hunger - 1);
-    ctx.setHunger(c, to);
+    ctx.setHunger(c, to, '过了一日');
     if (to === 1) ctx.mood(c, -1, '严重饥饿拖累');
     // 因果：柜里有粮，锅里无饭——这是选择，不是命运（CY-01 deny_food）
     if (to <= 1 && ['meal', 'canned', 'raw', 'meat'].some((i) => ctx.hasItem(i))) {
@@ -19,7 +19,7 @@ export function tickHunger(ctx) {
     }
     // H-04（v1 修订）：渐进式——首次濒死 50% 转微恙，带病挨饿才升重病
     if (to === 0 && ctx.rng.chance(cfg.starveSick)) {
-      ctx.setSick(c, c.sick >= 1 ? Math.max(c.sick, 2) : 1);
+      ctx.setSick(c, c.sick >= 1 ? Math.max(c.sick, 2) : 1, '饿出病来');
       ctx.fact('starve_sick', { char: c.id });
     }
   }
@@ -42,47 +42,47 @@ export function tickHealth(ctx) {
 
     // —— 伤 ——
     if (c.wound === 3) {
-      if (woundTreated && rested && healerHome) { ctx.setWound(c, 2); }
+      if (woundTreated && rested && healerHome) { ctx.setWound(c, 2, '治过又有人照看'); }
       else if (ctx.rng.chance(0.5 * deathMul)) { ctx.fact('dying_wound', { char: c.id }); ctx.die(c, '重伤不治'); continue; }
       else ctx.fact('critical_wound_hold', { char: c.id });
     } else if (c.wound === 2) {
-      if (woundTreated && rested) ctx.setWound(c, 1);
+      if (woundTreated && rested) ctx.setWound(c, 1, '治过又静养');
       else if (rested) {
         c.woundRestDays++;
-        if (c.woundRestDays >= 2) { ctx.setWound(c, 1); c.woundRestDays = 0; }
+        if (c.woundRestDays >= 2) { ctx.setWound(c, 1, '卧床将养'); c.woundRestDays = 0; }
         if (ctx.rng.chance(0.2 * worseMul)) { c.woundUntreatedDays = 3; }
-      } else if (ctx.rng.chance(0.3 * worseMul)) { ctx.setWound(c, 3); ctx.fact('wound_worse', { char: c.id }); }
+      } else if (ctx.rng.chance(0.3 * worseMul)) { ctx.setWound(c, 3, '伤未医治，恶化了'); ctx.fact('wound_worse', { char: c.id }); }
       if (!woundTreated) c.woundUntreatedDays++;
     } else if (c.wound === 1) {
-      if (rested) ctx.setWound(c, 0);
-      else { c.woundRestDays++; if (c.woundRestDays >= 3) ctx.setWound(c, 0); }
+      if (rested) ctx.setWound(c, 0, '静养好了');
+      else { c.woundRestDays++; if (c.woundRestDays >= 3) ctx.setWound(c, 0, '将养数日好了'); }
       if (!woundTreated) c.woundUntreatedDays++;
     } else { c.woundUntreatedDays = 0; c.woundRestDays = 0; }
     // 感染交叉（I-06）
     if (c.wound >= 2 && c.woundUntreatedDays >= 3 && c.sick === 0 && ctx.rng.chance(0.3)) {
-      ctx.setSick(c, 1); ctx.fact('infection', { char: c.id });
+      ctx.setSick(c, 1, '伤口感染了'); ctx.fact('infection', { char: c.id });
     }
 
     // —— 病 ——
     if (c.sick === 3) {
       if (sickTreated && rested && healerHome) {
         c.sickRestDays++;
-        if (c.sickRestDays >= 2) { ctx.setSick(c, 2); c.sickRestDays = 0; }
+        if (c.sickRestDays >= 2) { ctx.setSick(c, 2, '治过又有人照看'); c.sickRestDays = 0; }
       } else if (sickTreated && rested) {
         if (ctx.rng.chance(0.35 * deathMul)) { ctx.fact('dying_sick', { char: c.id }); ctx.die(c, '重病不治'); continue; }
       } else if (ctx.rng.chance(0.5 * deathMul)) { ctx.fact('dying_sick', { char: c.id }); ctx.die(c, '重病不治'); continue; }
       else ctx.fact('critical_sick_hold', { char: c.id });
     } else if (c.sick === 2) {
-      if (sickTreated && rested) ctx.setSick(c, 1);
+      if (sickTreated && rested) ctx.setSick(c, 1, '治过又静养');
       else if (rested) {
         c.sickRestDays++;
-        if (c.sickRestDays >= 2) { ctx.setSick(c, 1); c.sickRestDays = 0; }
-      } else if (ctx.rng.chance(0.15 * worseMul)) ctx.setSick(c, 3);
+        if (c.sickRestDays >= 2) { ctx.setSick(c, 1, '卧床将养'); c.sickRestDays = 0; }
+      } else if (ctx.rng.chance(0.15 * worseMul)) ctx.setSick(c, 3, '病未医治，恶化了');
       if (c.sickTreatedHerb) { c.sickTreatedHerb = false; } // 草药药只顶一晨
     } else if (c.sick === 1) {
       if (rested || sickTreated) {
         c.sickRestDays++;
-        if (c.sickRestDays >= 2) { ctx.setSick(c, 0); c.sickRestDays = 0; }
+        if (c.sickRestDays >= 2) { ctx.setSick(c, 0, '将养数日好了'); c.sickRestDays = 0; }
       }
     }
     ctx.emit('CHAR_FLAGS', { char: c.id, woundRestDays: c.woundRestDays, woundUntreatedDays: c.woundUntreatedDays, sickRestDays: c.sickRestDays, sickUntreatedDays: c.sickUntreatedDays, sickTreatedHerb: !!c.sickTreatedHerb });
@@ -92,7 +92,7 @@ export function tickHealth(ctx) {
 /** 步骤④：疲劳结算（F 系：夜间排班已写 awakeTonight/sleptWhere） */
 export function tickFatigue(ctx) {
   for (const c of aliveChars(ctx.s)) {
-    if (c.awakeTonight) ctx.setFatigue(c, c.fatigue + 1);
+    if (c.awakeTonight) ctx.setFatigue(c, c.fatigue + 1, '守夜未眠');
     c.awakeTonight = false;
     ctx.emit('CHAR_FLAG', { char: c.id, key: 'awakeTonight', val: false });
   }
@@ -118,7 +118,7 @@ export function tickTemperature(ctx) {
     if (burn - sev < 0) {
       for (const c of aliveChars(s)) {
         const p = c.frail || c.wound >= 1 || c.sick >= 1 ? 0.3 : 0.18;
-        if (ctx.rng.chance(p) && c.sick === 0) { ctx.setSick(c, 1); ctx.fact('cold_sick', { char: c.id }); }
+        if (ctx.rng.chance(p) && c.sick === 0) { ctx.setSick(c, 1, '冬夜受寒'); ctx.fact('cold_sick', { char: c.id }); }
       }
     }
     // 铁炉化雪（H-11）
@@ -145,7 +145,7 @@ export function tickMood(ctx) {
           ctx.fact('breakdown_left', { char: c.id });
           ctx.die(c, '崩溃离队'); // 移出队伍（带走份额的叙事由 facts 承载）
         } else {
-          ctx.setWound(c, 2);
+          ctx.setWound(c, 2, '崩溃自戕');
           for (const o of aliveChars(ctx.s)) if (o.id !== c.id) ctx.moodRaw(o, -4, '同伴崩溃自伤');
           c.breakdown = null; c.soothed = 0;
           // 事件镜像（回放一致性铁律）：这层清零必须能被 fold 还原——

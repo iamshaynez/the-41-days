@@ -32,7 +32,7 @@ const state = {
   asks: {},          // 正文里的「世界停问」卡：key → { sig, el }
   lastAlive: null, popFor: null,
   // 原地反馈（体验批次三）
-  fb: null, fbQueue: [],
+  fb: null, fbQueue: [], fbLedger: null,
   // 幕页与露布（叙事双轴排印升级）
   lastActId: null, chronShown: null,
   // 季相痕迹：积雪连日、上一次雪天
@@ -130,7 +130,7 @@ function clearBook() {
   state.lastAlive = null; state.lastDay = null; state.lastPhase = null;
   state.lastPrologueCard = null;
   state.pendingDropcap = false; state.follow = true;
-  state.fb = null; state.fbQueue = [];
+  state.fb = null; state.fbQueue = []; state.fbLedger = null;
   state.lastActId = null; state.chronShown = null;
   state.lastWKey = null; state.snowStreak = 0; state.lastSnowDay = 0;
   hideFlowPing();
@@ -192,6 +192,10 @@ function replayHistory(history, s) {
   let lastDay = null;
   for (const h of history) {
     if (h.role === 'annals') continue; // 史笔住在右翼史卷里，不进正文书页
+    if (h.role === 'ledger') { // 账卡：落库的台账 JSON 重铺成同一张卡（不参与日分界——它跟着上一段正文走）
+      try { renderTurnLedger(JSON.parse(h.text)); } catch { /* 残页跳过 */ }
+      continue;
+    }
     if (h.day != null && h.day !== lastDay) { dayDivider(h.day); lastDay = h.day; }
     if (h.role === 'player') {
       const line = el('p', 'player-line', esc(h.text));
@@ -388,7 +392,12 @@ function handleSse(block) {
   if (ev === 'echo') narrateRaw(data.text, { cls: 'clarify' }); // 世界接住狂语的一笔（零状态变化）
   if (ev === 'stage') narrateRaw(data.text); // 戏文轨：舞台导演接的一拍，落进正文
   if (ev === 'ensemble') narrateEnsemble(data); // 堂屋：晨间对话块（内核先裁决，台词是演出）
-  if (ev === 'state-patch') { applyState(data.state); restoreDraft(); }
+  if (ev === 'state-patch') {
+    // 账卡先进书页、再翻日：这一轮正文写完（flush 打字机），家底与人的每一笔变动亮出来，
+    // 然后才立「第 N 日」分界（applyState 内）——账属于翻页前的那一夜
+    if (state.fbLedger) { typist.flush(); renderTurnLedger(state.fbLedger); state.fbLedger = null; }
+    applyState(data.state); restoreDraft();
+  }
 /** 被追问的那句话放回输入行：在原句上改，比重打一遍体面 */
 function restoreDraft() {
   if (!state.restoreDraft) return;
@@ -428,6 +437,7 @@ function streamBeats(beats) {
 }
 function prepFeedback(fb) {
   state.fb = fb || {};
+  state.fbLedger = state.fb.ledger || null; // 账卡台账：等这一轮正文落完（state-patch 前）进书页
   const beats = state.fb.beats || [];
   const moves = state.fb.moves || [];
   const per = beats.length ? Math.ceil(moves.length / beats.length) : moves.length;
@@ -553,6 +563,49 @@ function penMargin(e) {
 function penNotes(box, e) {
   for (const pn of e.pens || []) box.appendChild(el('p', 'pen-note', `闲笔 · ${rich((pn.name || '') + (pn.line ? '：' : ''))}${rich(pn.line || '')}`));
   for (const m of e.mirrors || []) box.appendChild(el('p', 'pen-note mir', rich(m)));
+}
+
+/* ═══ 账卡（turn-ledger）：一轮之内，家底与人的每一笔变动——变多少、为什么、谁的手 ═══
+   数据来自内核事件流原账（buildLedger 服务端聚合），随书页落库为 role:ledger，
+   续局重铺走同一副排版。三源徽记：你=这轮你点的（金）/规=你立的规矩在执行/世=世界的手。 */
+const LEDGER_SIGN = (n) => (n > 0 ? '+' : '−') + Math.abs(n);
+const ldDirCls = (d) => (d === 'good' ? 'up' : d === 'bad' ? 'down' : '');
+const LD_TAG_TXT = { you: '你', rule: '规', world: '世' };
+const ldTag = (tier) => tier && LD_TAG_TXT[tier] ? `<i class="ld-tag t-${tier}">${LD_TAG_TXT[tier]}</i>` : '';
+function renderTurnLedger(lg) {
+  if (!lg || (!lg.items?.length && !lg.chars?.length)) return;
+  closePara();
+  const box = el('div', 'turn-ledger');
+  let html = `<span class="ld-kicker">账 · 第${lg.day ?? ''}日</span>`;
+  // 卡头引言：这一轮的账，源头是你说的哪句话（display 原文截尾）
+  if (lg.choice?.text) {
+    const said = lg.choice.text.length > 26 ? lg.choice.text.slice(0, 26) + '…' : lg.choice.text;
+    html += `<p class="ld-choice"><b class="ld-by ${lg.choice.by === 'you' ? 'you' : 'rule'}">${lg.choice.by === 'you' ? '因你' : '按规矩'}</b>「${esc(said)}」</p>`;
+  }
+  if (lg.items?.length) {
+    html += '<p class="ld-sec">家底</p>';
+    for (const it of lg.items) {
+      html += `<div class="ld-row"><span class="ld-name">${esc(it.name)}</span>` +
+        `<b class="ld-num ${it.delta > 0 ? 'up' : 'down'}">${LEDGER_SIGN(it.delta)}</b>` +
+        `<span class="ld-why">${esc(it.why || '')}</span>${ldTag(it.tier)}</div>`;
+    }
+  }
+  if (lg.chars?.length) {
+    html += '<p class="ld-sec">人</p>';
+    for (const c of lg.chars) {
+      for (const r of c.rows) {
+        const shift = r.from && r.to && r.from !== r.to ? `${esc(r.from)}<i class="ld-ar">→</i>${esc(r.to)}` : esc(String(r.to ?? ''));
+        const pts = typeof r.delta === 'number' && r.delta !== 0 ? `<i class="ld-pts">（${LEDGER_SIGN(r.delta)}）</i>` : '';
+        html += `<div class="ld-row"><span class="ld-name">${esc(c.name)}</span>` +
+          `<span class="ld-what">${esc(r.label)}</span>` +
+          `<b class="ld-num ${ldDirCls(r.dir)}">${shift}${pts}</b>` +
+          (r.why ? `<span class="ld-why">${esc(r.why)}</span>` : '') + ldTag(r.tier) + '</div>';
+      }
+    }
+  }
+  box.innerHTML = html;
+  $('narration').appendChild(box);
+  revealFlow();
 }
 // 用户往上翻阅时暂停跟随（已读回滚，UI 设计 §5）——监听的是正文栏的内部滚动
 const flowScroll = () => $('flow-scroll');
