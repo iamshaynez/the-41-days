@@ -135,6 +135,12 @@
         <p class="hint">这里需要管理员账号（ADMIN_USERNAME / ADMIN_PASSWORD 首次登录时自动创建）。<a href="/">回首页登录</a></p>
       </div>
       <div id="admin-body" hidden>
+        <h2>准入</h2>
+        <div class="admin-row">
+          <span>新用户注册</span>
+          <button id="btn-signup-toggle" class="ghost" type="button"></button>
+          <span id="signup-toggle-state" class="hint"></span>
+        </div>
         <h2>用户</h2>
         <table id="users-table" class="table"></table>
         <h2>LLM 供应商</h2>
