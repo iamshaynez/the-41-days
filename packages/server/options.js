@@ -34,8 +34,13 @@ export function validateOptions(pack, state, raw, { card } = {}) {
       .filter((it) => it.type !== 'auto_day' && it.type !== 'scene')
       .map((it) => normalizeIntent(state, pack, it)) // 宽进：中文名翻成 id 再验
       .filter((it) => validateIntentShape(it) && feasibleIntent(state, pack, it)); // 严出：验证照旧
+    // 夜卡的选项必须真能应答夜间（方针/夜动作/续跑）——其余是「点得动、点不动夜」的陷阱：
+    // 夜停在岔路上等的是答案，scene/direction 都清不掉 atFork，夜永不收尾（实测死循环）
+    if (card === 'night' && !intents.some((it) => ['night_directive', 'night', 'auto_night'].includes(it.type))) continue;
     if (!intents.length) {
-      // 戏文轨：内核没有、但说得出口的事——不过滤，交给舞台导演当场接戏
+      // 戏文轨只属于方略卡（day）：内核没有、但说得出口的事——不过滤，交给舞台导演当场接戏。
+      // 提问卡（黄昏/夜访）不收非答案——点了卡原样回来，等于给玩家挖坑
+      if (card !== 'day') continue;
       const text = cutClean(`${o.label.trim()}${o.hint ? '——' + String(o.hint).trim() : ''}`, 100);
       out.push({
         label: cutClean(o.label, 40),
