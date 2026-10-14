@@ -52,10 +52,12 @@
       </div>
       <div class="setup-row">
         <button id="btn-start" class="primary">住进去</button>
+        <button id="btn-start-quick" class="ghost" type="button">快局 · 第 21 天入局</button>
       </div>
       <hr class="setup-rule">
       <p class="hint">没有要学的指令。每天他们会自己张罗生计；轮到你了，世界会停下来问——
         你点一个答案，或者随口说说自己的想法。日子就这么过。</p>
+      <p class="hint">快局从还军时节入局：家底是过了二十天的样子，交割日仍是第四十一天。</p>
       <p class="hint" id="engine-hint" hidden>管理员还没配置叙事引擎（管理页 → LLM 供应商）。
         在那之前，游戏以直读模式兜底运行。</p>
     </section>
@@ -67,6 +69,7 @@
           <div id="vitals">
             <div id="partyline" class="partyline" aria-label="同住的人"></div>
             <div id="homeline" class="homeline" aria-label="这个家与家底"></div>
+            <div id="fbfx" aria-hidden="true"></div><!-- 原地反馈浮签层：不随状态重绘被抹掉 -->
           </div>
           <div id="flow" class="paper">
             <div id="flow-scroll">

@@ -111,7 +111,7 @@ export function feasibleIntent(state, pack, intent) {
       return !!intent.give && !!intent.get;
     }
     case 'direction': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.length <= 60;
-    case 'policy': return typeof intent.key === 'string' && ['feeding', 'rationing', 'nightApproach'].includes(intent.key);
+    case 'policy': return typeof intent.key === 'string' && ['feeding', 'rationing', 'nightApproach', 'overviewDays'].includes(intent.key);
     case 'auto_day': return s.phase === 'day';
     case 'auto_night': return s.phase === 'night' && !!s.night && !s.night.home;
     case 'night_directive': return s.phase === 'night' && !!s.night && !s.night.home;

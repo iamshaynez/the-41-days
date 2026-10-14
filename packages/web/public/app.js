@@ -28,7 +28,13 @@ const state = {
   busy: false, follow: true,
   lastDay: null, lastPhase: null, pendingDropcap: false,
   asks: {},          // 正文里的「世界停问」卡：key → { sig, el }
-  lastAlive: null, popFor: null
+  lastAlive: null, popFor: null,
+  // 原地反馈（体验批次三）
+  fb: null, fbQueue: [],
+  // 幕页与露布（叙事双轴排印升级）
+  lastActId: null, chronShown: null,
+  // 季相痕迹：积雪连日、上一次雪天
+  lastWKey: null, snowStreak: 0, lastSnowDay: 0
 };
 
 // ——— 鉴权门：会话随 cookie 走，未登录回 landing ———
@@ -67,21 +73,22 @@ function updateWatch(s) {
 }
 
 // ——— 开局 / 续局 ———
-async function startRun(_difficulty, sidestory) {
+async function startRun(_difficulty, sidestory, { quick = false } = {}) {
   // 模式不由玩家选：服务端按 LLM 路由配置决定（直读是测试与降级通道，不作为游戏模式提供）
   // 难度也不由玩家选：单一难度（低门槛进入，残酷由江陵自己负责）
   const res = await fetch('/api/runs', {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(sidestory ? { sidestory } : {})
+    body: JSON.stringify(sidestory ? { sidestory } : quick ? { quick: true } : {})
   });
   const r = await res.json();
   state.runId = r.id;
   clearBook();
-  enterGame(r.mode, r.state);
-  dayDivider(1);
+  const startDay = r.state.day || 1;
+  dayDivider(startDay);
   // 开局仪式：三个名字，一个一个写上门后的墙（别传：先念开场白）
   if (r.state.sidestory) narrateRaw(`—— ${esc(r.state.sidestory.title)} ——\n${esc(r.state.sidestory.intro || '')}`, {});
-  narrateRaw('第 1 天。', { dropcap: true });
+  if (quick) narrateRaw('（快局 · 从第 21 天入局——这个家已经过了二十天，前情见右侧史卷。）', { cls: 'sys' });
+  narrateRaw(`第 ${startDay} 天。`, { dropcap: true });
   const living = r.state.charView.filter((c) => c.alive);
   const wall = el('div', 'wall-names');
   wall.appendChild(el('span', 'wall-kicker', '门后'));
@@ -98,8 +105,10 @@ async function startRun(_difficulty, sidestory) {
       ? '（日子他们会自己张罗；轮到你时，世界会停下来问。任何时候，都可以随口说点什么。）'
       : '（日子他们会自己张罗；轮到你时，世界会停下来问。直读模式认得大白话，比如「照常过吧」「省着吃」。）', { cls: 'sys' });
   }, wantRM() ? 0 : 400 + living.length * 550 + 500);
+  enterGame(r.mode, r.state); // 状态入座在后：露布插页落在开场白之后，不抢卷首
 }
 $('btn-start').addEventListener('click', () => startRun());
+$('btn-start-quick')?.addEventListener('click', () => startRun(null, null, { quick: true }));
 
 /** 合上当前这本书：回到卷首（对局都留在「没写完的局」里） */
 function backToSetup() {
@@ -107,7 +116,7 @@ function backToSetup() {
   $('game').hidden = true; $('setup').hidden = false;
   clearBook();
   syncChrome();
-  loadResume();
+loadResume();
 }
 
 /** 清空书页：新局/续局前，把上一局的字与未决的问句都收走 */
@@ -119,6 +128,9 @@ function clearBook() {
   state.lastAlive = null; state.lastDay = null; state.lastPhase = null;
   state.lastPrologueCard = null;
   state.pendingDropcap = false; state.follow = true;
+  state.fb = null; state.fbQueue = [];
+  state.lastActId = null; state.chronShown = null;
+  state.lastWKey = null; state.snowStreak = 0; state.lastSnowDay = 0;
   hideFlowPing();
   hideCharPop();
 }
@@ -168,6 +180,8 @@ async function resumeRun(id) {
   clearBook();
   state.s = r.state; rebuildNounRe(); // 先立名词索引，前文里的名字就能翻
   replayHistory(r.history || [], r.state);
+  // 前文里的史步已经活在史卷里——露布插页只管「续上之后」的新步
+  state.chronShown = new Set((r.state.chronicle?.entries || []).map(chronKey));
   enterGame(r.mode, r.state);
   scrollFlow(true);
 }
@@ -233,15 +247,18 @@ const rich = (() => {
 })();
 class Typist {
   /** hooks.makePara：自定义段落容器（默认正文叙事流）；hooks.mark=false 关闭名词标注 */
-  constructor(hooks = {}) { this.para = null; this.queue = []; this.timer = null; this.hooks = hooks; this.sbuf = new SentenceBuffer(); }
+  constructor(hooks = {}) { this.para = null; this.queue = []; this.timer = null; this.hooks = hooks; this.sbuf = new SentenceBuffer(); this.nextCls = ''; }
   /** 入队（流式安全）：跨增量缓冲，只释放完整句——边界落在「字」与「。」之间时不丢标点 */
   feed(text) {
     for (const item of this.sbuf.feed(text)) this.queue.push(item);
     this.pump();
   }
+  /** 换段（排队式）：下一个段落用给定 class 起（节拍排版用——每拍一段，段随拍走） */
+  beatPara(cls = '') { this.queue.push({ __para: cls }); this.pump(); }
   ensurePara() {
     if (this.para) return this.para;
-    this.para = this.hooks.makePara ? this.hooks.makePara() : makePara();
+    this.para = this.hooks.makePara ? this.hooks.makePara() : makePara(this.nextCls);
+    this.nextCls = '';
     this.para.classList.add('streaming');
     return this.para;
   }
@@ -253,6 +270,7 @@ class Typist {
       const op = this.queue.shift();
       const rate = this.queue.length > 12 ? 38 : this.queue.length > 5 ? 62 : 95;
       if (op === 0) this.closePara();
+      else if (op && op.__para !== undefined) { this.closePara(); this.nextCls = op.__para; }
       else this.emit(op);
       this.timer = setTimeout(tick, rate);
     };
@@ -264,6 +282,7 @@ class Typist {
     sp.innerHTML = rich(s);
     if (this.hooks.mark !== false) markNouns(sp);
     this.ensurePara().appendChild(sp);
+    if (this.hooks.onSentence) this.hooks.onSentence(); // 原地反馈：一句一拍，页面跟着动一下
     scrollFlow();
   }
   flush() {
@@ -272,6 +291,7 @@ class Typist {
     while (this.queue.length) {
       const op = this.queue.shift();
       if (op === 0) this.closePara();
+      else if (op && op.__para !== undefined) { this.closePara(); this.nextCls = op.__para; }
       else this.emit(op, true);
     }
     this.closePara();
@@ -280,7 +300,9 @@ class Typist {
   /** 轮次结束：收段标记入队（不打断仍在落墨的节奏，光标随最后一笔自然熄灭） */
   endTurn() { this.queue.push(0); this.pump(); }
 }
-const typist = new Typist();      // 叙事流
+const typist = new Typist({      // 叙事流（onSentence：节拍动画随句释放）
+  onSentence: () => drainFeedback()
+});
 const memoirTypist = new Typist({ // 局终回忆录：段落落在独立的排印区块里
   makePara: () => {
     let m = $('memoir-block');
@@ -350,7 +372,12 @@ function handleSse(block) {
   const ev = block.match(/^event: (.+)$/m)?.[1];
   const dataRaw = block.match(/^data: (.+)$/m)?.[1];
   const data = dataRaw ? JSON.parse(dataRaw) : {};
-  if (ev === 'narration-delta') streamNarrate(data.d || '');
+  if (ev === 'narration-delta') {
+    // 节拍对齐（直读/概述日）：直读正文随发 beats——一拍一段，段随拍走；LLM 散文则整段入纸
+    if (Array.isArray(data.beats) && data.beats.length) streamBeats(data.beats);
+    else typist.feed(data.d || '');
+  }
+  if (ev === 'feedback') prepFeedback(data);
   if (ev === 'memoir-delta') streamMemoir(data.d || '');
   if (ev === 'clarify') {
     narrateRaw('……' + data.text, { cls: 'clarify' });
@@ -387,6 +414,72 @@ function makePara(cls = '') {
 /** 流式增量：整块交给 Typist，段落边界入队不打断节奏 */
 function streamNarrate(delta) { typist.feed(delta); }
 function closePara() { typist.flush(); }
+
+/* ═══ 原地反馈（体验批次三）：书页在长字，家底与人在原地动一下 ═══
+   beats=谁在做（行动者脉冲）；moves=物品账（家底小签）；ticks=破晓刻度（人侧小签）。
+   动画随打字机的句子释放（一句一拍）；overlay 层不随状态重绘被抹掉。 */
+function streamBeats(beats) {
+  for (const b of beats) {
+    typist.beatPara(b.k === 'day_overview' ? 'overview-line' : '');
+    typist.feed(b.line);
+  }
+}
+function prepFeedback(fb) {
+  state.fb = fb || {};
+  const beats = state.fb.beats || [];
+  const moves = state.fb.moves || [];
+  const per = beats.length ? Math.ceil(moves.length / beats.length) : moves.length;
+  state.fbQueue = beats.map((b, i) => ({ beat: b, moves: moves.slice(i * per, (i + 1) * per) }));
+  if (!beats.length && moves.length) state.fbQueue = [{ beat: null, moves }];
+  // 刻度（破晓的饥饿/伤病/心情档）：发生在昨夜，即刻缓开，等不及正文
+  (state.fb.ticks || []).forEach((tk, i) => setTimeout(() => fireTick(tk), wantRM() ? 0 : 600 + i * 420));
+}
+function drainFeedback() {
+  const op = state.fbQueue?.shift();
+  if (!op || wantRM()) return;
+  if (op.beat?.char) pulseChar(op.beat.char);
+  for (const mv of op.moves || []) fireMove(mv);
+}
+function pulseChar(id) {
+  const chip = document.querySelector(`.pl-char[data-id="${id}"]`);
+  if (!chip) return;
+  chip.classList.remove('acting'); void chip.offsetWidth; chip.classList.add('acting');
+  setTimeout(() => chip.classList.remove('acting'), 1600);
+}
+function fireMove(mv) {
+  if (!mv?.item || !ITEM_META[mv.item]) return;
+  spawnFbChip(`${mv.delta > 0 ? '+' : '−'}${Math.abs(mv.delta)} ${ITEM_META[mv.item][0]}`, mv.delta > 0 ? 'up' : 'down', 'homeline');
+}
+const MOOD_KEY_TXT = { breakdown: '崩溃', depressed: '抑郁', low: '低落', calm: '平静', firm: '坚定' };
+const TICK_TXT = {
+  HUNGER_CHANGED: (t) => (t.to < t.from ? '更饿了' : '缓过来些'),
+  WOUND_CHANGED: (t) => (t.to > t.from ? '伤重了' : '伤好些了'),
+  SICK_CHANGED: (t) => (t.to > t.from ? '病重了' : '病好些了'),
+  FATIGUE_CHANGED: (t) => (t.to > t.from ? '更累了' : '歇过来了'),
+  MOOD_LEVEL: (t) => `心情·${MOOD_KEY_TXT[t.to] || t.to}`,
+  BREAKDOWN_START: () => '崩溃了'
+};
+function fireTick(tk) {
+  const fn = TICK_TXT[tk.t];
+  if (!fn) return;
+  const worse = tk.t === 'MOOD_LEVEL' ? ['firm', 'calm', 'low', 'depressed', 'breakdown'].indexOf(tk.to) > ['firm', 'calm', 'low', 'depressed', 'breakdown'].indexOf(tk.from) : undefined;
+  spawnFbChip(fn(tk), worse === undefined ? 'tick' : (worse || tk.t === 'BREAKDOWN_START' ? 'down' : 'up'), 'partyline', tk.char);
+}
+/** 一枚原地小签：落在 vitals 侧的 overlay 层——状态重绘抹不掉它，它自己会淡走 */
+function spawnFbChip(text, dir, anchorId, charId) {
+  const layer = $('fbfx');
+  if (!layer) return;
+  const anchor = charId ? document.querySelector(`.pl-char[data-id="${charId}"]`) : $(anchorId);
+  const chip = el('span', 'fb-chip ' + dir, text);
+  layer.appendChild(chip);
+  const r = anchor?.getBoundingClientRect();
+  const lr = layer.getBoundingClientRect();
+  if (r) {
+    chip.style.left = Math.max(4, r.left - lr.left + r.width / 2 - 36) + 'px';
+    chip.style.top = (r.bottom - lr.top + 5) + 'px';
+  }
+  setTimeout(() => chip.remove(), 2600);
+}
 /** 堂屋对话块（人物血肉计划 PR2）：场记一行 → 逐人台词 → 结局拍收束 */
 const ENS_KIND_TXT = { comment: '评史', idle: '闲话', bond: '交心', friction: '争执', shadow: '翻旧账' };
 function narrateEnsemble(data) {
@@ -414,6 +507,50 @@ function dayDivider(day, suffix = '') {
   $('narration').appendChild(d);
   state.pendingDropcap = true;
   revealFlow();
+}
+/** 幕页：— 第二幕 · 问讯 —（换幕那天，书页里立一道幕题） */
+const ACT_ORD = { A1: '一', A2: '二', A3: '三', A4: '四', A5: '五' };
+function actDivider(act) {
+  closePara();
+  const d = el('div', 'act-divider', `<b>第${ACT_ORD[act.id] || ''}幕 · ${esc(act.title)}</b>`);
+  $('narration').appendChild(d);
+  state.pendingDropcap = true;
+  revealFlow();
+}
+/** 露布插页（叙事双轴排印升级）：史卷新落定的大事步进正文，一次一页、只进不重排 */
+function chronKey(e) { return e.day + ':' + (e.title || '') + ':' + (e.ending ? 'end' : ''); }
+function renderNewChronicle(ch) {
+  if (!state.chronShown) state.chronShown = new Set();
+  for (const e of ch.entries) {
+    const key = chronKey(e);
+    if (state.chronShown.has(key) || e.day > state.s.day) continue;
+    if (!e.anchor && !(e.pens || []).length && !(e.mirrors || []).length) continue; // 空笔不占页
+    state.chronShown.add(key);
+    if (e.ending) continue; // 收束步由终局排版负责
+    if (e.anchor) gazetteBlock(e);
+    else penMargin(e);
+  }
+}
+function gazetteBlock(e) {
+  closePara();
+  const g = el('div', 'gazette' + (e.track ? ' tr-' + e.track : ''));
+  g.innerHTML = `<span class="gz-kicker">露布 · 第${e.day}日</span><b class="gz-title">${esc(e.title)}</b>` +
+    (e.text ? `<p class="gz-text">${rich(e.text)}</p>` : '') +
+    (e.echo ? `<p class="gz-echo">这一家 · ${rich(e.echo)}</p>` : '');
+  penNotes(g, e);
+  markNouns(g);
+  $('narration').appendChild(g);
+  revealFlow();
+}
+/** 页边闲笔：不上正文，贴着页边小字 */
+function penMargin(e) {
+  const d = el('div', 'pen-margin');
+  penNotes(d, e);
+  if (d.children.length) { closePara(); $('narration').appendChild(d); revealFlow(); }
+}
+function penNotes(box, e) {
+  for (const pn of e.pens || []) box.appendChild(el('p', 'pen-note', `闲笔 · ${rich((pn.name || '') + (pn.line ? '：' : ''))}${rich(pn.line || '')}`));
+  for (const m of e.mirrors || []) box.appendChild(el('p', 'pen-note mir', rich(m)));
 }
 // 用户往上翻阅时暂停跟随（已读回滚，UI 设计 §5）——监听的是正文栏的内部滚动
 const flowScroll = () => $('flow-scroll');
@@ -486,6 +623,24 @@ function applyState(s) {
   document.body.dataset.winter = s.winterActive ? '1' : '0';
   if (state.lastDay !== null && state.lastDay !== s.day && s.phase !== 'prologue' && !s.over) dayDivider(s.day);
   state.lastDay = s.day;
+  // 季相（体验批次三·痕迹）：冬深页缘霜重；雪下连日，檐雪渐厚
+  if (s.season) {
+    document.body.classList.toggle('winter', !!s.season.winter);
+    document.documentElement.style.setProperty('--winter-depth', String(s.season.depth));
+  }
+  const wkey = s.day + ':' + s.weather;
+  if (state.lastWKey !== wkey) {
+    state.snowStreak = s.weather === 'snow' ? (state.lastSnowDay === s.day - 1 ? state.snowStreak + 1 : 1) : 0;
+    if (s.weather === 'snow') state.lastSnowDay = s.day;
+    state.lastWKey = wkey;
+    document.body.dataset.snow = String(Math.min(3, state.snowStreak));
+  }
+  // 幕页（叙事双轴）：换幕那天，书页里立一道幕题
+  const act = s.chronicle?.currentAct;
+  if (act && state.lastActId && act.id !== state.lastActId && s.phase !== 'prologue' && !s.over) actDivider(act);
+  if (act) state.lastActId = act.id;
+  // 露布插页：新落定的大事步从史卷走进正文——史与家在同一页上；闲笔作页边批注
+  if (s.chronicle && s.phase !== 'prologue' && !s.over) renderNewChronicle(s.chronicle);
 
   const weather = WEATHER_NAME[s.weather] || s.weather;
   $('clock').innerHTML = `${svgUse(WEATHER_ICON[s.weather] || 'clear', 'clock-ic')} 第 ${s.day} 日 · ${weather} · ${PHASE_NAME[s.phase] || s.phase}${s.winterActive ? ' · 冬' : ''}`;
@@ -625,6 +780,7 @@ const FAC_NAME = (s) => {
   const f = s.facilities || {};
   const out = [];
   if (f.stove) out.push(f.stove_eco ? '节能炉' : '炉灶');
+  if ((f.stoveFireLeft || 0) > 0) out.push('灶有余火'); // 痕迹：一灶火没熄，日子就有余温
   if (f.heater) out.push(f.heater_iron ? '铁炉' : '火盆');
   if (f.radio) out.push('烽鼓具');
   if (f.piano >= 3) out.push('续弦的琴');
@@ -700,9 +856,21 @@ function openHomebook() {
       <div class="matches small">${Array.from({ length: 10 }, (_, i) => `<span class="match ${i < 10 - nv.slots ? 'burnt' : ''}"></span>`).join('')}</div>
       <p class="hb-line">在「${esc(nv.room)}」${nv.noise > 0 ? ` · <span class="hl-alert">声响 ×${nv.noise}——有人听见了</span>` : ''}</p></section>`;
   }
+  // 规矩：概述日开关（长线体验 §4.4——平淡日一笔带过；想逐件细看随时关）
+  if (!s.over) {
+    const on = s.policy?.overviewDays !== false;
+    html += `<section class="hb-sec"><p class="m-kicker">规矩</p>
+      <button class="chip hb-policy" type="button">${on ? '平淡的日子一笔带过（点此改为逐日细看）' : '平淡的日子逐日细看（点此改为一笔带过）'}</button></section>`;
+  }
   sheet.innerHTML = html;
   renderSiegeInto($('hb-siege'), s);
   renderInvGrid($('hb-inv'), s.inventory);
+  const polBtn = sheet.querySelector('.hb-policy');
+  if (polBtn) polBtn.addEventListener('click', () => {
+    const on = state.s?.policy?.overviewDays !== false;
+    sendIntents([{ type: 'policy', key: 'overviewDays', value: !on }], on ? '平淡的日子，改一天一天细看' : '平淡的日子，一笔带过');
+    closeSheets();
+  });
   sheet.querySelector('.sheet-x').addEventListener('click', closeSheets);
   openSheet('homebook');
 }

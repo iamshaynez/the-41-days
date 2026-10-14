@@ -30,6 +30,10 @@ export function humanFacts(state, pack, facts) {
     k: 'note',
     text: '说明：字段 k 是事实代号（如 franko_left=船牙鲁舟离岸、franko=鲁舟、war_telegraph=交割前兆——指北边的动静变了，不是任何具体器物）。代号一律不得直译成器物或地名。正文一律用中文名，禁止把代号音译成人名，禁止出现英文与现代器物。'
   });
+  // 概述日（长线体验 §4.4）：这一天已被内核一笔带过——叙事者不得虚构它的事件
+  if ((facts || []).some((f) => f && f.k === 'day_overview')) {
+    mapped.push({ k: 'note', text: '说明：day_overview=今天是被概述的平淡日（家里自理：吃饭/家务/管家张罗）。正文一两句带过这一天即可，不要虚构新事件。' });
+  }
   return mapped;
 }
 
@@ -134,9 +138,18 @@ export function renderDirect(state, facts, pack) {
   const lines = [];
   // 死者仍在 chars 里但 alive=false——charById 只查活人，会漏成内部 id（"bron的病"）。
   // 人名先查本局名册（含死者），再查内容包，最后才落 id。
-  const name = (id) => state.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || id;
+  const name = mkName(state, pack);
   for (const f of facts) {
-    switch (f.k) {
+    const l = directFactLine(f, t, name, state, pack);
+    if (l) lines.push(l);
+  }
+  return lines.filter(Boolean).join('\n');
+}
+
+/** 单条事实 → 一行直读文（renderDirect 与 buildBeats 共用同一张映射；无行返回 null） */
+function directFactLine(f, t, name, state, pack) {
+  const lines = [];
+  switch (f.k) {
       case 'run_started': lines.push(`第 1 天。${t.dawn.header.replace('{{day}}', 1).replace('{{weather}}', '围城第 9 天')}——你们住进了橘里九号。${f.chars}，三个名字写在了门后的墙上。`); break;
       case 'prologue_start': lines.push('在这一切之前——降卒进城的那天。'); break;
       case 'prologue_beat': lines.push(`——${f.title}——`); break;
@@ -223,9 +236,11 @@ export function renderDirect(state, facts, pack) {
         const txt = f.key === 'rationing' ? (f.value ? '记下了：以后省着吃，先紧着真正饿的人。' : '记下了：恢复正常吃饭，别让人饿着。')
           : f.key === 'nightApproach' ? (f.value === 'cautious' ? '记下了：夜里小心些，不出声。' : f.value === 'bold' ? '记下了：夜里放手干。' : '记下了：夜里照常。')
           : f.key === 'feeding' ? (f.value === 'manual' ? '记下了：吃饭的事你亲自管。' : '记下了：吃饭的事他们自己张罗。')
+          : f.key === 'overviewDays' ? (f.value === false ? '记下了：平淡的日子也一天一天细过。' : '记下了：平淡的日子一笔带过。')
           : '记下了。';
         lines.push(txt); break;
       }
+      case 'day_overview': lines.push(overviewLine(f, t)); break;
       case 'night_fork': lines.push(f.text || '前面有个岔子，等你拿主意。'); break;
       case 'night_directive_set': lines.push(`今夜的方针定了：${f.text}（${{ cautious: '谨慎', normal: '照常', bold: '放手' }[f.stance] || '照常'}）。接下来的一夜，他自己走。`); break;
       case 'night_choice': lines.push(`按方针，他选了：${f.label}。`); break;
@@ -281,8 +296,53 @@ export function renderDirect(state, facts, pack) {
       case 'meta': break;
       default: lines.push('……'); break;
     }
+  return lines.filter(Boolean).join('\n') || null;
+}
+
+/** 人名解析（renderDirect/buildBeats 共用）：先查本局名册（含死者），再查内容包 */
+function mkName(state, pack) {
+  return (id) => state.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || id;
+}
+
+/** 概述日一笔（长线体验 §4.4）：连平越深字越省——deep 档连家常补笔都省了 */
+function overviewLine(f, t) {
+  const ov = t.overview || {};
+  const streak = f.streak || 1;
+  const tier = streak <= 1 ? 'first' : streak <= 3 ? 'again' : 'deep';
+  let line = ov[tier] || '这一天没有什么可记的。';
+  if (tier !== 'deep') {
+    const notes = [];
+    if (f.ate?.length) notes.push((ov.note_eat || '').replace('{{n}}', String(f.ate.length)));
+    if (f.built) notes.push((ov.note_built || '').replace('{{what}}', f.built));
+    if (f.searched && notes.length < 2) notes.push(ov.note_searched || '');
+    line = line.replace('{{note}}', notes.filter(Boolean).join(''));
   }
-  return lines.filter(Boolean).join('\n');
+  return line.replace('{{note}}', '').trim();
+}
+
+/** 节拍视图（体验批次三·原地反馈）：facts → [{k,line,char?,del?}]。
+ *  与 renderDirect 同一张映射——打字机走到哪一拍，页面就在哪里动一下。 */
+export function buildBeats(state, facts, pack) {
+  const t = pickVariants(pack.narrations, state);
+  const name = mkName(state, pack);
+  const beats = [];
+  for (const f of facts) {
+    const line = directFactLine(f, t, name, state, pack);
+    if (!line) continue;
+    beats.push({ k: f.k, line, ...(f.char ? { char: f.char } : {}), ...(f.delegated ? { del: true } : {}) });
+  }
+  return beats;
+}
+
+/** 反馈载荷（SSE feedback 事件 / confirm-plan JSON）：
+ *  beats=逐拍行文（带行动者）；moves=物品增减账（事件流原账）；ticks=破晓刻度（指名到人）。 */
+export function buildFeedback(state, facts, events, pack) {
+  return {
+    beats: buildBeats(state, facts, pack),
+    moves: (events || []).filter((e) => e.t === 'ITEM_MOVED').map((e) => ({ item: e.d.item, delta: e.d.delta })),
+    ticks: (events || []).filter((e) => ['HUNGER_CHANGED', 'WOUND_CHANGED', 'SICK_CHANGED', 'FATIGUE_CHANGED', 'MOOD_LEVEL', 'BREAKDOWN_START'].includes(e.t))
+      .map((e) => ({ t: e.t, char: e.d.char, from: e.d.from, to: e.d.to }))
+  };
 }
 
 function raidLine(f, t, name) {

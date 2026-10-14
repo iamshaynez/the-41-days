@@ -1508,3 +1508,78 @@ body.motion-off { scroll-behavior: auto; }
 .finale-act.futures { border-top: 1px dashed var(--brass, #6a5327); }
 .future-line { font-family: var(--font-kai); font-size: 14px; line-height: 2; color: var(--ink-2, #aaa); margin: 4px auto; max-width: 36em; }
 .future-line.blank { color: var(--ink-4, #555); font-style: italic; }
+
+/* ════════════════════════════════════════════════════════════════
+   体验批次三：概述日一笔 · 原地反馈 · 幕页/露布/页边闲笔 · 季相痕迹
+   （长线体验 §4.4 概述日；UI 设计 v0.3 玄案材质——文字游戏也要原地动起来）
+   ════════════════════════════════════════════════════════════════ */
+
+/* 概述日：一笔小字——史笔省墨，日子越平字越淡 */
+#narration p.overview-line {
+  color: var(--ink-3); font-size: .92em; letter-spacing: .08em;
+}
+
+/* 幕页：换幕那天书页里立一道幕题（比日分隔重一档：泥金字距） */
+.act-divider {
+  display: flex; align-items: center; gap: 18px; margin: 42px 0 20px;
+  color: var(--ink-3); font-size: 13.5px; letter-spacing: .6em; text-indent: .6em;
+  animation: fadeUp 1s ease both;
+}
+.act-divider::before, .act-divider::after { content: ''; flex: 1; border-top: 1px solid var(--rule); }
+.act-divider b { color: var(--brass); letter-spacing: .35em; font-size: 15px; font-weight: 700; }
+
+/* 露布插页：大事步从史卷走进正文——贴在城门上的那张告示 */
+.gazette {
+  max-width: 34em; margin: 26px auto 18px; padding: 13px 22px 12px;
+  border: 1px solid var(--rule); border-left: 3px solid var(--brass);
+  background: linear-gradient(180deg, rgba(212, 175, 55, .06), transparent 62%);
+  animation: fadeUp .9s ease both;
+}
+.gazette.tr-gen { border-left-color: var(--accent-2); }
+.gazette .gz-kicker { display: block; font-family: var(--font-carved); font-size: 10.5px; letter-spacing: .4em; color: var(--ink-3); margin-bottom: 5px; }
+.gazette .gz-title { display: block; font-family: var(--font-li); font-size: 16.5px; letter-spacing: .28em; color: var(--ink-1); margin-bottom: 7px; }
+.gazette .gz-text { font-size: .95em; color: var(--ink-2); margin: 0; }
+.gazette .gz-echo { font-size: .88em; color: var(--accent); margin: 7px 0 0; }
+
+/* 页边闲笔：小字楷体，贴着右缘——不上正文，只批一句 */
+.pen-margin { margin: 10px 0 6px; text-align: right; }
+.pen-note { font-family: var(--font-kai); font-size: .82em; color: var(--ink-3); margin: 2px 0; }
+.pen-note.mir { color: var(--brass); }
+
+/* 原地反馈浮签层：覆在人物行/家底行上，状态重绘抹不掉，自己会淡走 */
+#vitals { position: relative; }
+#fbfx { position: absolute; inset: 0; pointer-events: none; z-index: 30; }
+.fb-chip {
+  position: absolute; padding: 1px 8px; font-size: 11px; letter-spacing: .06em;
+  border: 1px solid var(--rule); border-radius: 2px;
+  background: rgba(24, 21, 18, .93); color: var(--ink-2);
+  animation: fbRise 2.5s ease both; white-space: nowrap;
+}
+.fb-chip.up { color: var(--brass); border-color: rgba(212, 175, 55, .45); }
+.fb-chip.down { color: var(--accent); border-color: rgba(188, 63, 40, .55); }
+@keyframes fbRise {
+  0% { opacity: 0; transform: translateY(5px); }
+  12% { opacity: 1; transform: translateY(0); }
+  76% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+
+/* 行动者脉冲：这一拍是谁在做事，剪影亮一拍 */
+.pl-char.acting { animation: plAct 1.5s ease both; }
+@keyframes plAct {
+  0%, 100% { box-shadow: 1px 2px 0 var(--shadow); transform: none; }
+  16% { box-shadow: 0 0 0 3px rgba(212, 175, 55, .22), 1px 2px 0 var(--shadow); transform: translateY(-2px); }
+}
+
+/* 季相痕迹：冬越深霜越重（--winter-depth 由服务端季相视图喂进）；雪下连日，檐雪渐密 */
+body[data-winter='1'] #frost { animation: none; opacity: calc(.4 + .6 * var(--winter-depth, .5)); }
+body[data-snow='1'] .snow { opacity: .55; }
+body[data-snow='2'] .snow { opacity: .8; }
+body[data-snow='3'] .snow { opacity: 1; }
+body:not([data-winter='1'])[data-snow] .snow { opacity: .5; }
+body[data-snow='3'] .snow::before { animation-duration: 9s; }
+body[data-snow='3'] .snow::after { animation-duration: 11s; }
+body.motion-off .fb-chip, body.motion-off .pl-char.acting, body.motion-off .act-divider, body.motion-off .gazette { animation: none; }
+
+/* 细目抽屉里的规矩开关 */
+.hb-policy { margin-top: 2px; }
