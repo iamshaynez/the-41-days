@@ -279,6 +279,8 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'wound_worse': lines.push(`${name(f.char)}的伤恶化了。`); break;
       case 'breakdown_stage': lines.push(`${name(f.char)}的状态更不对了——得有人陪着说说话。`); break;
       case 'breakdown_recovered': lines.push(`${name(f.char)}缓过来了。人在。`); break;
+      case 'night_rest': lines.push(`${name(f.char)}${f.bed ? '在床上睡了个整觉' : f.half ? '睡了后半宿' : '睡了个安稳觉'}，缓了回来。`); break;
+      case 'guard_handover': lines.push(`${name(f.to)}回来接了守，${name(f.from)}总算能躺下了。`); break;
       case 'breakdown_left': lines.push(`${name(f.char)}走了。门轴响了一声，没有人追。`); break;
       case 'trap_caught': lines.push('捕鼠笼响了——有肉了。'); break;
       case 'trap_empty': lines.push('捕鼠笼空着。'); break;
@@ -374,7 +376,7 @@ const WORLD_WHY = new Set([
 // 常设家什的自动产出与烧用（取暖/集雨/园子/捕鼠……）也是规矩在替你干活，
 // 即便发生在方针夜也不归「你」——方案管夜路，不管炉子
 const RULE_WHY = new Set(['卧床将养', '将养数日好了', '静养好了', '治过又静养', '治过又有人照看', '安抚见了效',
-  '取暖', '化雪', '集雨', '集雪', '园子', '捕鼠', '蒸馏', '归还']);
+  '取暖', '化雪', '集雨', '集雪', '园子', '捕鼠', '蒸馏', '归还', '安睡将息', '睡床安睡', '半宿将息']);
 /** 一笔变动的三源判定：世界词表 > 作息词表 > delegated 印（方针夜升级归你）> 你的手 */
 function tierOf(rawWhy, delegated, turn) {
   if (rawWhy && (rawWhy.startsWith('ml_') || WORLD_WHY.has(rawWhy))) return 'world';

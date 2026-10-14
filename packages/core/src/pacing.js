@@ -11,7 +11,10 @@ export const ROUTINE_DAY_FACTS = new Set([
   'search_hit', 'search_miss', 'radio_news', 'radio_weather', 'radio_music', 'radio_missing', 'radio_static',
   'no_ap', 'no_food', 'no_fuel', 'no_material', 'no_tool', 'no_item', 'no_med', 'no_furniture',
   'need_facility', 'nothing_to_search', 'waste_warning', 'trade_done', 'trade_reject', 'trade_no_stock',
-  'franko_left', 'container_refilled', 'weak_scavenge', 'policy_set', 'dissolve_shift'
+  'franko_left', 'container_refilled', 'weak_scavenge', 'policy_set', 'dissolve_shift',
+  // 夜之家政（F-03 落地）：安睡恢复与换守是家常，不算「这一天有事发生」——
+  // 不归入的话，家里有人疲惫就永无平淡日，概述日闸门枯死（实测 overview_share 掉破下限）
+  'night_rest', 'guard_handover'
 ]);
 
 /** 当日的幕（内容即数据：mainline.acts 的 days 区间） */
@@ -33,7 +36,10 @@ export function dayIsQuiet(ctx) {
   if (policyOf(s).overviewDays === false) return false; // 玩家立过规矩：平淡也要逐件细看
   if (s.activeEvent) return false;                       // 门口有事，先应门
   if ((s.mainline || []).some((e) => e.day === s.day && e.stepId)) return false; // 史与家同页
-  const alarms = dawnProblems(s, ctx.pack).filter((p) => (p.sev || 0) >= 2);     // 火警：断粮/饿慌/病危/崩溃
+  const alarms = dawnProblems(s, ctx.pack).filter((p) => (p.sev || 0) >= 3);     // 真火警：断粮/病危/崩溃
+  // sev2 的慢性抱怨（饿得发慌/情绪低落/柴快烧完——隔天报的老毛病）不拦收卷：
+  // 饿着肚子过平淡日子，叙述上仍是平淡日子（kpis 注：机器人贴温饱线火警偏多，
+  // 真实玩家的概述日占比显著更高——闸门按真火警算，别被机器人的老毛病枯死）
   return alarms.length === 0;
 }
 

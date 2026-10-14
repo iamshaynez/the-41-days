@@ -20,6 +20,7 @@ export function resolveRaid(ctx) {
     ctx.fact('raid_none', {});
     return;
   }
+  ctx.nightRaided = true; // 破晓疲劳结算读它：真遇袭的夜，守卫无觉可打（安静夜睡椅相抵）
   // 夜窃变体（15%）：无声，晨报发现
   const quiet = ctx.rng.chance(0.15);
   // 威胁与防御（R-03：家产值 = 库存总值/10，再按 /50 折算——家当越多越招贼）
@@ -48,10 +49,10 @@ export function resolveRaid(ctx) {
   else if (D >= 0.35 * T) band = 'theft';
   else band = 'bad';
 
-  // 失窃（按类型口味取物）
+  // 失窃（按类型口味取物）——家当越厚越招贼：守着不动的家，贼替你花
   const appetite = { looters: ['food', 'raw', 'canned', 'water'], bandits: ['lux', 'bandage', 'meds', 'canned'], drunks: ['any'], vengeful: ['any'] }[type];
   const stolen = [];
-  const stealBudget = { repelled: 0, repelled_hurt: 0.1, theft: 0.25, bad: 0.4 }[band] || 0;
+  const stealBudget = { repelled: 0, repelled_hurt: 0.15, theft: 0.35, bad: 0.5 }[band] || 0;
   if (!quiet && stealBudget > 0) stealItems(ctx, stealBudget, appetite, stolen);
 
   const hurt = [];

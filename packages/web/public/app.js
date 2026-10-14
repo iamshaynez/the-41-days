@@ -1268,6 +1268,11 @@ function syncAsks(s) {
         <span class="matches small">${Array.from({ length: 10 }, (_, i) => `<span class="match ${i < 10 - nv.slots ? 'burnt' : ''}"></span>`).join('')}</span>
         ${nv.noise > 0 ? `<span class="noise-line">${svgUse('noise', 'hint-ic')}声响 ×${nv.noise}——有人听见了</span>` : ''}`;
       node.appendChild(meta);
+      // 夜是三口人的夜（P0 夜之家政）：家里谁守夜、谁安睡——门后的动静也上卡
+      if (nv.home) {
+        node.appendChild(el('p', 'ask-hint home-line',
+          `家里：${nv.home.guard ? `${esc(nv.home.guard)}守着门` : '<b>没人守夜</b>'}${nv.home.asleep.length ? ` · ${esc(nv.home.asleep.join('、'))}安睡` : ''}`));
+      }
       if (nv.containers.length) {
         const list = el('div', 'leaders');
         for (const c of nv.containers) {
@@ -1303,6 +1308,11 @@ function syncAsks(s) {
         opts.appendChild(optBtn('继续摸黑前进', '▸', () => sendIntents([{ type: 'auto_night' }], '继续')));
         opts.appendChild(optBtn('今晚到此为止', '←', () => sendIntents([{ type: 'night', action: 'retreat' }], '撤退')));
         if (nv.micro) appendDirectiveHandoff(opts, s);
+      }
+      // P2 换守：提前收工回家接守——夜访者守门，原守卫睡后半宿（有守卫才可换）
+      if (nv.home?.guard && !nv.directives) {
+        opts.appendChild(optBtn(`收工回家，接替守夜（让${nv.home.guard}躺下）`, '换', () =>
+          sendIntents([{ type: 'night', action: 'handover' }], '收工接守'), '东西到手就走，守卫的觉也是命'));
       }
       node.appendChild(opts);
       const rr = refreshRow('night', opts);

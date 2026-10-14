@@ -27,8 +27,10 @@ export function genFrankoStock(ctx) {
     const item = ctx.pack.itemMap[it];
     let mult = ctx.rng.range(m.priceBuy[0] * 100, m.priceBuy[1] * 100) / 100;
     if (s.winterActive && ['firewood', 'fuel'].includes(it)) mult *= 2;
-    // v0.2 校准：交割日固定 D60，食品与燃料的摊位数量加厚（其余 SKU 不变）
-    const nMax = ['食物', '燃料'].includes(item.cat) ? 6 : 5;
+    // v0.2 校准：交割日固定 D60，燃料的摊位数量加厚（其余 SKU 不变）；
+    // 食物摊刻意减薄（3）：船牙喂不活一个从不出门的家——守家经济的食物有上限
+    // （F-03 修复后睡床治愈让守家近乎无敌，渡口成了唯一能掐住的活命线）
+    const nMax = ['firewood', 'fuel'].includes(it) ? 6 : item.cat === '食物' ? 3 : 5;
     stock.push({ item: it, n: ctx.rng.range(2, nMax), buy: Math.max(1, Math.round(item.value * mult * cfg.tradeMul)) });
   }
   return stock;
