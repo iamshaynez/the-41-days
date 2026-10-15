@@ -1,5 +1,6 @@
 // 对局状态构造与派生量（内核设计 §2 六轴、§4/§5 防御与家产）。
 import { Rng, clamp } from './rng.js';
+import { pickLocPools } from './unlock.js';
 
 export const MOOD_LEVELS = [
   { max: -14, key: 'breakdown', name: '崩溃' },
@@ -81,6 +82,8 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     doorLevel: 0, homeFurniture: 6,
     house: { opened: { hall: true, living: true, kitchen: true }, searched: {}, hiddenFound: {} },
     knownLocs: [...pack.manifest.startKnowledgeLocations, ...(ids.includes('alexey') ? ['beacon'] : [])], // 逄灶开局识北津台
+    // 周目地点池（城市扩展）：每周目从同组候选里只浮出一部分——一周目去不全城
+    locPool: pickLocPools(seed, pack.manifest),
     locState: {},
     night: null, lastScavenger: null,
     // v0.3 同步日历：军心溶解账（家访配合/家书报平安为正；如实与沉默为负或零）。

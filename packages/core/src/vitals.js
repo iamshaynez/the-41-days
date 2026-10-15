@@ -4,6 +4,7 @@ import { moodLevel, apMaxOf, difficultyCfg, aliveChars, charById } from './state
 import { genFrankoStock } from './trade.js';
 import { recordCausal } from './causality.js';
 import { threadsFrankoPick } from './threads.js';
+import { unlockMet } from './unlock.js';
 
 const mod = (n) => n;
 
@@ -345,13 +346,13 @@ export function advanceDay(ctx) {
 /** 晨间事件抽取（V-01/V-02：时间轴必发 + 随机外部 55%） */
 export function drawMorningEvents(ctx) {
   const s = ctx.s, cards = ctx.pack.cards;
-  // 地点解锁扫描（E 系情报门槛：旗标到位即解锁，晨报追认）
-  // 修 v1 遗留：intelUnlock 曾无人消费，驿亭/旧垒实际不可达
+  // 地点解锁扫描（E 系情报门槛 + 城市扩展依赖链）：条件到位即解锁，晨报追认。
+  // 依赖口径：intelUnlock=旗标（旧）；requires=组合条件（visitedAny/visitedAll/flags/docs/minDay）；
+  // 周目池外的地点（unlockMet 内裁剪）永不开——一周目去不全城。
   for (const loc of s.locationsCache || []) { /* noop 占位防旧档 */ }
   for (const loc of ctx.pack.locations) {
-    if (loc.home || !loc.intelUnlock) continue;
-    if (s.knownLocs.includes(loc.id)) continue;
-    if (s.eventFlags[loc.intelUnlock]) {
+    if (loc.home || s.knownLocs.includes(loc.id)) continue;
+    if (unlockMet(s, ctx.pack, loc)) {
       s.knownLocs.push(loc.id);
       ctx.emit('LOC_KNOWN', { loc: loc.id });
       ctx.fact('loc_unlocked', { loc: loc.name });

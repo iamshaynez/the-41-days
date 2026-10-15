@@ -61,6 +61,7 @@ function apply(s, ev) {
       break;
     }
     case 'LOC_NEW': if (!s.locState[d.loc]) s.locState[d.loc] = { searched: {}, npcState: {}, scriptsFired: {}, firstVisit: true }; break;
+    case 'LOC_KNOWN': if (!s.knownLocs.includes(d.loc)) s.knownLocs.push(d.loc); break;
     case 'LOC_SEARCHED': if (s.locState[d.loc]) s.locState[d.loc].searched[d.cont] = d.day ?? true; break;
     case 'LOC_REFILL': if (s.locState[d.loc]) delete s.locState[d.loc].searched[d.cont]; break;
     case 'NPC_STATE': if (s.locState[d.loc]) s.locState[d.loc].npcState[d.npc] = d.state; break;
