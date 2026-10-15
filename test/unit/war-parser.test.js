@@ -77,6 +77,14 @@ describe('直读解析器（LLM 离线同构）', () => {
     assert.ok(p.clarify, '给出人话引导');
   });
 
+  test('帮助有回音：帮助/怎么玩 映射 help（不再是哑巴入口）', () => {
+    const { state } = newRun({ roster: ['bron'] });
+    const p = parseDirect(state, PACK, '帮助');
+    assert.deepEqual(p.intents, [{ type: 'meta', query: 'help' }]);
+    const p2 = parseDirect(state, PACK, '状态');
+    assert.deepEqual(p2.intents, [{ type: 'meta', query: 'status' }], '状态照旧');
+  });
+
   test('元指令：状态/库存', () => {
     const { state } = newRun({ roster: ['bron'] });
     const p = parseDirect(state, PACK, '状态');

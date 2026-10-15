@@ -65,7 +65,8 @@ export function parseDirect(state, pack, input) {
   const t = text.toLowerCase();
 
   // 元指令
-  if (/^(状态|库存|帮助|查看)/.test(text)) return { intents: [{ type: 'meta', query: 'status' }] };
+  if (/^帮助|怎么玩|我能做/.test(text)) return { intents: [{ type: 'meta', query: 'help' }] };
+  if (/^(状态|库存|查看)/.test(text)) return { intents: [{ type: 'meta', query: 'status' }] };
 
   // 事件选项：选A/选1/A/1/选项share（内容包卡 + run 级 GE 生成卡）
   if (state.activeEvent) {
