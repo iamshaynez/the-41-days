@@ -29,7 +29,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = join(here, '..', 'web', 'public');
 const PACK_DIR = join(here, '..', '..', 'content', 'base');
 
-export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMin, sessionTtlMs, logLevel, nodeEnv } = {}) {
+export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMin, sessionTtlMs, logLevel, nodeEnv, sseHeartbeatMs = 15000 } = {}) {
   // 显式参数 > 环境变量 > 默认值（只传实际存在的键，避免 undefined 覆盖）
   const overrides = {};
   for (const k of ['PORT', 'DB_PATH', 'ADMIN_USERNAME', 'ADMIN_PASSWORD', 'LOG_LEVEL', 'INPUT_RATE_PER_MIN', 'SESSION_TTL_HOURS', 'NODE_ENV']) {
@@ -632,22 +632,40 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         // 意图解析：决策卡直传结构化意图（v2）→ LLM 裁判 → 直读兜底（同一 schema，同一 resolve 管线）
         let intents = [], clarify = null, say = null, echo = null, degraded = false;
         const gw = run.mode === 'llm' ? buildGateway(id) : null;
-        if (Array.isArray(body.intents) && body.intents.length) {
+        const viaIntents = Array.isArray(body.intents) && body.intents.length;
+        if (viaIntents) {
+          // 坏形状趁头未开还能回 400（开闸之后错误只能走 SSE error 事件）
           intents = body.intents.filter(validateIntentShape).slice(0, 20);
           if (!intents.length) {
             json(res, 400, { error: '无效意图' });
             return;
           }
-        } else if (gw) {
-          const r = await gw.parse(input, state);
-          if (r.ok && !r.degraded) { intents = r.intents; clarify = r.clarify; say = r.say; echo = r.echo || null; }
-          else degraded = true;
-          // 直读兜底只在降级或真的一无所获时跑——echo/say 都是合法的完整回应，
-          // 不许被 clarify 抢走，更不许把玩家对 NPC 说的话再当命令解析一遍（夜间正则误中=答非所问）
-          if (degraded || (!intents.length && !clarify && !echo && !say)) { const fb = parseDirect(state, pack, input); intents = intents.concat(fb.intents); clarify = clarify || fb.clarify || null; }
-        } else {
-          const fb = parseDirect(state, pack, input);
-          intents = fb.intents; clarify = fb.clarify || null;
+        }
+        // 开闸即心跳（断线重连契约）：LLM 裁判要想很久——响应头与 ack 先走，
+        // 注释行（SSE 规范：解析端天然忽略）每拍一记，反向代理（默认 60s 读超时）
+        // 不会把静默的流掐断，前端也才能分辨「世界还在想」与「线断了」。
+        res.writeHead(200, {
+          'content-type': 'text/event-stream; charset=utf-8',
+          'cache-control': 'no-cache', connection: 'keep-alive',
+          'x-accel-buffering': 'no'
+        });
+        const heartbeat = setInterval(() => { try { res.write(': hb\n\n'); } catch { /* 已断开 */ } }, sseHeartbeatMs);
+        res.on('close', () => clearInterval(heartbeat));
+        const send = (ev, data) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
+        // 体验10：先回一声——LLM 串行调用前的白屏等待有了心跳（UI 对未知事件天然忽略）
+        send('ack', { day: state.day, phase: state.phase });
+        if (!viaIntents) {
+          if (gw) {
+            const r = await gw.parse(input, state);
+            if (r.ok && !r.degraded) { intents = r.intents; clarify = r.clarify; say = r.say; echo = r.echo || null; }
+            else degraded = true;
+            // 直读兜底只在降级或真的一无所获时跑——echo/say 都是合法的完整回应，
+            // 不许被 clarify 抢走，更不许把玩家对 NPC 说的话再当命令解析一遍（夜间正则误中=答非所问）
+            if (degraded || (!intents.length && !clarify && !echo && !say)) { const fb = parseDirect(state, pack, input); intents = intents.concat(fb.intents); clarify = clarify || fb.clarify || null; }
+          } else {
+            const fb = parseDirect(state, pack, input);
+            intents = fb.intents; clarify = fb.clarify || null;
+          }
         }
         // 未被接住的话（v3）：echo/say 演出世界如何接住它，素材环收存原文——
         // 两天后命运导演可能长出一张回应卡（离谱输入的兜底不是拒绝，是消化）；
@@ -656,14 +674,6 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           intents = [{ type: 'whisper', text: input.slice(0, 60) }];
         }
 
-        res.writeHead(200, {
-          'content-type': 'text/event-stream; charset=utf-8',
-          'cache-control': 'no-cache', connection: 'keep-alive',
-          'x-accel-buffering': 'no'
-        });
-        const send = (ev, data) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
-        // 体验10：先回一声——LLM 串行调用前的白屏等待有了心跳（UI 对未知事件天然忽略）
-        send('ack', { day: state.day, phase: state.phase });
         if (clarify && !intents.length) {
           send('clarify', { text: clarify });
           ink.push({ day: state.day, role: 'sys', text: '……' + clarify });
