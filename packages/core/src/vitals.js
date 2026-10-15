@@ -3,6 +3,7 @@
 import { moodLevel, apMaxOf, difficultyCfg, aliveChars, charById } from './state.js';
 import { genFrankoStock } from './trade.js';
 import { recordCausal } from './causality.js';
+import { threadsFrankoPick } from './threads.js';
 
 const mod = (n) => n;
 
@@ -335,7 +336,8 @@ export function advanceDay(ctx) {
     // 常客是城与家之间的信使，不是一张会走路的价目表
     const stepMap = new Map((ctx.pack.mainline?.steps || []).map((x) => [x.id, x]));
     const news = [...(s.mainline || [])].reverse().map((m) => m.stepId && stepMap.get(m.stepId)?.title).find(Boolean) || null;
-    ctx.fact('franko_incoming', { ...(dark ? { dark: true } : {}), ...(news ? { news } : {}) });
+    const say = threadsFrankoPick(ctx); // 线的捎话轨（回响节拍器）：母题句搭船牙的船
+    ctx.fact('franko_incoming', { ...(dark ? { dark: true } : {}), ...(news ? { news } : {}), ...(say ? { say } : {}) });
   }
   ctx.emit('DAY_STARTED', { day: s.day, weather: s.weather, snapshot: structuredClone(s) });
 }

@@ -191,7 +191,13 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'no_tool': lines.push(`没有${f.tool}。`); break;
       case 'need_facility': lines.push(`得先有${f.facility}。`); break;
       case 'waste_warning': lines.push(`${name(f.char)} 已经吃饱了，再吃就是浪费。`); break;
-      case 'franko_incoming': lines.push((f.dark ? t.franko.arrive_dark : t.franko.arrive) + (f.news ? `他捎来城里的一句话——都在说：「${f.news}。」` : '')); break;
+      case 'franko_incoming': lines.push((f.dark ? t.franko.arrive_dark : t.franko.arrive)
+        + (f.say ? `${f.say}` : '') + (f.news && !f.say ? `他捎来城里的一句话——都在说：「${f.news}。」` : '')); break;
+      // —— 小说层（回响节拍器）：线的轻触与物化、幕问与幕结 ——
+      case 'thread_touch': lines.push(f.line); break;
+      case 'token_found': lines.push(`收起一件东西：${f.name}。${f.flavor ? `（${f.flavor}）` : ''}`); break;
+      case 'act_question': lines.push(`——${{ A1: '第一', A2: '第二', A3: '第三', A4: '第四', A5: '第五' }[f.act] || ''}幕问：${f.q}`); break;
+      case 'act_wrap': lines.push(`——${{ A1: '第一', A2: '第二', A3: '第三', A4: '第四', A5: '第五' }[f.act] || ''}幕 · 收——\n这一幕，你做了：${f.you}。\n城里：${f.city}。\n悬而未决：${f.open}。`); break;
       case 'franko_left': lines.push(t.franko.leave); break;
       case 'trade_done': lines.push(t.trade.deal); break;
       case 'trade_reject': lines.push(t.trade.reject); break;
