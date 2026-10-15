@@ -225,9 +225,12 @@ function applyOne(ctx, intent) {
         ['beacon', /北津台|烽火台|举火/], ['letters', /家书|寄信|写信/],
         ['maicheng', /麦城/], ['army', /军心|北边的兵|士气/]
       ];
+      // 识途之地优先成誓（seed 闭环）：史锚地点（北津台）一旦已识，话头落成
+      // 誓——当晚黄昏方案即可兑现；落史种则兑现窗口只有窗口内的大事 ask 步
+      // 那几天（极易错过），话头永不关闭。未识之地照旧走史种（城里的传闻）。
       const histHit = HIST_KEYS.find(([, re]) => re.test(text));
-      const locHit = !histHit && locOfText(s, ctx.pack, text);
-      const kind = histHit ? 'hist' : locHit ? 'vow' : 'misc';
+      const locHit = locOfText(s, ctx.pack, text);
+      const kind = locHit ? 'vow' : histHit ? 'hist' : 'misc';
       const id = 'd' + (s.day) + '_' + (Object.keys(s.directions || {}).length + 1);
       const entry = {
         id, text, subject, kind, day: s.day, lastDay: s.day, alive: true, watered: 0,

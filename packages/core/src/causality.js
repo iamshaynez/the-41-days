@@ -264,6 +264,16 @@ export function tickDirections(ctx) {
       ctx.fact('direction_faded', { id: d.id, subject: d.subject, text: d.text });
     }
   }
+  // 史种窗口外枯萎：承诺的晨卡有窗口（card.when.seedWindow），窗口过了没人接，
+  // 话头就散——不许留成永不兑现的僵尸（实测：北津台话头被谋士反复重提）
+  for (const d of all) {
+    if (d.kind !== 'hist' || !d.alive) continue;
+    const [, hi] = ctx.pack?.cardMap?.['hs_' + d.seed]?.when?.seedWindow || [];
+    if (hi !== undefined && s.day > hi) {
+      d.alive = false; dirty = true;
+      ctx.fact('hist_seed_faded', { id: d.id, subject: d.subject, text: d.text, seed: d.seed });
+    }
+  }
   if (dirty) ctx.setFlag('directions', structuredClone(s.directions));
 }
 

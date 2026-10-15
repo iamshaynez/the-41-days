@@ -109,6 +109,57 @@ describe('史种：不进面板，长在史书里', () => {
   });
 });
 
+describe('seed 闭环（实测：北津台话头白天点了没反应、晚上反复出现却永不兑现）', () => {
+  test('识途之地点名史锚 → 誓（当晚可践）；未识之地 → 史种（原路径保留）', () => {
+    let s = newRun({ seed: 830 }).state;
+    s = step(s, [{ type: 'advance' }]).state;
+    s.knownLocs.push('beacon');
+    s = step(s, [{ type: 'direction', text: '天黑前登北津台' }]).state;
+    const dirs = Object.values(s.directions);
+    assert.ok(dirs.some((d) => d.kind === 'vow' && d.target === 'beacon'), '已识北津台 → 誓（黄昏践誓方案当晚就能兑现）');
+    assert.ok(!dirs.some((d) => d.kind === 'hist' && d.seed === 'beacon'), '不再落成等晨卡的史种');
+
+    let s2 = newRun({ seed: 831 }).state;
+    s2 = step(s2, [{ type: 'advance' }]).state;
+    s2 = step(s2, [{ type: 'direction', text: HIST }]).state;
+    assert.ok(Object.values(s2.directions).some((d) => d.kind === 'hist' && d.seed === 'beacon'), '未识北津台 → 史种照旧（城里的传闻路径）');
+  });
+
+  test('史种窗口外枯萎：不再成为永不兑现的话头', () => {
+    const { state } = newRun({ seed: 832 });
+    state.day = 40; // beacon 窗口 [29,36] 已过
+    state.directions = { h1: { id: 'h1', text: HIST, kind: 'hist', seed: 'beacon', day: 30, lastDay: 30, alive: true, watered: 0 } };
+    const ctx = new Ctx(state, PACK, [], []);
+    tickDirections(ctx);
+    assert.equal(state.directions.h1.alive, false, '窗口外破晓即散');
+    assert.ok(ctx.facts.some((f) => f.k === 'hist_seed_faded'), '散时落一笔（有响应，不是无声蒸发）');
+  });
+
+  test('史种独立发芽：窗口内没有大事 ask 步的早晨，回应卡照常长出', () => {
+    const { state } = newRun({ seed: 833 });
+    state.day = 33; state.phase = 'day'; // 33 在 [29,36] 内，且不在 ask 步日（3,12,16,19,27,29,38）
+    state.directions = { h1: { id: 'h1', text: HIST, kind: 'hist', seed: 'beacon', day: 31, lastDay: 31, alive: true, watered: 0 } };
+    mainlineAskTick(new Ctx(state, PACK, [], []));
+    assert.equal(state.activeEvent?.cardId, 'hs_beacon', '不搭大事步的车，种子自己长成晨卡——承诺的回应必须来');
+    assert.ok(state.firedOnce['hs_h1'], '发芽落 firedOnce（一局一次）');
+  });
+
+  test('发芽幂等：已发芽的种子不重发；无种子无步的早晨照旧安静', () => {
+    const { state } = newRun({ seed: 834 });
+    state.day = 33; state.phase = 'day';
+    state.directions = { h1: { id: 'h1', text: HIST, kind: 'hist', seed: 'beacon', day: 31, lastDay: 31, alive: true, watered: 0 } };
+    mainlineAskTick(new Ctx(state, PACK, [], []));
+    state.activeEvent = null;
+    mainlineAskTick(new Ctx(state, PACK, [], []));
+    assert.ok(!state.activeEvent, '发过的芽不再来');
+
+    const bare = newRun({ seed: 835 }).state;
+    bare.day = 33; bare.phase = 'day';
+    mainlineAskTick(new Ctx(bare, PACK, [], []));
+    assert.ok(!bare.activeEvent, '无种子无步的早晨不凭空开卡');
+  });
+});
+
 describe('杂念：静默快散', () => {
   test('三天自散、无回声（direction_echo 退役）', () => {
     const { state } = newRun({ seed: 807 });

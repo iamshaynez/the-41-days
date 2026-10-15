@@ -262,9 +262,10 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'vow_made': lines.push(`这话立成了誓——「${f.text.slice(0, 16)}」。今晚的方案会照着走。`); break;
       case 'vow_fulfilled': lines.push(`那件事，办了——「${f.text.slice(0, 16)}」落了地。`); break;
       case 'vow_broken': lines.push(`誓多了记不住——最早那句「${f.text.slice(0, 12)}」，只得先欠着。`); break;
-      case 'hist_seed': lines.push(`这话落进了城里人的耳朵里。`); break;
+      case 'hist_seed': lines.push(`这话落进了城里人的耳朵里——传着传着，早晚有人会拿它来问你。`); break;
       case 'direction_watered': lines.push(`这事又提了一遍——${f.subject ? name(f.subject) : '这个家'}记着呢。`); break;
       case 'direction_faded': lines.push(`「${f.text}」——后来没人再提，它就淡了。`); break;
+      case 'hist_seed_faded': lines.push(`「${f.text.slice(0, 16)}」这话在城里飘了些日子，没人接，散了。`); break;
       case 'direction_echo': lines.push(`${f.char ? name(f.char) : '这个家'}还惦记着「${f.text}」这件事。`); break;
       case 'whisper_kept': lines.push('（这句话没人接。可这座城什么都听着。）'); break;
       case 'fate_passed': lines.push('门外的动静等你等到天黑。等你动身，它已经过去了。'); break;
