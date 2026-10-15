@@ -186,9 +186,9 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'open_room': lines.push(`${f.room} 的阻隔被清开了。`); break;
       case 'no_ap': lines.push(t.refuse.no_ap.replace('{{name}}', name(f.char))); break;
       case 'no_food': lines.push('家里没有能吃的东西了。'); break;
-      case 'no_fuel': lines.push('没柴了。冷的锅，冷的胃。'); break;
+      case 'no_fuel': lines.push('没柴了——板材也能顶柴烧饭（取暖只认柴火）。冷的锅，冷的胃。'); break;
       case 'no_material': lines.push(`材料不够——缺${pack.itemMap[f.item]?.name || f.item}。`); break;
-      case 'no_tool': lines.push(`没有${f.tool}。`); break;
+      case 'no_tool': lines.push(f.how ? `没有${f.tool}——${f.how}。` : `没有${f.tool}。`); break;
       case 'need_facility': lines.push(`得先有${f.facility}。`); break;
       case 'waste_warning': lines.push(`${name(f.char)} 已经吃饱了，再吃就是浪费。`); break;
       case 'franko_incoming': lines.push((f.dark ? t.franko.arrive_dark : t.franko.arrive)
@@ -320,7 +320,10 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'war_alt_shift': lines.push(t.war.alt_shift); break;
       case 'war_join_table': lines.push(t.war.join_table); break;
       case 'mood_level': break; // 心情档位变化由卡片剪影承载，不占正文
-      case 'meta': break;
+      case 'meta':
+        // 帮助不再是哑巴（实测：键入帮助无回音）——工具→资源链路速查
+        if (f.query === 'help') lines.push('过日子认几条链：柴火取暖、板材可代柴烧饭——有斧头白天能劈旧家具；没斧头，铁砧上 2 板材 3 铁件打得出来，夜里军辎营的辎重箱兴许翻得到。吃的靠夜访和鲁舟的船；夜里出门只一人。说「今晚谁去哪」，或直接吩咐「石大做饭」这类白话。');
+        break;
       default: lines.push('……'); break;
     }
   return lines.filter(Boolean).join('\n') || null;

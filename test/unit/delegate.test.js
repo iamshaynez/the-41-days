@@ -202,6 +202,34 @@ describe('晨报问题（dawnProblems）与情境建议（suggests）', () => {
     for (const x of sg.filter((y) => y.label !== '我能做什么？')) assert.equal(x.intents.at(-1).type, 'auto_day', `${x.label} 应收卷`);
   });
 
+  test('工具链教学（实测：砍柴火→没有斧头，链路断裂）：拒绝带路径、劈柴出名实相符的柴', () => {
+    // 没斧头：拒绝要说清斧头从哪来（打造/军辎营），不是一句「没有斧头」把人挡死
+    let s = newRun();
+    s.inventory.axe = 0; s.homeFurniture = 3;
+    const r1 = resolveInput(structuredClone(s), pack, [{ type: 'act', actor: s.chars[0].id, action: 'chop' }]);
+    const nt = r1.facts.find((f) => f.k === 'no_tool');
+    assert.ok(nt, 'no_tool 落账');
+    assert.ok(nt.how && /打造|军辎营|铁砧/.test(nt.how), `拒绝要带获取路径：${nt.how}`);
+    // 有斧头：劈家具出板材也出柴（「劈柴」名实相符——板材能代柴烧饭，柴能取暖）
+    s.inventory.axe = 1;
+    const r2 = resolveInput(s, pack, [{ type: 'act', actor: s.chars[0].id, action: 'chop' }]);
+    assert.ok(r2.facts.some((f) => f.k === 'chop'), '劈成');
+    assert.ok((r2.state.inventory.firewood || 0) >= 1, '劈家具至少得 1 柴（取暖只认柴）');
+    assert.ok((r2.state.inventory.wood || 0) >= 2, '也得板材（烧饭/建材）');
+  });
+
+  test('柴将尽预警进晨报：有斧指劈家具，没斧指打造/夜访路径', () => {
+    const s = newRun();
+    s.inventory.firewood = 0; s.inventory.wood = 1;
+    const line = dawnProblems(s, pack).find((p) => p.key === 'fuel_low');
+    assert.ok(line, '柴将尽占一行');
+    assert.ok(/斧/.test(line.text), '要点出斧头链路');
+    // 有斧有家具：指向劈旧家具
+    s.inventory.axe = 1; s.homeFurniture = 2;
+    const line2 = dawnProblems(s, pack).find((p) => p.key === 'fuel_low');
+    assert.ok(/劈/.test(line2.text), '有斧时指劈家具');
+  });
+
   test('白天能做的事要看得见：疲惫补觉 / 家里没翻完的角落 / 劈家具攒柴', () => {
     // 玩家实测反馈：白天能做的太少。先把已有动作一键化亮出来——
     // 补觉、搜家、劈柴都是既有机制，缺的是入口。
