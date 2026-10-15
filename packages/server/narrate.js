@@ -255,6 +255,7 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'day_overview': lines.push(overviewLine(f, t)); break;
       case 'night_fork': lines.push(f.text || '前面有个岔子，等你拿主意。'); break;
       case 'delegated_pick': lines.push(`没人点名——${name(f.char)}把这件事接了过去。`); break;
+      case 'self_reliant': lines.push(`要用的${f.what || '家什'}家里没有——${f.how || '现做了一副'}，接着干。`); break;
       case 'night_directive_set': lines.push(`今夜的方针定了：${f.text}（${{ cautious: '谨慎', normal: '照常', bold: '放手' }[f.stance] || '照常'}）。接下来的一夜，他自己走。`); break;
       case 'night_choice': lines.push(`按方针，他选了：${f.label}。`); break;
       case 'night_ignore': lines.push(`没去惊动${f.npc}，各走各的。`); break;

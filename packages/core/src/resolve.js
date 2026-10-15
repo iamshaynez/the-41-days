@@ -91,6 +91,19 @@ export function resolveInput(state, pack, intents) {
     // 宽进统一洗（LLM/直读同一条管线）：中文名翻 id、泛指执行者清掉——
     // 内核裁决永远拿到规范意图，「人/谁」绝不以角色名的身份走到 NO_CHAR
     const norm = normalizeIntent(state, pack, intent);
+    // 输入即实现（角色张罗，考虑用户的 input）：玩家指了目标，缺的家什当场补——
+    // 先造再用、同批复用。玩家的意思让角色办成，不被「没有工具」挡死。
+    // 表驱动（目前柴链；药械等按同骨架接）；管家托管的意图自己已排好链，不走这条
+    if (norm?.type === 'act' && norm.action === 'chop' && (state.inventory.axe || 0) <= 0 && !norm.delegated) {
+      const rec = (ctx.pack.recipes || []).find((r) => r.id === 'make_axe');
+      const canForge = !!rec && !!state.facilities.metal
+        && (rec.need || []).every((n) => (state.inventory[n.item] || 0) >= n.n);
+      if (canForge) {
+        queue.unshift({ type: 'act', ...(norm.actor ? { actor: norm.actor } : {}), action: 'craft', target: 'make_axe' }, norm);
+        ctx.fact('self_reliant', { what: '斧头', how: '铁砧上现打了一柄' });
+        continue;
+      }
+    }
     if (!validateIntentShape(norm)) { rejects.push({ intent, reason: 'BAD_SHAPE' }); continue; }
     ctx.delegated = !!norm.delegated;
     const r = applyOne(ctx, norm);
