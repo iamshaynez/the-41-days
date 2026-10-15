@@ -1,5 +1,5 @@
 {
-  "$comment": "内核设计-v0.2 §4（避难所内景）与 GDD-v0.2 §8.1（地点卡，荆州卷）。door: open|locked|rubble|bars；容器 tool 门槛同内核 §4；loot 为权重表 [{item,count:[min,max],w}]。内部 id 沿用 v0.1。",
+  "$comment": "内核设计-v0.2 §4（避难所内景）与 GDD-v0.2 §8.1（地点卡，荆州卷）。door: open|locked|rubble|bars；容器 tool 门槛同内核 §4；loot 为权重表 [{item,count:[min,max],w}]。内部 id 沿用 v0.1。城市扩展 0.30.0 新字段：mark=用途图例（treasure|danger|story|trade|food|med，舆图一眼看懂）；pool=周目池组（manifest.locationPools 定义，每周目组内只浮出 pick 个——一周目去不全城）；requires=解锁条件组（visitedAny 任一/visitedAll 全部/flags 旗标/docs 文档/minDay 天数，各类 AND）；heardWhen=风闻条件（上图灰名+hint 提示，尚不可去——先去了哪里，才听说哪里）；blurb=黄昏方案卡的一句话。依赖链示例：sewer 夜访+sewer_intel→fishing；#064 藏宝图→baling。",
   "locations": [
     {
       "id": "home",
@@ -264,6 +264,7 @@
       "id": "market",
       "name": "被焚的南市",
       "threat": 2,
+      "mark": "food",
       "knownAtStart": true,
       "rooms": [
         {
@@ -452,6 +453,7 @@
       "id": "church",
       "name": "府库里社",
       "threat": 0,
+      "mark": "story",
       "knownAtStart": true,
       "rooms": [
         {
@@ -581,6 +583,7 @@
       "id": "hospital",
       "name": "杜仲医棚",
       "threat": 0,
+      "mark": "med",
       "knownAtStart": true,
       "trade": {
         "focus": [
@@ -650,6 +653,7 @@
       "id": "post",
       "name": "驿亭",
       "threat": 2,
+      "mark": "story",
       "intelUnlock": "knows_post",
       "rooms": [
         {
@@ -761,6 +765,7 @@
       "id": "villas",
       "name": "大族宅区",
       "threat": 1,
+      "mark": "treasure",
       "knownAtStart": true,
       "rooms": [
         {
@@ -858,7 +863,8 @@
               "docs": [
                 "#007",
                 "#044",
-                "#063"
+                "#063",
+                "#064"
               ]
             }
           ]
@@ -872,6 +878,7 @@
       "id": "frontline",
       "name": "水门渡旧垒",
       "threat": 4,
+      "mark": "danger",
       "intelUnlock": "knows_frontline",
       "rooms": [
         {
@@ -999,6 +1006,7 @@
       "id": "sewer",
       "name": "城濠水窦",
       "threat": 2,
+      "mark": "story",
       "intelUnlock": "knows_sewer",
       "rooms": [
         {
@@ -1128,6 +1136,7 @@
       "id": "beacon",
       "name": "北津台",
       "threat": 3,
+      "mark": "danger",
       "intelUnlock": "knows_beacon",
       "rooms": [
         {
@@ -1208,6 +1217,1117 @@
       "npcs": [],
       "docsPool": [],
       "flavor": "江边第三台。鼓架还在，薪柴还干——像有人一直在等它再响。"
+    },
+    {
+      "id": "fishing",
+      "name": "南湖渔村",
+      "threat": 1,
+      "mark": "food",
+      "pool": "south",
+      "requires": {
+        "visitedAny": [
+          "sewer"
+        ],
+        "flags": [
+          "sewer_intel"
+        ]
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "sewer"
+        ]
+      },
+      "hint": "濠鼠的价目里有这条路——南湖上有个渔村。买过他的消息，才带你去。",
+      "blurb": "鱼、净水，与一点安稳",
+      "rooms": [
+        {
+          "id": "f_dyke",
+          "name": "湖埂",
+          "door": "open",
+          "containers": [
+            {
+              "id": "f_baskets",
+              "name": "鱼笱",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    3,
+                    5
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "veg",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "f_reed",
+          "name": "芦棚",
+          "door": "open",
+          "containers": [
+            {
+              "id": "f_nets",
+              "name": "网架",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "herb",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "f_shrine",
+          "name": "祠龛",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "f_niche",
+              "name": "陶龛",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "brocade",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "qiniang",
+          "name": "渔婆七娘",
+          "stance": "neutral",
+          "armed": false,
+          "firstScript": "s_fishing_nets",
+          "desc": "手上的网眼比她的牙密。她看人先看手——是来抢的还是来换的。"
+        }
+      ],
+      "docsPool": [],
+      "flavor": "南湖的鱼越来越难捞——捞鱼的人，一半抽了丁，一半逃了湖。"
+    },
+    {
+      "id": "dockyard",
+      "name": "江津戍",
+      "threat": 3,
+      "mark": "trade",
+      "pool": "south",
+      "requires": {
+        "visitedAny": [
+          "frontline"
+        ],
+        "minDay": 15
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "frontline"
+        ]
+      },
+      "hint": "旧垒的军士换防时提过江津戍——南岸渡口的军市。",
+      "blurb": "军市的黑价，渡口的私船",
+      "trade": {
+        "focus": [
+          "comp",
+          "coffee",
+          "cigs"
+        ],
+        "rate": 1.2
+      },
+      "rooms": [
+        {
+          "id": "dk_stockade",
+          "name": "戍栅",
+          "door": "open",
+          "containers": [
+            {
+              "id": "dk_post",
+              "name": "弃哨",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "parts",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dk_market",
+          "name": "军市棚",
+          "door": "bars",
+          "containers": [
+            {
+              "id": "dk_counter",
+              "name": "货案",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "coffee",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "cigs",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "wine",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ],
+              "docs": [
+                "#065"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dk_store",
+          "name": "转运仓",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "dk_crates",
+              "name": "潮箱",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "comp",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "elec",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "dk_broker",
+          "name": "军市牙侩",
+          "stance": "wary",
+          "armed": true,
+          "firstScript": "s_dock_broker",
+          "desc": "军靴上套着草鞋。他的秤能称米，也能称你值几支箭。"
+        }
+      ],
+      "docsPool": [
+        "#065"
+      ],
+      "flavor": "渡口的旗换了颜色，生意照做——只是价目表换成了军中的。"
+    },
+    {
+      "id": "jiying",
+      "name": "纪南故郢",
+      "threat": 2,
+      "mark": "story",
+      "pool": "ruins",
+      "requires": {
+        "visitedAny": [
+          "post"
+        ],
+        "minDay": 12
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "post"
+        ]
+      },
+      "hint": "死信库里没送出去的信，收信地址写着纪南——郢都故墟还在城北。",
+      "blurb": "故郢的简牍与碎玉",
+      "rooms": [
+        {
+          "id": "jy_wall",
+          "name": "夯土垣",
+          "door": "open",
+          "containers": [
+            {
+              "id": "jy_breach",
+              "name": "坍口",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "wood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "parts",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "jy_office",
+          "name": "官署基",
+          "door": "open",
+          "containers": [
+            {
+              "id": "jy_pit",
+              "name": "简牍坑",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "book",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "jewel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "brocade",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "jy_terrace",
+          "name": "高台",
+          "door": "rubble",
+          "containers": [
+            {
+              "id": "jy_cellar",
+              "name": "台心窖",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    1,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "wine",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "elec",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "jy_scribe",
+          "name": "拾简人",
+          "stance": "neutral",
+          "armed": false,
+          "firstScript": "s_jiying_scribe",
+          "desc": "披着蓑衣在简牍坑里翻拣。他说他在替死人寄信。"
+        }
+      ],
+      "docsPool": [
+        "#055"
+      ],
+      "flavor": "四百年前的都城塌成了土冈。农人绕着走，说夜里听得见编钟。"
+    },
+    {
+      "id": "baling",
+      "name": "八岭古冢",
+      "threat": 4,
+      "mark": "treasure",
+      "pool": "ruins",
+      "requires": {
+        "docs": [
+          "#064"
+        ],
+        "minDay": 18
+      },
+      "heardWhen": {
+        "minDay": 18
+      },
+      "hint": "城西封土堆上夜里有人点灯——有人先到了。乐师的图上画着进去的路。",
+      "blurb": "椁室里的楚玉——和先你一步的人",
+      "rooms": [
+        {
+          "id": "bl_mound",
+          "name": "封土坡",
+          "door": "open",
+          "containers": [
+            {
+              "id": "bl_left",
+              "name": "盗掘者遗物",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "lockpick",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "bullet",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bl_passage",
+          "name": "墓道",
+          "door": "rubble",
+          "containers": [
+            {
+              "id": "bl_rocks",
+              "name": "崩石",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "parts",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "chamber",
+          "name": "玄室",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "bl_hoard",
+              "name": "椁藏",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "brocade",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "wine",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "bl_digger",
+          "name": "盗掘者",
+          "stance": "hostile",
+          "armed": true,
+          "firstScript": "s_baling_digger",
+          "desc": "镐头靠在椁边，人比镐头更瘦。他先看见你，还是你先看见他——这一步走错就是命。"
+        }
+      ],
+      "docsPool": [],
+      "flavor": "八岭山的封土一座连一座。图上圈的那座塌了半边——塌，是最近的事。"
+    },
+    {
+      "id": "camp",
+      "name": "军辎营",
+      "threat": 5,
+      "mark": "danger",
+      "requires": {
+        "visitedAny": [
+          "frontline"
+        ],
+        "flags": [
+          "crossing_heard"
+        ],
+        "minDay": 20
+      },
+      "heardWhen": {
+        "flags": [
+          "crossing_heard"
+        ]
+      },
+      "hint": "白翎的箭楼望得见西郊辎营的火——那边的车马一夜比一夜多。",
+      "blurb": "武库与粮台——去的人少有全身回的",
+      "rooms": [
+        {
+          "id": "cp_abatis",
+          "name": "鹿角栅",
+          "door": "open",
+          "containers": [
+            {
+              "id": "cp_fodder",
+              "name": "弃草料",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "firewood",
+                  "count": [
+                    3,
+                    5
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "wood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cp_wagons",
+          "name": "辎车场",
+          "door": "open",
+          "containers": [
+            {
+              "id": "cp_chest",
+              "name": "辎重箱",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "bullet",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "powder",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "canned",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cp_granary",
+          "name": "粮囤",
+          "door": "bars",
+          "containers": [
+            {
+              "id": "cp_bin",
+              "name": "囤底",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    4,
+                    6
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "veg",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "cl_quartermaster",
+          "name": "军需卒",
+          "stance": "hostile",
+          "armed": true,
+          "firstScript": "s_camp_watch",
+          "desc": "他在数箭。数完箭数粮，数完粮数人——城里来的人，也在他的账上。"
+        }
+      ],
+      "docsPool": [],
+      "flavor": "车辙深深碾进冻土。营里的火整夜不熄——数箭的人也整夜不睡。"
+    },
+    {
+      "id": "shahead",
+      "name": "沙头黑市",
+      "threat": 3,
+      "mark": "trade",
+      "requires": {
+        "visitedAny": [
+          "market"
+        ],
+        "minDay": 8
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "market"
+        ]
+      },
+      "hint": "南市烧了以后，做买卖的挪去了沙头——守粮行的溃兵嘴里漏过一句。",
+      "blurb": "南市烧剩下的生意，都在这",
+      "trade": {
+        "focus": [
+          "jewel",
+          "brocade",
+          "wine"
+        ],
+        "rate": 1.3
+      },
+      "rooms": [
+        {
+          "id": "sh_stall",
+          "name": "帘后铺面",
+          "door": "open",
+          "containers": [
+            {
+              "id": "sh_curtain",
+              "name": "货帘",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "cigs",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "coffee",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "meds",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sh_cache",
+          "name": "私仓",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "sh_wall",
+              "name": "夹壁",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "brocade",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "comp",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [
+        {
+          "id": "sh_broker",
+          "name": "市牙",
+          "stance": "neutral",
+          "armed": true,
+          "firstScript": "s_shahead_broker",
+          "desc": "袖手立在帘后。他不开口，先伸三根手指——不是价钱，是你的命的分量。"
+        }
+      ],
+      "docsPool": [],
+      "flavor": "没有招牌，没有市籍。价钱是活的，命也是。"
+    },
+    {
+      "id": "zhangtai",
+      "name": "章台废基",
+      "threat": 1,
+      "mark": "story",
+      "requires": {
+        "visitedAny": [
+          "villas"
+        ]
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "villas"
+        ]
+      },
+      "hint": "乐师宅里那卷谱的末行写着「章台」——楚王的离宫，塌在东郊。",
+      "blurb": "离宫的瓦砾与一卷旧谱",
+      "rooms": [
+        {
+          "id": "zt_base",
+          "name": "台基",
+          "door": "open",
+          "containers": [
+            {
+              "id": "zt_stairs",
+              "name": "崩阶",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "wood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "parts",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "zt_wedges",
+          "name": "楔窝",
+          "door": "open",
+          "containers": [
+            {
+              "id": "zt_score",
+              "name": "谱龛",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "book",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ztyard",
+          "name": "回廊",
+          "door": "rubble",
+          "containers": [
+            {
+              "id": "zt_hollow",
+              "name": "廊穴",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "brocade",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "jewel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [
+        "#044"
+      ],
+      "flavor": "「章华之台，三休乃至。」如今一休就到了顶——顶上长着一棵树。"
+    },
+    {
+      "id": "garden",
+      "name": "杜氏药圃",
+      "threat": 2,
+      "mark": "med",
+      "requires": {
+        "visitedAny": [
+          "hospital"
+        ],
+        "minDay": 10
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "hospital"
+        ]
+      },
+      "hint": "杜仲的药柜见底时提过：城北自家的药圃，兵过之后就没敢回去。",
+      "blurb": "药畦还活着——看守它的只有荒草",
+      "rooms": [
+        {
+          "id": "gd_gate",
+          "name": "圃门",
+          "door": "open",
+          "containers": [
+            {
+              "id": "gd_lodge",
+              "name": "门房",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "wood",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "gd_beds",
+          "name": "药畦",
+          "door": "open",
+          "containers": [
+            {
+              "id": "gd_plot",
+              "name": "药圃",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "herb",
+                  "count": [
+                    3,
+                    5
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "veg",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "gd_dry",
+          "name": "焙房",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "gd_rack",
+              "name": "焙架",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "herbmed",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "bandage",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "herb",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "畦垄齐整——荒了的地不长这么齐。有人夜里回来照看它。"
     }
   ]
 }

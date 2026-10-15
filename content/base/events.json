@@ -3707,6 +3707,353 @@
           }
         }
       ]
+    },
+    {
+      "id": "s_fishing_nets",
+      "kind": "script",
+      "for": "s_fishing_nets",
+      "title": "渔婆的网",
+      "text": "七娘的网摊在膝上，梭子停了半晌。「湖里的东西认网，网认手。你们的手是拿笔的还是拿刀的？」\n她的网破了个大洞——不补，明天湖里就少一顿饭。[[要|拿零件替她绞网脚]]，湖会记账。",
+      "options": [
+        {
+          "key": "mend",
+          "label": "用零件替她绞网脚",
+          "cost": [
+            {
+              "item": "parts",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "items": {
+              "raw": 3
+            },
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "fishing_bond": true
+            },
+            "text": "网脚绞好，她从鱼笱底下摸出三条鱼——「湖记账，比城里的账房公道。」"
+          }
+        },
+        {
+          "key": "buy",
+          "label": "买鱼",
+          "cost": [
+            {
+              "item": "canned",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "items": {
+              "raw": 4
+            },
+            "text": "她不问你的钱是哪来的。湖上的人只问天气。"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "不扰她",
+          "effects": {
+            "text": "梭子又动起来。网眼里漏下来的月光，一格一格。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_dock_broker",
+      "kind": "script",
+      "for": "s_dock_broker",
+      "title": "军市的秤",
+      "text": "牙侩把草鞋从军靴上蹭下来，摆出两样东西：一把算筹，一张转文书。「军价公道——公道得你不敢还价。」\n他身后的货案下压着半箱墨还新的印纸。[[要|递上一坛酒]]，价目就会换一页。",
+      "options": [
+        {
+          "key": "gift",
+          "label": "递上一坛酒",
+          "cost": [
+            {
+              "item": "wine",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "dock_trusted": true
+            },
+            "knowledge": 1,
+            "text": "酒入袖，价目换页。他压低声音说了三个字：船，粮，箭——渡口如今只剩这三样生意。"
+          }
+        },
+        {
+          "key": "barter",
+          "label": "以物易物",
+          "cost": [
+            {
+              "item": "comp",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "items": {
+              "cigs": 1,
+              "coffee": 1
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "只看不买",
+          "effects": {
+            "text": "算筹在他指间翻响，像在替你算命。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_jiying_scribe",
+      "kind": "script",
+      "for": "s_jiying_scribe",
+      "title": "拾简人",
+      "text": "简牍坑边点着一盏豆灯。拾简人把湿简一片片摆开晾，像在晾一床旧棉絮。「郢都塌的时候，官署的简没人抢——粮食比字金贵。」\n他挑出两卷给你：[[要|拿生食换]]，他说这是替死人收的邮资。",
+      "options": [
+        {
+          "key": "feed",
+          "label": "以生食换简",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 2
+            }
+          ],
+          "effects": {
+            "items": {
+              "book": 2
+            },
+            "knowledge": 1,
+            "flags": {
+              "scribe_bond": true
+            },
+            "text": "他把简卷好，动作像给婴儿裹襁褓。「四百年没人读它们了。你读，它们就还活着。」"
+          }
+        },
+        {
+          "key": "listen",
+          "label": "听他讲郢都",
+          "effects": {
+            "knowledge": 1,
+            "mood": {
+              "actor": 1
+            },
+            "text": "他讲城墙的走向，讲 market 台下水门的旧事——讲到你睡着，简牍坑的豆灯还亮着。"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "不打扰",
+          "effects": {
+            "text": "豆灯照着他佝偻的影子。整座死城的公文，归他一个人保管。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_baling_digger",
+      "kind": "script",
+      "for": "s_baling_digger",
+      "title": "先你一步的人",
+      "text": "玄室的椁板被撬开了一角。盗掘者蹲在洞口，镐头横在膝上——他听见你了，但他没回头。\n「外椁是我的。内椁——」他这才回头，眼白在暗处发亮，「内椁里的东西，压得住这个时代的价。」\n[[要|分他一份口粮]]，或者[[要|比一比谁的镐快]]。",
+      "options": [
+        {
+          "key": "share",
+          "label": "分他一份口粮",
+          "cost": [
+            {
+              "item": "canned",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "bl_pact": true
+            },
+            "npcState": {
+              "bl_digger": "greeted"
+            },
+            "mood": {
+              "actor": -1
+            },
+            "text": "他嚼得很慢，像在数米粒。「内椁你拿大件，我拿小件。乱世里的分赃，比太平年月的契约牢靠。」"
+          }
+        },
+        {
+          "key": "fight",
+          "label": "先下手",
+          "effects": {
+            "riskCheck": {
+              "difficulty": 9,
+              "ambush": true,
+              "onPass": {
+                "npcState": {
+                  "bl_digger": "down"
+                },
+                "text": "镐头还横在他膝上，人躺平了。玄室里只剩你和椁藏的呼吸声。"
+              },
+              "onFail": {
+                "combat": "bl_digger",
+                "text": "他在黑里待得比你久。"
+              }
+            }
+          }
+        },
+        {
+          "key": "backoff",
+          "label": "退出墓道",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_camp_watch",
+      "kind": "script",
+      "for": "s_camp_watch",
+      "title": "数箭的人",
+      "text": "辎车场的火把隔十步一枝。军需卒坐在粮囤下，一枚一枚数箭——数完一捆，在木牍上划一道。\n[[要|鹿角栅有半人高的缺口]]。从缺口进去，就是他的账；被他数进去，就是你的命。",
+      "options": [
+        {
+          "key": "count",
+          "label": "伏在缺口外跟他数",
+          "effects": {
+            "knowledge": 1,
+            "flags": {
+              "camp_reckoned": true
+            },
+            "mood": {
+              "actor": 1
+            },
+            "text": "四百二十捆箭，粮囤九座。你把这座营的命脉数进心里——夜里再黑，心里也是亮的。"
+          }
+        },
+        {
+          "key": "steal",
+          "label": "趁数箭声撬辎重箱",
+          "effects": {
+            "items": {
+              "bullet": 3
+            },
+            "riskCheck": {
+              "difficulty": 9,
+              "onPass": {
+                "text": "数箭的声音盖住了锁响。他数到第四百二十一捆，你退出了缺口。"
+              },
+              "onFail": {
+                "wound": 1,
+                "npcState": {
+                  "cl_quartermaster": "alert"
+                },
+                "text": "锁响的那一下，他停了。箭比喝问先到——你带伤滚出了鹿角栅。"
+              }
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "退回去",
+          "effects": {
+            "abortNight": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_shahead_broker",
+      "kind": "script",
+      "for": "s_shahead_broker",
+      "title": "帘后三指",
+      "text": "帘子后面没有铺面，只有一双眼睛和三根手指。「南市烧了，规矩没烧。」\n三根手指的意思你不懂，但你的口袋懂——[[要|把值钱的押上]]，他自会开价。",
+      "options": [
+        {
+          "key": "sell",
+          "label": "卖一件值钱货",
+          "cost": [
+            {
+              "item": "jewel",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "items": {
+              "meds": 1,
+              "water": 2
+            },
+            "flags": {
+              "sh_open": true
+            },
+            "text": "他掂了掂，从帘后推出两样东西。「下回来，报『南市老价』——这句暗语比路引好用。」"
+          }
+        },
+        {
+          "key": "ask",
+          "label": "打听行情",
+          "effects": {
+            "knowledge": 1,
+            "text": "「米价翻到九十了，还往上走。药，有价无市。」他顿了顿，「想活过开春，别攒钱，攒粮。」"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "掀帘走人",
+          "effects": {
+            "text": "帘子落下，三根手指在帘后并成了一根。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "s_zhangtai_score",
+      "kind": "script",
+      "for": "loc:zhangtai",
+      "title": "楔窝里的谱",
+      "text": "崩阶的楔窝里卡着一只木匣——楔窝是架柱的榫眼，柱没了，匣子在。匣里一卷谱，纸角烧焦，末行题着「章台引·楚声」。\n大族宅那张断弦的琴，缺的就是这一卷。",
+      "options": [
+        {
+          "key": "take",
+          "label": "收起谱卷",
+          "effects": {
+            "items": {
+              "book": 1
+            },
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "zhangtai_score": true
+            },
+            "text": "谱卷入手很轻。三休台塌成了土坡，曲子还在纸上等一双愿意按下去的手。"
+          }
+        },
+        {
+          "key": "read",
+          "label": "就着月光读一遍",
+          "effects": {
+            "knowledge": 1,
+            "mood": {
+              "actor": 2
+            },
+            "text": "楚声的调子起得很低，像从土里长出来的。读完你发现自己在流泪——为一座没见过的台。"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "原样放回",
+          "effects": {
+            "text": "有些东西属于塌掉的地方。你把楔窝的匣子推回原位。"
+          }
+        }
+      ]
     }
   ],
   "broadcasts": {

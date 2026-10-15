@@ -412,6 +412,16 @@ const LOC_BLURB = {
   market: '吃的', villas: '值钱货和锁', church: '安全，神父在',
   hospital: '药', post: '死信和旧纸', frontline: '最险，也最肥'
 };
+/** 黄昏排序与一句话（城市扩展）：老排序保底，新地点按内容包 blurb/threat 追加——
+ *  池里浮出哪个城，方案卡就认得哪个城 */
+function rankedLocs(known, pack) {
+  const head = LOC_RANK.filter((l) => known.includes(l));
+  const tail = known
+    .filter((l) => !head.includes(l))
+    .sort((a, b) => ((pack.locMap[a]?.threat || 0) - (pack.locMap[b]?.threat || 0)) || (a < b ? -1 : 1));
+  return [...head, ...tail];
+}
+const blurbOf = (pack, locId) => pack.locMap[locId]?.blurb || LOC_BLURB[locId] || '';
 
 /** 话里点名的地点（誓的判定与 planDusk 共用同一张别名表） */
 export function locOfText(state, pack, text) {
@@ -505,12 +515,12 @@ export function planDusk(state, pack) {
     const scavChar = s.chars.find((c) => c.id === scavId);
     const mindWarn = scavChar && lowMind(scavChar) ? `；${scavName}情绪很低，今晚可能不肯出门` : '';
     const dirNote = dirLoc === locId && dirHit ? `践誓——「${dirHit.text.slice(0, 14)}」；` : '';
-    return { key, label: lines.join('，'), hint: `${dirNote}${LOC_BLURB[locId] || ''}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
+    return { key, label: lines.join('，'), hint: `${dirNote}${blurbOf(pack, locId)}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
   };
 
   const plans = [];
   if (scav && known.length) {
-    const ranked = LOC_RANK.filter((l) => known.includes(l));
+    const ranked = rankedLocs(known, pack);
     if (dirLoc) { // 念头点名的地方排第一（不在常规排序里也照排——念头优先于habit）
       const i = ranked.indexOf(dirLoc);
       if (i >= 0) ranked.splice(i, 1);

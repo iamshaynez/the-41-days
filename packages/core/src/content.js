@@ -129,6 +129,36 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     const locIds = new Set(locations.map((l) => l.id));
     for (const p of map.places || []) if (!locIds.has(p.id)) errs.push(`舆图引用未知地点 ${p.id}`);
     for (const t of map.traces || []) if (t.when?.doc && !docMap[t.when.doc]) errs.push(`舆图痕 ${t.id} 引用未知文档 ${t.when.doc}`);
+    for (const r of map.roads || []) {
+      if (!locIds.has(r.from)) errs.push(`舆图道路引用未知地点 ${r.from}`);
+      if (!locIds.has(r.to)) errs.push(`舆图道路引用未知地点 ${r.to}`);
+    }
+  }
+  // 城市扩展引用校验：池成员、依赖地点/文档、标记图例——标不出即不存在
+  const poolSeen = new Map();
+  for (const p of manifest.locationPools || []) {
+    if (!p.group || !Array.isArray(p.members) || p.members.length < 2 || (p.pick || 1) >= p.members.length) {
+      errs.push(`地点池 ${p.group} 配置非法（members≥2 且 pick<members）`);
+      continue;
+    }
+    for (const mem of p.members) {
+      if (!locMap[mem]) errs.push(`地点池 ${p.group} 成员 ${mem} 不存在`);
+      if (poolSeen.has(mem)) errs.push(`地点 ${mem} 同时住在两个池里（${poolSeen.get(mem)} 与 ${p.group}）`);
+      poolSeen.set(mem, p.group);
+    }
+  }
+  const MARKS = new Set(['treasure', 'danger', 'story', 'trade', 'food', 'med']);
+  for (const l of locations) {
+    if (l.mark && !MARKS.has(l.mark)) errs.push(`地点 ${l.id} 的 mark ${l.mark} 不在图例`);
+    if (l.pool && ![...(manifest.locationPools || [])].some((p) => p.group === l.pool && p.members.includes(l.id))) {
+      errs.push(`地点 ${l.id} 自称属于池 ${l.pool}，池不认`);
+    }
+    for (const cond of [l.requires, l.heardWhen]) {
+      for (const v of [...(cond?.visitedAny || []), ...(cond?.visitedAll || [])]) {
+        if (!locMap[v]) errs.push(`地点 ${l.id} 的依赖地点 ${v} 不存在`);
+      }
+      for (const d of cond?.docs || []) if (!docMap[d]) errs.push(`地点 ${l.id} 的依赖文档 ${d} 不存在`);
+    }
   }
   if (historia) {
     const names = new Set(historia.persons || []);

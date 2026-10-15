@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "semver": "0.29.0",
+  "semver": "0.30.0",
   "name": "第 41 天 · 江陵",
   "coreVersion": ">=0.1.0",
   "files": [
@@ -43,6 +43,26 @@
     "church",
     "hospital",
     "villas"
+  ],
+  "locationPools": [
+    {
+      "group": "south",
+      "pick": 1,
+      "members": [
+        "fishing",
+        "dockyard"
+      ],
+      "comment": "南线每局只开一地：湖上的渔村，或渡口的军市"
+    },
+    {
+      "group": "ruins",
+      "pick": 1,
+      "members": [
+        "jiying",
+        "baling"
+      ],
+      "comment": "北线每局只开一地：故郢的简牍，或古冢的椁藏"
+    }
   ],
   "war": {
     "$comment": "v0.3 同步日历（正典圣经 v0.3 §1）：白衣渡江在序章之夜——玩家 D1 即交割次晨，D41 固定为临沮日（不掷骰）。玩家的四十一天与将军的四十一天同起点、同终点、两种命运。dissolveThreshold：军心溶解阈值——家访配合/家书报平安推高溶解；刀偏（或然）须同时握有杠杆且溶解低于阈值。",
