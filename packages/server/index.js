@@ -963,15 +963,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         return json(res, 200, { farewell: things });
       }
 
-      // —— 别传（长线体验-v0.2 §3.4：档案馆里的故事认出门） ——
-      const sideUnlocked = (u, arch) => {
-        if (!u) return true;
-        if (u.kind === 'seal') return arch.some((e) => e.kind === 'seal' && e.key === u.key);
-        if (u.kind === 'annal') return arch.some((e) => e.kind === 'annal');
-        if (u.kind === 'run_ending') return arch.some((e) => e.kind === 'run_memory' && e.data.ending === u.ending);
-        if (u.kind === 'docs') return arch.filter((e) => e.kind === 'doc').length >= u.count;
-        return false;
-      };
+      // —— 别传（长线体验-v0.2 §3.4：档案馆里的故事认出门；解锁判定见模块级 sideUnlocked） ——
       if (path === '/api/sidestories' && req.method === 'GET') {
         const s = auth(req);
         if (!s) return json(res, 401, { error: '请先登录。' });
@@ -1150,6 +1142,18 @@ function readBody(req) {
 }
 function parseCookie(str) {
   return Object.fromEntries(str.split(';').map((s) => s.trim().split('=').map(decodeURIComponent)));
+}
+
+/** 别传解锁判定（纯函数）：菜单列出与创建开局共用同一把钥匙——
+ *  曾声明在请求处理器后段，创建路径先引用 → TDZ 必 500（菜单点进去一本空书的根因），
+ *  提升到模块级，两条路由永远同一答案。 */
+export function sideUnlocked(u, arch) {
+  if (!u) return true;
+  if (u.kind === 'seal') return arch.some((e) => e.kind === 'seal' && e.key === u.key);
+  if (u.kind === 'annal') return arch.some((e) => e.kind === 'annal');
+  if (u.kind === 'run_ending') return arch.some((e) => e.kind === 'run_memory' && e.data.ending === u.ending);
+  if (u.kind === 'docs') return arch.filter((e) => e.kind === 'doc').length >= u.count;
+  return false;
 }
 
 // 直启入口：严格模式——schema 落后时拒启并提示 migrate（部署入口见 package.json / Dockerfile）
