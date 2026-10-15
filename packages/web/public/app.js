@@ -2152,12 +2152,13 @@ const DOC_LAYERS = [
 function openRite(html, cls = '') {
   const r = $('rite');
   r.className = 'rite' + (cls ? ' ' + cls : '');
-  r.innerHTML = `<button class="rite-x sheet-x" type="button" aria-label="合上">${svgUse('close')}</button><div class="rite-body">${html}</div>`;
+  // 滚动收在内层 .rite-scroll：木框与金线长在卷上，滚到底框也不丢
+  r.innerHTML = `<button class="rite-x sheet-x" type="button" aria-label="合上">${svgUse('close')}</button><div class="rite-scroll"><div class="rite-body">${html}</div></div>`;
   r.querySelector('.rite-x').addEventListener('click', closeSheets);
   // 逐行显影：幕内的 .rr 按序起拍（首拍让卷轴先落定）
   [...r.querySelectorAll('.rr')].forEach((p, i) => { p.style.animationDelay = `${0.35 + i * 0.45}s`; });
   openSheet('rite');
-  r.scrollTop = 0;
+  r.querySelector('.rite-scroll').scrollTop = 0;
 }
 /** 结局大典：走过的结局才有的五幕全文（数据装配见 ritual.js，老局体面降级） */
 function endingRiteHTML(run, gallery) {
