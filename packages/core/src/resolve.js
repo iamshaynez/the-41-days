@@ -261,7 +261,7 @@ function applyOne(ctx, intent) {
         same.lastDay = s.day;
         if (same.kind === 'vow') same.watered = (same.watered || 0) + 1;
         ctx.setFlag('directions', structuredClone(s.directions));
-        ctx.fact('direction_watered', { id: same.id, subject, text });
+        ctx.fact('direction_watered', { id: same.id, subject, text, kind: same.kind });
         return { ok: true };
       }
       const id = 'd' + (s.day) + '_' + (Object.keys(s.directions || {}).length + 1);
