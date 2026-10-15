@@ -1540,6 +1540,14 @@ body.motion-off { scroll-behavior: auto; }
 .annal-entry.forked { border-left-color: var(--accent-2, #d8b36a); }
 .annal-entry.forked em { color: var(--accent-2, #d8b36a); opacity: 1; }
 .annal-entry.forked em::after { content: ''; }
+
+/* 0.32.0 落幕 · 案语：史源前因后果——压卷与收束行之间的史官注疏 */
+.finale-act.notes { border-top: 1px dashed var(--brass, #6a5327); }
+.note-entry { font-family: var(--font-kai); font-size: 14px; line-height: 1.9; margin: 0 auto 14px; max-width: 36em; text-align: left; }
+.note-entry .n-src { display: block; font-size: 12px; letter-spacing: .12em; color: var(--brass, #8a6d3b); margin-bottom: 2px; }
+.note-entry .n-text { display: block; color: var(--ink-2, #bbb); }
+.note-entry .n-tie { display: block; font-style: normal; font-size: 13px; color: var(--ink-3, #999); margin-top: 3px; padding-left: 1.6em; text-indent: -1.6em; }
+.note-entry .n-tie::first-letter { color: var(--accent-2, #d8b36a); }
 .future-line.blank { color: var(--ink-4, #555); font-style: italic; }
 
 /* ════════════════════════════════════════════════════════════════
