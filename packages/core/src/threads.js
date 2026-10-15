@@ -4,6 +4,10 @@
 // 激活与去重全部从 state 派生（firedOnce/flags/day/dissolve），fold 可回放。
 import { aliveChars } from './state.js';
 import { DEED_PHRASES } from './ge.js';
+import { hashStr } from './rng.js';
+
+/** 低位折叠后取模：hashStr 的低 bit 对相近串有聚簇（实测三个 id 同余 7），先 ^ 高位再选 */
+const pickOf = (h, n) => ((h ^ (h >>> 16)) >>> 0) % n;
 
 const dissolveTh = (pack) => pack?.manifest?.war?.dissolveThreshold ?? 22;
 const threadActive = (s, th, pack) => {
@@ -11,6 +15,7 @@ const threadActive = (s, th, pack) => {
   if (a.card) return !!s.firedOnce[a.card];
   if (a.flag) return !!s.eventFlags?.[a.flag];
   if (a.dissolve === 'threshold') return (s.dissolve || 0) >= dissolveTh(pack);
+  if (a.chance !== undefined && pickOf(hashStr(`${s.seed}|thchance|${th.id}`), 100) >= a.chance) return false;
   return s.day >= (a.day ?? 1);
 };
 
@@ -48,7 +53,7 @@ export function tickThreads(ctx) {
       if (tc.via !== 'morning' || s.firedOnce[k]) return;
       if (s.day >= tc.from && s.day <= tc.to) {
         mark(k);
-        ctx.fact('thread_touch', { id: t.id, motif: t.motif, line: tc.line });
+        ctx.fact('thread_touch', { id: t.id, motif: t.motif, line: touchLine(s, t.id, i, tc) });
       }
     });
     // 翻转卡：窗口内择晨而落（晨位被占则顺延到窗口内下一晨）
@@ -73,15 +78,16 @@ export function tickThreads(ctx) {
 function tickActs(ctx) {
   const s = ctx.s;
   const ml = ctx.pack?.mainline;
-  const acts = (ml?.acts || []).filter((a) => a.days && a.question);
+  const acts = (ml?.acts || []).filter((a) => a.days && (a.questions || a.question));
   if (!acts.length || s.sidestory) return;
-  for (const { id: act, days, question } of acts) {
+  for (const { id: act, days, questions, question } of acts) {
+    const qPool = questions || [question];
     const first = days[0];
     const last = days[1];
     if (s.day >= first && s.day <= first + 1 && !s.firedOnce['actq_' + act]) {
       s.firedOnce['actq_' + act] = true;
       ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
-      ctx.fact('act_question', { act, q: question });
+      ctx.fact('act_question', { act, q: qPool[pickOf(hashStr(`${s.seed}|actq|${act}`), qPool.length)] });
     }
     if (s.day === last && !s.firedOnce['actw_' + act]) {
       s.firedOnce['actw_' + act] = true;
@@ -91,10 +97,36 @@ function tickActs(ctx) {
       const top = entries.sort((a, b) => b.weight - a.weight)[0];
       const you = top ? `${top.via ? name(top.via) : (top.actor === 'player' ? '你' : '')}${DEED_PHRASES[top.verb] || ''}${top.target && ctx.pack.charMap?.[top.target] ? '·' + name(top.target) : ''}` : '日子照常过';
       const city = ml.steps.filter((st) => (st.dayWindow?.[0] ?? st.day) >= first && (st.dayWindow?.[0] ?? st.day) <= last).map((st) => st.title).join('、') || '无大事';
-      const open = (ctx.pack.threads?.threads || []).filter((t) => !t.hidden && threadActive(s, t, ctx.pack)).map((t) => t.motif).join('、') || '无';
+      const open = [...(ctx.pack.threads?.threads || []).filter((t) => !t.hidden && threadActive(s, t, ctx.pack)).map((t) => t.motif),
+        ...rosterThreadsOf(s, ctx.pack).slice(0, 2).map((t) => t.motif)].join('、') || '无';
       ctx.fact('act_wrap', { act, you, city, open });
     }
   }
+}
+
+/** 触句挑选：句池（lines）按种子选一——同线不同周目不同相 */
+function touchLine(s, threadId, i, tc) {
+  if (Array.isArray(tc.lines) && tc.lines.length) return tc.lines[pickOf(hashStr(`${s.seed}|thl|${threadId}|${i}`), tc.lines.length)];
+  return tc.line;
+}
+
+/** 名册线（变奏的免费来源）：名册随机 → 在册者的心结即线。无状态行（浮卡已承
+ *  动态），只在捎话轨落一触、进幕结的「悬而未决」——轻重刚好 */
+export function rosterThreadsOf(s, pack) {
+  const cfg = pack?.threads?.rosterThreads;
+  if (!cfg?.enabled) return [];
+  const [lo, hi] = cfg.touchWindow || [13, 22];
+  return aliveChars(s)
+    .filter((c) => pack.charMap?.[c.id]?.persona?.knot)
+    .map((c) => {
+      const knot = pack.charMap[c.id].persona.knot;
+      const day = lo + pickOf(hashStr(`${s.seed}|knotday|${c.id}`), hi - lo + 1);
+      const knotShort = knot.length > 14 ? knot.slice(0, 14) + '……' : knot;
+      return {
+        id: 'knot_' + c.id, motif: `${c.name}的心事`, hidden: true,
+        touches: [{ from: day, to: day, via: 'franko', line: (cfg.frankoTemplate || '{knotShort}').replaceAll('{name}', c.name).replaceAll('{knotShort}', knotShort) }]
+      };
+    });
 }
 
 /** 线的状态行（常驻晨报，sev0 不拦概述）：游戏替玩家记住 */
@@ -111,15 +143,15 @@ export function threadsStateLines(state, pack) {
 /** 鲁舟捎话轨：到访日若撞上某线的 franko 轻触窗口，捎一句母题（并记账防重） */
 export function threadsFrankoPick(ctx) {
   const s = ctx.s;
-  for (const t of ctx.pack?.threads?.threads || []) {
-    if (!threadActive(s, t, ctx.pack)) continue;
+  for (const t of [...(ctx.pack?.threads?.threads || []), ...rosterThreadsOf(s, ctx.pack)]) {
+    if (t.hidden !== true && !threadActive(s, t, ctx.pack)) continue;
     for (const [i, tc] of (t.touches || []).entries()) {
       const k = `tht_${t.id}_${i}`;
       if (tc.via !== 'franko' || s.firedOnce[k]) continue;
       if (s.day >= tc.from && s.day <= tc.to) {
         s.firedOnce[k] = true;
         ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
-        return tc.line;
+        return touchLine(s, t.id, i, tc);
       }
     }
   }

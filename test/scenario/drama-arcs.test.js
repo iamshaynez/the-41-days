@@ -49,14 +49,20 @@ describe('A 正史停问：大事落地那晨，史书先问这个家', () => {
     assert.ok(card.options.length >= 2, '停问卡要有得选');
   });
 
-  test('如实登记 → 军心溶解账 +1（史与家的账真连着）', () => {
-    let s = newRun({ seed: 402 }).state;
-    s = passDay(s); s = passDay(s);
-    const before = s.dissolve || 0;
-    const key = PACK.cardMap.ask_m2_visit.options.find((o) => (o.effects || {}).dissolve > 0)?.key;
-    assert.ok(key, '军簿卡要有一条往军心账上加码的选项');
-    s = step(s, [{ type: 'event_choice', option: key }]).state;
-    assert.ok((s.dissolve || 0) > before, '答「如实登记」应推动军心账');
+  test('如实登记 → 军心溶解账 +1（史与家的账真连着；变奏世界扫种子找军簿局）', () => {
+    // D3 晨位如今按种子从池里选角——扫种子找一个抽中军簿卡的局
+    for (let seed = 1; seed <= 40; seed++) {
+      let s = newRun({ seed }).state;
+      s = passDay(s); s = passDay(s);
+      if (s.activeEvent?.cardId !== 'ask_m2_visit') continue;
+      const before = s.dissolve || 0;
+      const key = PACK.cardMap.ask_m2_visit.options.find((o) => (o.effects || {}).dissolve > 0)?.key;
+      assert.ok(key, '军簿卡要有一条往军心账上加码的选项');
+      s = step(s, [{ type: 'event_choice', option: key }]).state;
+      assert.ok((s.dissolve || 0) > before, '答「如实登记」应推动军心账');
+      return;
+    }
+    assert.ok(false, '40 个种子里军簿卡应至少出现一次（池分布异常）');
   });
 
   test('停问卡一次不重发（fold 可回放）', () => {
