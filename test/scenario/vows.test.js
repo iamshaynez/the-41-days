@@ -146,6 +146,26 @@ describe('seed 闭环（实测：北津台话头白天点了没反应、晚上�
     assert.ok(ctx.facts.some((f) => f.k === 'hist_seed_done'), '结账落一笔（对话历史里也留个收尾）');
   });
 
+  test('许约到兑现全链路（实测反馈：老是契约约定，点了没人去）：白天许约 → 黄昏践誓方案排第一 → 点它真的去、到地即践', () => {
+    // 前提：识途北津台（誓以识途为前提——planDusk 才排得出践誓方案）
+    let s = newRun({ seed: 850, roster: ['bron', 'marta', 'katya'] }).state;
+    s.knownLocs.push('beacon');
+    s = step(s, [{ type: 'direction', subject: 'bron', text: '天黑前登北津台看看' }]).state;
+    const vow = Object.values(s.directions).find((d) => d.kind === 'vow' && d.target === 'beacon');
+    assert.ok(vow, '白天许约 → 落成誓（target=beacon）');
+    // 黄昏：践誓方案必须排第一
+    s = step(s, [{ type: 'advance' }]).state;
+    const plans = planDusk(s, PACK).plans;
+    const top = plans.find((p) => p.intent.scavenger && p.intent.location);
+    assert.equal(top.intent.location, 'beacon', '带人的方案里北津台排第一（践誓优先）');
+    assert.match(top.hint, /践誓/, '方案 hint 点明「践誓」——玩家要知道点哪条才叫兑现');
+    // 点它 → 夜访北津台 → 到地即践
+    const r = step(s, [top.intent]);
+    assert.ok(r.state.night && !r.state.night.home && r.state.night.locId === 'beacon', '人真的去了北津台');
+    const v2 = Object.values(r.state.directions).find((d) => d.kind === 'vow');
+    assert.ok(v2 && v2.alive === false && v2.fulfilledDay, '到地即践——誓销账');
+  });
+
   test('史种独立发芽：窗口内没有大事 ask 步的早晨，回应卡照常长出', () => {
     const { state } = newRun({ seed: 833 });
     state.day = 33; state.phase = 'day'; // 33 在 [29,36] 内，且不在 ask 步日（3,12,16,19,27,29,38）
