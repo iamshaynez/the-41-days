@@ -16,9 +16,9 @@ const newRun = (opts = {}) => {
 const toNight = (loc = 'villas') => {
   let s = newRun();
   s = resolveInput(s, pack, [{ type: 'advance' }]).state;
-  const plans = planDusk(s, pack).plans;
-  const plan = plans.find((p) => p.intent.location === loc) || plans[0];
-  return resolveInput(s, pack, [plan.intent]).state;
+  // 直接构造指派（不借 planDusk 的排序——排序是状态感知的，夜用例不该跟着变）
+  const who = s.chars.find((c) => c.alive && c.wound < 3 && c.sick < 3);
+  return resolveInput(s, pack, [{ type: 'dusk_assign', scavenger: who.id, location: loc, gear: [], others: {} }]).state;
 };
 
 describe('管家：白天规划（planDay）', () => {
@@ -108,6 +108,35 @@ describe('管家：黄昏方案（planDusk）', () => {
     const stay = plans.find((p) => p.key === 'stay');
     const r = resolveInput(structuredClone(s), pack, [stay.intent]);
     assert.equal(r.state.day, s.day + 1, '留守过夜应推进到第二天');
+  });
+
+  test('地点排序看得见状态：搜空的降权，没翻过的优先（实测：选项里全是搜空的地点，没有出路）', () => {
+    let s = newRun();
+    s = resolveInput(s, pack, [{ type: 'advance' }]).state;
+    // 南市全搜空；医棚没去过（全新鲜）——首方案必须指向有货的地方
+    const market = pack.locMap.market;
+    const conts = (market.rooms || []).flatMap((r) => r.containers || []);
+    s.locState.market = { searched: Object.fromEntries(conts.map((c) => [c.id, 1])), npcState: {} };
+    s.knownLocs.push('hospital');
+    const top = planDusk(s, pack).plans.find((p) => p.intent.scavenger && p.intent.location);
+    assert.notEqual(top.intent.location, 'market', '不派去搜空的南市');
+    assert.ok(top.intent.location === 'church' || top.intent.location === 'hospital', '首方案指向没翻过的起步地（府库/医棚皆可）');
+  });
+
+  test('全搜空也有出路：最久未访的排第一（回补在重访时掷骰），hint 点明重访', () => {
+    let s = newRun();
+    s = resolveInput(s, pack, [{ type: 'advance' }]).state;
+    s.day = 20;
+    // 两个已知地点都搜空：南市 day2 搜的、宅区 day12 搜的——南市更久没走，回补期望高
+    for (const [locId, day] of [['market', 2], ['villas', 12]]) {
+      const loc = pack.locMap[locId];
+      const conts = (loc.rooms || []).flatMap((r) => r.containers || []);
+      s.locState[locId] = { searched: Object.fromEntries(conts.map((c) => [c.id, day])), npcState: {} };
+    }
+    s.knownLocs = ['home', 'market', 'villas'];
+    const top = planDusk(s, pack).plans.find((p) => p.intent.scavenger && p.intent.location);
+    assert.equal(top.intent.location, 'market', '全空时派去最久未访的（重访才有回补）');
+    assert.match(top.hint, /重访/, 'hint 告诉玩家这是重访碰回补，不是白跑');
   });
 
   test('危重伤员不出现在外出方案里', () => {
