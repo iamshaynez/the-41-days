@@ -123,6 +123,38 @@ describe('黄昏卡不收非答案：守誓／改约类纯念头不留', () => {
     assert.ok(!/已了结的话头/.test(cardBrief(clean, PACK, 'day')), '没有已了结主题时不硬塞');
   });
 
+  test('饥荒警报进黄昏简报：只剩 N 顿时点明「出门的人必须去富粮的地方」', () => {
+    const s = duskState();
+    for (const k of ['meal', 'canned', 'raw', 'meat', 'veg']) s.inventory[k] = 0;
+    s.inventory.raw = 2; // 3 张嘴 ≈ 0.7 天
+    const brief = cardBrief(s, PACK, 'dusk');
+    assert.match(brief, /只剩约 \d+ 顿口粮/, '警报带顿数');
+    assert.match(brief, /富粮/, '指明方向');
+    const day = cardBrief(s, PACK, 'day');
+    assert.ok(!/未践的誓：「/.test(day), '不再给谋士可抄写的誓文本');
+  });
+
+  test('危机过滤：断粮 ≤2 顿时，黄昏金选项砍掉留守与非粮地，白天砍掉纯念头类', () => {
+    const s = duskState();
+    for (const k of ['meal', 'canned', 'raw', 'meat', 'veg']) s.inventory[k] = 0;
+    s.inventory.raw = 2;
+    s.knownLocs.push('hospital', 'sewer');
+    const out = validateOptions(PACK, s, {
+      options: [
+        { label: '今晚都不出门', intents: [{ type: 'dusk_assign', scavenger: null, location: null, gear: [], others: {} }] },
+        { label: '去医棚翻药', intents: [{ type: 'dusk_assign', scavenger: 'bron', location: 'hospital', gear: [], others: {} }] },
+        { label: '去南市搬粮', intents: [{ type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: {} }] },
+        { label: '再许一遍那个誓', intents: [{ type: 'direction', subject: 'bron', text: '一定要找到吃的' }] }
+      ]
+    }, { card: 'dusk' });
+    assert.ok(out.some((o) => o.label === '去南市搬粮'), '富粮地保留');
+    assert.ok(!out.some((o) => o.label === '今晚都不出门'), '饥荒夜不留守选项');
+    assert.ok(!out.some((o) => o.label === '去医棚翻药'), '零粮地砍掉');
+    assert.ok(!out.some((o) => o.label === '再许一遍那个誓'), '纯念头砍掉');
+    const day = validateOptions(PACK, s, { options: [{ label: '惦记着那个誓', intents: [{ type: 'direction', subject: 'bron', text: '守约' }] }] }, { card: 'day' });
+    assert.equal(day.length, 0, '白天饥荒不出纯念头选项');
+  });
+
   test('黄昏简报标注搜空地点：全容器搜过的地点标「已搜空，别当正经去处反复派」', () => {
     const s = duskState();
     const loc = PACK.locMap.market;

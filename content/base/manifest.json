@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "semver": "0.35.2",
+  "semver": "0.35.3",
   "name": "第 41 天 · 江陵",
   "coreVersion": ">=0.1.0",
   "files": [
@@ -30,8 +30,8 @@
     "wood": 8,
     "parts": 12,
     "comp": 4,
-    "raw": 6,
-    "canned": 2,
+    "raw": 8,
+    "canned": 3,
     "water": 5,
     "bandage": 1,
     "crowbar": 1,

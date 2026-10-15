@@ -458,6 +458,9 @@ const LOC_BLURB = {
 /** 地点产出剖析（EV 份额：食物/柴）——按需派工的口径，纯函数按包缓存 */
 const LOC_PROFILE = new WeakMap();
 const FOOD_ITEMS = new Set(['meal', 'canned', 'raw', 'meat', 'veg']);
+/** 单地点产出剖析（按需派工/危机过滤共用） */
+export function locNeedProfile(pack, locId) { return locProfiles(pack)[locId] || { food: 0, fuel: 0 }; }
+
 function locProfiles(pack) {
   let m = LOC_PROFILE.get(pack);
   if (m) return m;
@@ -554,6 +557,15 @@ export function planDusk(state, pack) {
   }
   const known = (s.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]);
 
+  // 按需派工（管家常识）：家里缺什么，方案往产什么的地方排——缺口的判定与晨报同一口径
+  const mouths0 = alive.length;
+  const foodDays0 = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0) / Math.max(1, mouths0);
+  const winterSoon0 = s.winterActive || s.day >= (s.winterStart || 12) - 4;
+  const needsDusk = {
+    foodNeed: foodDays0 < 4,
+    fuelNeed: winterSoon0 && (s.inventory.firewood || 0) < 6
+  };
+
   // 外出候选：危重出不了门（startNight 会拒），排序 = 心态可出门 > 背包 > 战斗。
   // 抑郁者 50% 拒绝出门（startNight 掷骰）——方案卡不预检心情就等于让玩家点哑炮
   const lowMind = (c) => ['depressed', 'breakdown'].includes(moodLevel(c.moodPts).key);
@@ -615,16 +627,7 @@ export function planDusk(state, pack) {
 
   const plans = [];
   if (scav && known.length) {
-    // 按需派工（管家常识）：家里缺什么，方案往产什么的地方排——玩家说「找吃的」
-    // 时红方案也答得对；缺口的判定与晨报同一口径
-    const mouths0 = alive.length;
-    const foodDays0 = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0) / Math.max(1, mouths0);
-    const winterSoon0 = s.winterActive || s.day >= (s.winterStart || 12) - 4;
-    const needs = {
-      foodNeed: foodDays0 < 4,
-      fuelNeed: winterSoon0 && (s.inventory.firewood || 0) < 6
-    };
-    const ranked = rankedLocs(s, known, pack, needs);
+    const ranked = rankedLocs(s, known, pack, needsDusk);
     if (dirLoc) { // 念头点名的地方排第一（不在常规排序里也照排——念头优先于habit）
       const i = ranked.indexOf(dirLoc);
       if (i >= 0) ranked.splice(i, 1);
@@ -645,6 +648,10 @@ export function planDusk(state, pack) {
       hint: '安全，但吃的不会自己长出来',
       intent: { type: 'dusk_assign', scavenger: null, location: null, gear: [], others }
     });
+  }
+  if (needsDusk.foodNeed) {
+    const meals1 = Math.floor(['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0) / Math.max(1, alive.length));
+    for (const p of plans) if (p.intent.scavenger && p.intent.location) p.hint = `家里只剩约 ${meals1} 顿——这趟先为嘴；` + p.hint;
   }
   return { plans };
 }

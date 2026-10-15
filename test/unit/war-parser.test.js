@@ -77,6 +77,16 @@ describe('直读解析器（LLM 离线同构）', () => {
     assert.ok(p.clarify, '给出人话引导');
   });
 
+  test('饥荒用语直达（实测：输入「努力找吃的，好好休息」毫无作用）：白天收卷+休整，黄昏托管找食', () => {
+    const { state } = newRun({ roster: ['bron', 'katya', 'marta'] });
+    const p = parseDirect(state, PACK, '努力找吃的，好好休息');
+    assert.ok(p.intents.some((i) => i.type === 'auto_day'), '白天：收卷交给管家（今晚按需派工去富粮地）');
+    assert.ok(p.intents.some((i) => i.action === 'sleep' || i.action === 'rest'), '好好休息：安排补觉/卧床');
+    let s2 = step(state, [{ type: 'advance' }]).state;
+    const p2 = parseDirect(s2, PACK, '今晚想办法找吃的');
+    assert.equal(p2.intents[0].type, 'dusk_auto', '黄昏：托管派工（需求感知会选富粮地）');
+  });
+
   test('帮助有回音：帮助/怎么玩 映射 help（不再是哑巴入口）', () => {
     const { state } = newRun({ roster: ['bron'] });
     const p = parseDirect(state, PACK, '帮助');
