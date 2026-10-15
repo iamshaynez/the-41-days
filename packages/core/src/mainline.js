@@ -23,10 +23,22 @@ export function mainlineAskTick(ctx) {
     .map((e) => (typeof e === 'string' ? { card: e } : e))
     .filter((e) => ctx.pack.cardMap[e.card])
     .filter((e) => !e.needItem || (s.inventory[e.needItem] || 0) > 0);
+  // 史种注入（念头演化）：种下的史锚在窗口内长成一张为它定制的停问卡——
+  // 玩家的话改写史书后来问什么。注入项带 seedOf 便于落 firedOnce 双账
+  for (const d of Object.values(s.directions || {})) {
+    if (d.kind !== 'hist' || !d.alive || s.firedOnce['hs_' + d.id]) continue;
+    const card = ctx.pack.cardMap['hs_' + d.seed];
+    const [lo, hi] = card?.when?.seedWindow || [];
+    if (card && lo !== undefined && s.day >= lo && s.day <= hi) {
+      pool.push({ card: card.id, seedOf: d.id });
+      break; // 一晨至多一粒史种
+    }
+  }
   if (!pool.length) return;
   const picked = pool[pickOf(hashStr(`${s.seed}|ask|${step.id}`), pool.length)];
   const card = ctx.pack.cardMap[picked.card];
   s.firedOnce['ask_' + step.id] = true;
+  if (picked.seedOf) s.firedOnce['hs_' + picked.seedOf] = true; // 史种落地双账
   ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
   s.activeEvent = { cardId: picked.card };
   ctx.emit('EVENT_FIRED', { cardId: picked.card });

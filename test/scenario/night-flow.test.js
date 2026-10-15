@@ -99,7 +99,7 @@ describe('念头进方案卡：世界记着，管家也记着', () => {
     const plans = planDusk(seeded, PACK);
     assert.equal(plans.plans[0].intent.location, 'villas', '首选方案应照念头去大族宅区');
     assert.ok(plans.plans[0].intent.gear.includes('crowbar'), '应带上铁撬');
-    assert.ok(plans.plans[0].hint.includes('念头'), `hint 应注明这是照着念头走：${plans.plans[0].hint}`);
+    assert.ok(/誓|惦记/.test(plans.plans[0].hint), `hint 应注明这是照着誓走：${plans.plans[0].hint}`);
     // 对照：没种念头时，首选仍是常规排序（南市在前）
     const control = planDusk(state, PACK);
     assert.equal(control.plans[0].intent.location, 'market', '无念头时按常规排序');

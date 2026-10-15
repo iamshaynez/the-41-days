@@ -1150,15 +1150,9 @@ function syncAsks(s) {
       if (s.careView?.problems?.length) {
         const body = el('div', 'ask-body');
         for (const p of s.careView.problems.slice(0, 5)) {
-          body.appendChild(el('p', 'care-line' + (p.sev >= 3 ? ' bad' : p.sev >= 2 ? ' mid' : '') + (String(p.key || '').startsWith('thread_') ? ' thread-line' : ''), esc(p.text)));
+          body.appendChild(el('p', 'care-line' + (p.sev >= 3 ? ' bad' : p.sev >= 2 ? ' mid' : '') + (['thread_', 'vow_'].some((pfx) => String(p.key || '').startsWith(pfx)) ? ' thread-line' : ''), esc(p.text)));
         }
         node.appendChild(body);
-      }
-      if (s.directions?.length) {
-        const dir = el('div', 'ask-body dir-box');
-        dir.appendChild(el('p', 'm-kicker', '种下的念头'));
-        for (const d of s.directions) dir.appendChild(el('p', 'care-line', `「${esc(d.text)}」——${esc(d.name)}记着呢（第${d.day}天种下）`));
-        node.appendChild(dir);
       }
       const opts = el('div', 'ask-opts');
       for (const sg of (s.suggests || []).filter((x) => !x.focus)) {

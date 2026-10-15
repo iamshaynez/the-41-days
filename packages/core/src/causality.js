@@ -257,19 +257,12 @@ export function tickDirections(ctx) {
   const all = Object.values(s.directions || {});
   if (!all.length) return;
   let dirty = false;
+  // 杂念：三天自散（不回声——永生回响退役，誓有晨报行、史种有落地卡）
   for (const d of all) {
-    if (d.alive && s.day - d.lastDay > 10) {
+    if (d.kind === 'misc' && d.alive && s.day - d.lastDay >= 3) {
       d.alive = false; dirty = true;
       ctx.fact('direction_faded', { id: d.id, subject: d.subject, text: d.text });
     }
-  }
-  for (const d of all.filter((x) => x.alive)) {
-    if (s.day <= d.day) continue;
-    if ((s.day - d.day) % 3 !== 1 || d.echoDay === s.day) continue;
-    if (d.subject && !charById(s, d.subject)) continue; // 人不在了，念头无处落
-    d.echoDay = s.day; dirty = true;
-    ctx.fact('direction_echo', { id: d.id, char: d.subject, text: d.text });
-    break; // 一天至多一声回响
   }
   if (dirty) ctx.setFlag('directions', structuredClone(s.directions));
 }

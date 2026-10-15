@@ -13,7 +13,7 @@ import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickPro
 import { tickAutonomous, tickDirections, bumpPairArc } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
-import { planDay, planNightStep, tickDawnLedgers, tickDrama } from './delegate.js';
+import { planDay, planNightStep, tickDawnLedgers, tickDrama, locOfText } from './delegate.js';
 import { mainlineAskTick } from './mainline.js';
 import { tickThreads } from './threads.js';
 import { preludeBeats } from './prelude.js';
@@ -206,27 +206,49 @@ function applyOne(ctx, intent) {
       return { ok: true };
     }
     case 'direction': {
-      // 念头（v3 命运导演）：介于命令与规矩之间的第三种动词——种下方向，不立即执行。
-      // 显形由三处延迟消化：晨间回声（causality）、命运导演锚池（ge）、叙事者简报。
+      // 念头演化（三级分流）：说出口的话按对象分家——
+      //  史锚（北津台/家书/麦城/军心）→ 史种：不进面板，日后在晨位池长出为它定制的停问卡；
+      //  点名地点 → 誓：晨报一行「未践」，夜访到地即践（列传改写），反复说从不做会被记账；
+      //  其余 → 杂念：静默，三天自散。旧「永生回声」退役。
       const text = String(intent.text).trim().slice(0, 60);
       const subject = intent.subject && s.chars.some((c) => c.id === intent.subject && c.alive) ? intent.subject : null;
       const alive = Object.values(s.directions || {}).filter((d) => d.alive);
       const same = alive.find((d) => d.subject === subject && d.text === text);
-      if (same) { // 再说一遍 = 浇水：延缓枯萎，不重种
+      if (same) { // 再说一遍 = 浇水：誓记「说过几遍」，别的只延寿
         same.lastDay = s.day;
+        if (same.kind === 'vow') same.watered = (same.watered || 0) + 1;
         ctx.setFlag('directions', structuredClone(s.directions));
         ctx.fact('direction_watered', { id: same.id, subject, text });
         return { ok: true };
       }
-      if (alive.length >= 3) { // 数量上限：念头不是任务清单，最老的让位
-        const oldest = [...alive].sort((a, b) => a.lastDay - b.lastDay)[0];
-        oldest.alive = false;
-        ctx.fact('direction_faded', { id: oldest.id, subject: oldest.subject, text: oldest.text });
+      const HIST_KEYS = [
+        ['beacon', /北津台|烽火台|举火/], ['letters', /家书|寄信|写信/],
+        ['maicheng', /麦城/], ['army', /军心|北边的兵|士气/]
+      ];
+      const histHit = HIST_KEYS.find(([, re]) => re.test(text));
+      const locHit = !histHit && locOfText(s, ctx.pack, text);
+      const kind = histHit ? 'hist' : locHit ? 'vow' : 'misc';
+      const id = 'd' + (s.day) + '_' + (Object.keys(s.directions || {}).length + 1);
+      const entry = {
+        id, text, subject, kind, day: s.day, lastDay: s.day, alive: true, watered: 0,
+        ...(kind === 'hist' ? { seed: histHit[0] } : {}),
+        ...(kind === 'vow' ? { target: locHit } : {})
+      };
+      (s.directions ||= {})[id] = entry;
+      if (kind === 'vow') {
+        // 誓上限 3：立新挤旧——最旧的活誓转「未践到底」
+        const vows = Object.values(s.directions).filter((d) => d.kind === 'vow' && d.alive).sort((a, b) => a.day - b.day);
+        for (let i = 0; i < vows.length - 3; i++) {
+          vows[i].alive = false;
+          ctx.fact('vow_broken', { id: vows[i].id, subject: vows[i].subject, text: vows[i].text });
+        }
+        ctx.fact('vow_made', { id, subject, text, target: locHit });
+      } else if (kind === 'hist') {
+        ctx.fact('hist_seed', { id, text, seed: histHit[0] }); // 只回一句轻的——不立专栏不回声
+      } else {
+        ctx.fact('direction_set', { id, subject, text });
       }
-      const id = `d${s.day}_${Object.keys(s.directions || {}).length + 1}`;
-      s.directions[id] = { id, subject, text, day: s.day, lastDay: s.day, alive: true };
       ctx.setFlag('directions', structuredClone(s.directions));
-      ctx.fact('direction_set', { id, subject, text });
       return { ok: true };
     }
     case 'scene': {

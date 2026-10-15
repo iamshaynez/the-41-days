@@ -1,9 +1,11 @@
-// 念头（direction）生命周期场景（命运导演 P1）：
-// 种下 → 登记/FLAG/fact → 浇水 → 上限挤出让位 → 晨间回声 → 枯萎 → 锚池/世界简报可见。
-// 念头是介于命令（act）与规矩（policy）之间的第三种动词：玩家种方向，世界慢慢消化。
+// 念头演化（三级分流）：誓（影响列传）/史种（长成停问卡）/杂念（静默快散）。
+// 永生回声与「种下的念头」专栏退役——隆重度与兑付力对齐。
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRun, step, PACK } from '../helpers.js';
+import { Ctx } from '../../packages/core/index.js';
+import { tickDirections } from '../../packages/core/src/causality.js';
+import { dawnProblems } from '../../packages/core/src/delegate.js';
 import { fold } from '../../packages/core/index.js';
 import { anchorPool } from '../../packages/core/src/ge.js';
 import { worldBrief, renderDirect } from '../../packages/server/narrate.js';
@@ -24,7 +26,7 @@ describe('场景：种下一个念头', () => {
     assert.deepEqual(rebuilt.directions, r.state.directions);
     // 直读渲染：这句话落进了心里
     const line = renderDirect(r.state, r.facts, PACK);
-    assert.ok(line.includes('教她认字') && line.includes('心里'), `渲染应含念头原文：${line}`);
+    assert.ok(line.includes('种子'), `杂念直读行轻描淡写（不陈列原文）：${line}`);
   });
 
   test('同一念头再说一遍：浇水，不重种', () => {
@@ -40,51 +42,46 @@ describe('场景：种下一个念头', () => {
     assert.ok(r2.facts.some((f) => f.k === 'direction_watered'), '落浇水 fact');
   });
 
-  test('第四颗念头：最老的淡出让位（fact direction_faded）', () => {
+  test('第四颗杂念不挤兑（誓才有上限；杂念自散）', () => {
     const { state } = newRun({ seed: 13 });
     let s = state;
-    const texts = ['教她认字', '把账写下去', '夜里别一个人出门', '学琴'];
-    for (const t of texts) s = step(s, [{ type: 'direction', subject: 'marta', text: t }]).state;
-    const alive = Object.values(s.directions).filter((d) => d.alive);
-    assert.equal(alive.length, 3, '同时至多三颗');
-    assert.ok(!alive.some((d) => d.text === '教她认字'), '最老的已淡出');
-  });
-
-  test('晨间回声：种下次日世界记得（fact direction_echo）', () => {
-    const { state } = newRun({ seed: 14 });
-    const r0 = step(state, [{ type: 'direction', subject: 'marta', text: '教她认字' }]);
-    const r1 = step(r0.state, [{ type: 'advance' }]);
-    assert.equal(r1.state.phase, 'dusk');
-    const r2 = step(r1.state, [{ type: 'dusk_assign', scavenger: null, others: {} }]);
-    assert.equal(r2.state.day, 2, '过了一天');
-    assert.ok(r2.facts.some((f) => f.k === 'direction_echo' && f.char === 'marta'), `次日晨间应有回声：${r2.facts.map((f) => f.k).join(',')}`);
-  });
-
-  test('十天没人再提：念头枯萎（fact direction_faded）', () => {
-    const { state } = newRun({ seed: 15 });
-    const r0 = step(state, [{ type: 'direction', subject: 'marta', text: '教她认字' }]);
-    let s = r0.state;
-    let faded = false;
-    for (let d = 0; d < 13 && !s.over && !faded; d++) {
-      const r = step(s, [{ type: 'advance' }]);
-      const r2 = step(r.state, [{ type: 'dusk_assign', scavenger: null, others: {} }]);
-      s = r2.state;
-      faded = r2.facts.some((f) => f.k === 'direction_faded');
+    for (const t of ['教她认字', '冬天要撑过去', '春天种点菜', '多睡点觉']) {
+      s = step(s, [{ type: 'direction', subject: 'marta', text: t }]).state;
     }
-    assert.ok(faded, '十天后枯萎');
-    assert.ok(Object.values(s.directions).every((d) => !d.alive), '没有活着的念头');
+    assert.equal(Object.values(s.directions).filter((d) => d.alive).length, 4, '杂念不限量');
   });
 
-  test('念头进锚池与世界简报——裁判、叙事者、编剧都看得见', () => {
+  test('回声退役：杂念不回声，三天自散（fact direction_faded）', () => {
+    const { state } = newRun({ seed: 14 });
+    const r0 = step(state, [{ type: 'direction', subject: 'marta', text: '教她认字' }]); // 杂念（无地无名）
+    assert.ok(r0.facts.some((f) => f.k === 'direction_set'), '登记照旧');
+    let s = r0.state;
+    const ctx = new Ctx({ ...s, day: s.day + 3 }, PACK, [], []);
+    tickDirections(ctx);
+    assert.ok(ctx.facts.some((f) => f.k === 'direction_faded'), '三天自散');
+    assert.ok(!ctx.facts.some((f) => f.k === 'direction_echo'), '永生回声已退役');
+  });
+
+  test('誓不枯萎：晨报一行常驻直到践行（杂念才散）', () => {
+    const { state } = newRun({ seed: 15 });
+    const r0 = step(state, [{ type: 'direction', text: '去大族宅区拆板材' }]); // 誓
+    const v = Object.values(r0.state.directions).find((d) => d.kind === 'vow');
+    assert.ok(v, '点名宅区成誓');
+    const later = { ...r0.state, day: r0.state.day + 12 };
+    const line = dawnProblems(later, PACK).find((p) => p.key === 'vow_' + v.id);
+    assert.ok(line && /未践·第12天/.test(line.text), `誓常驻晨报（${line?.text}）`);
+  });
+
+  test('世界简报只报未践的誓——杂念不广播（谋士不再复读）', () => {
     const { state } = newRun({ seed: 16 });
-    const s = step(state, [{ type: 'direction', subject: 'anton', text: '把账写下去' }]).state;
-    const pool = anchorPool(PACK, s);
-    assert.ok(pool.includes('念头:文简·把账写下去'), `锚池应含念头：${pool.join(' ')}`);
+    let s = step(state, [{ type: 'direction', text: '去南市看看' }]).state; // 誓
+    s = step(s, [{ type: 'direction', subject: 'anton', text: '把账写下去' }]).state; // 杂念
     const brief = worldBrief(s, PACK);
-    assert.ok(brief.includes('把账写下去') && brief.includes('念头'), `简报应含念头：${brief}`);
+    assert.ok(brief.includes('未践的誓') && brief.includes('南市'), '誓要进简报');
+    assert.ok(!brief.includes('把账写下去'), '杂念不广播');
   });
 
-  test('念头的主人不在了：回声不再响（但登记不失败）', () => {
+  test('誓的主人不在了：登记不失败（列传照念）', () => {
     const { state } = newRun({ seed: 17 });
     const s = step(state, [{ type: 'direction', subject: null, text: '这个家要有个读书声' }]).state;
     assert.ok(Object.values(s.directions)[0].subject === null, '全家念头 subject 为 null');
