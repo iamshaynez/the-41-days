@@ -744,6 +744,34 @@ export function suggests(state, pack) {
     }
     if (foodTotal <= 3 && foodTotal > 0) out.push({ label: '省着吃，今天交给他们', intents: [{ type: 'policy', key: 'rationing', value: true }, close] });
     if (policyOf(s).rationing && foodTotal > 3) out.push({ label: '恢复正常吃饭，今天交给他们', intents: [{ type: 'policy', key: 'rationing', value: false }, close] });
+    // 白天能做的事要看得见（玩家实测：白天似乎没事可做）——把既有机制一键化亮出来。
+    // 补觉：疲惫的人打盹是最常被问的「白天能干嘛」
+    {
+      const tired = aliveChars(s).filter((c) => c.fatigue >= 1 && !c.bedRest && c.ap >= 2);
+      if (tired.length) out.push({
+        label: `让疲惫的补一觉（${tired.map((c) => c.name).join('、')}），其余交给他们`,
+        intents: [...tired.map((c) => ({ type: 'act', actor: c.id, action: 'sleep' })), close]
+      });
+    }
+    // 搜家：家里还有没翻完的角落——白天最稳妥的进项
+    {
+      const leftovers = (pack.locMap.home.rooms || []).flatMap((r) => s.house.opened[r.id]
+        ? (r.containers || []).filter((ct) => !s.house.searched[ct.id] && (ct.type !== 'locked' || s.house.searched[ct.id + ':open'])) : []);
+      if (leftovers.length) {
+        const who = aliveChars(s).find((c) => c.ap > 0 && !c.bedRest);
+        if (who) out.push({
+          label: `把家里没翻的角落再翻一遍（还有 ${leftovers.length} 处），其余交给他们`,
+          intents: [...leftovers.slice(0, Math.min(who.ap, 3)).map((ct) => ({ type: 'act', actor: who.id, action: 'search_home', target: ct.id })), close]
+        });
+      }
+    }
+    // 劈家具攒柴：wood 可代柴烧饭（厨房认 firewood 或 wood）——柴与板材见底才出，不唠叨
+    {
+      if ((s.inventory.axe || 0) > 0 && (s.homeFurniture || 0) > 0 && ((s.inventory.firewood || 0) + (s.inventory.wood || 0)) <= 3) {
+        const who = aliveChars(s).find((c) => c.ap > 0 && !c.bedRest);
+        if (who) out.push({ label: '劈件旧家具，攒柴烧饭过冬', intents: [{ type: 'act', actor: who.id, action: 'chop' }, close] });
+      }
+    }
     if (s.facilities.radio) {
       const hearer = aliveChars(s).find((c) => c.ap > 0 && !c.bedRest);
       if (hearer) out.push({ label: '听听更鼓，其余交给他们', intents: [{ type: 'act', actor: hearer.id, action: 'listen_radio' }, close] });

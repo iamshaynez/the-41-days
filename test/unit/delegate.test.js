@@ -172,6 +172,24 @@ describe('晨报问题（dawnProblems）与情境建议（suggests）', () => {
     // 宏观节奏：白天建议全部收卷（求助除外）
     for (const x of sg.filter((y) => y.label !== '我能做什么？')) assert.equal(x.intents.at(-1).type, 'auto_day', `${x.label} 应收卷`);
   });
+
+  test('白天能做的事要看得见：疲惫补觉 / 家里没翻完的角落 / 劈家具攒柴', () => {
+    // 玩家实测反馈：白天能做的太少。先把已有动作一键化亮出来——
+    // 补觉、搜家、劈柴都是既有机制，缺的是入口。
+    const s = newRun();
+    s.chars[0].fatigue = 2; s.chars[0].ap = 3; // 有人疲惫且有力气打盹
+    s.inventory.axe = 1; s.homeFurniture = 2;
+    s.inventory.firewood = 0; s.inventory.wood = 0;
+    s.house.opened.kitchen = true; s.house.searched = {}; // 厨房开着、柜子没翻
+    const sg = suggests(s, pack);
+    assert.ok(sg.some((x) => x.label.includes('补一觉') && x.intents.some((i) => i.action === 'sleep' && i.actor === s.chars[0].id)), '疲惫补觉一键（带人名的动作）');
+    assert.ok(sg.some((x) => x.label.includes('翻') && x.intents.some((i) => i.action === 'search_home')), '家里没翻完的角落一键');
+    assert.ok(sg.some((x) => x.label.includes('劈') && x.intents.some((i) => i.action === 'chop')), '劈家具攒柴一键（柴与板材见底时）');
+    for (const x of sg) if (x.intents) assert.equal(x.intents.at(-1).type, 'auto_day', `${x.label} 也要收卷`);
+    // 不缺柴时不出劈柴行
+    s.inventory.firewood = 6;
+    assert.ok(!suggests(s, pack).some((x) => x.label.includes('劈')), '柴够了就不唠叨');
+  });
   test('夜里建议带 auto_night 结构化意图', () => {
     let s = toNight('villas');
     if (s.phase !== 'night') s = newRun(); // 防御：夜访没建成则跳过
