@@ -7,7 +7,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRun, step, PACK } from '../helpers.js';
 import { planNightStep, planDusk } from '../../packages/core/src/delegate.js';
-import { validateOptions } from '../../packages/server/options.js';
+import { validateOptions, cardBrief } from '../../packages/server/options.js';
 
 /** 造一个停在岔路的微操夜（frontline 有警惕的巡逻兵，seed 93 与 night-flow 同源） */
 function nightAtFork() {
@@ -61,6 +61,54 @@ describe('夜卡不收戏文：非答案不包装成选项', () => {
     assert.equal(day.length, 1, '方略卡保留戏文轨（设计用途：说得出口的事交给舞台接）');
     assert.equal(day[0].intents[0].type, 'scene');
     assert.match(day[0].hint, /戏文/);
+  });
+});
+
+describe('黄昏卡不收非答案：守誓／改约类纯念头不留', () => {
+  /** 白天收卷直落黄昏（与上面 junk 用例同一条捷径） */
+  function duskState() {
+    const { state } = newRun({ seed: 98 });
+    return step(state, [{ type: 'advance' }]).state;
+  }
+
+  test('守誓／改约只有 direction 意图（可行但不派工）——黄昏卡必须整条丢弃', () => {
+    const s = duskState();
+    assert.equal(s.phase, 'dusk', '测试前提：停在黄昏');
+    const out = validateOptions(PACK, s, {
+      options: [
+        { label: '守誓：冒雨登北津台', hint: '说出去的话要作数', intents: [{ type: 'direction', subject: 'anton', text: '冒雨登北津台' }] },
+        { label: '改约', hint: '推到天晴再说', intents: [{ type: 'direction', subject: 'anton', text: '北津台的事推到天晴' }] }
+      ]
+    }, { card: 'dusk' });
+    assert.equal(out.length, 0, '黄昏等的是派工（dusk_assign）——纯念头是「点得动、夜不开始」的陷阱（实测死循环）');
+  });
+
+  test('真派工照常放行：出门践誓与在家留守都是答案', () => {
+    const s = duskState();
+    s.knownLocs.push('beacon');
+    const out = validateOptions(PACK, s, {
+      options: [
+        { label: '今晚都不出门', intents: [{ type: 'dusk_assign', scavenger: null, location: null, gear: [], others: { anton: 'sleep', marta: 'sleep' } }] },
+        { label: '冒雨登北津台（践誓）', intents: [{ type: 'dusk_assign', scavenger: 'anton', location: 'beacon', gear: [], others: { marta: 'sleep' } }] },
+        { label: '派工之外的杂念', intents: [{ type: 'dusk_assign', scavenger: 'anton', location: 'beacon', gear: [], others: {} }, { type: 'direction', subject: 'anton', text: '看好台上的柴' }] }
+      ]
+    }, { card: 'dusk' });
+    assert.equal(out.length, 3, '带 dusk_assign 的选项（哪怕附带念头）都过');
+  });
+
+  test('内核行为锚定：黄昏只有 direction 意图时 phase 不动（这就是循环本身），dusk_assign 才入夜', () => {
+    let s = duskState();
+    s = step(s, [{ type: 'direction', subject: 'anton', text: '冒雨登北津台' }]).state;
+    assert.equal(s.phase, 'dusk', '念头不派工——黄昏还在原地等答案');
+    s = step(s, [{ type: 'dusk_assign', scavenger: null, location: null, gear: [], others: {} }]).state;
+    assert.notEqual(s.phase, 'dusk', '派了工夜才开始/收尾');
+  });
+
+  test('黄昏提示词写明派工契约（dusk_assign 单意图 + 践誓指引）——删了契约模型就会拿念头凑数', () => {
+    const s = duskState();
+    const brief = cardBrief(s, PACK, 'dusk');
+    assert.match(brief, /"type":"dusk_assign"/, '黄昏卡提示词必须给出 dusk_assign 意图格式');
+    assert.match(brief, /黄昏不收 direction/, '念头白天说的规矩要写明');
   });
 });
 
