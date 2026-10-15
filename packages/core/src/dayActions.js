@@ -9,6 +9,14 @@ export const AP_COST = { eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2,
 
 export function applyDayAction(ctx, intent) {
   const s = ctx.s, pack = ctx.pack;
+  if (!intent.actor) {
+    // 托管（策略级输入的兜底解）：没点名执行者——内核选可行动的人，不把指令作废
+    const pick = aliveChars(s).find((c) => !c.bedRest && c.ap >= (AP_COST[intent.action] ?? 0));
+    if (pick) {
+      intent = { ...intent, actor: pick.id };
+      ctx.fact('delegated_pick', { char: pick.id, action: intent.action });
+    }
+  }
   const c = charById(s, intent.actor);
   if (!c) return { ok: false, reason: 'NO_CHAR' };
   const action = intent.action;

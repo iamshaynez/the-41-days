@@ -13,7 +13,8 @@ import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickPro
 import { tickAutonomous, tickDirections, bumpPairArc } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
-import { planDay, planNightStep, tickDawnLedgers, tickDrama, locOfText } from './delegate.js';
+import { planDay, planDusk, planNightStep, tickDawnLedgers, tickDrama, locOfText } from './delegate.js';
+import { normalizeIntent } from './parser.js';
 import { mainlineAskTick } from './mainline.js';
 import { tickThreads } from './threads.js';
 import { preludeBeats } from './prelude.js';
@@ -27,6 +28,7 @@ export function validateIntentShape(intent) {
   switch (intent.type) {
     case 'act': return typeof intent.action === 'string';
     case 'dusk_assign': return true;
+    case 'dusk_auto': return true; // 内部托管意图（直读「派人出门」→ planDusk 首方案）
     case 'night': return typeof intent.action === 'string';
     case 'trade_op': return intent.give || intent.get;
     case 'event_choice': return typeof intent.option === 'string';
@@ -86,9 +88,12 @@ export function resolveInput(state, pack, intents) {
       runDirectiveNight(ctx, rejects, stance);
       continue;
     }
-    if (!validateIntentShape(intent)) { rejects.push({ intent, reason: 'BAD_SHAPE' }); continue; }
-    ctx.delegated = !!intent.delegated;
-    const r = applyOne(ctx, intent);
+    // 宽进统一洗（LLM/直读同一条管线）：中文名翻 id、泛指执行者清掉——
+    // 内核裁决永远拿到规范意图，「人/谁」绝不以角色名的身份走到 NO_CHAR
+    const norm = normalizeIntent(state, pack, intent);
+    if (!validateIntentShape(norm)) { rejects.push({ intent, reason: 'BAD_SHAPE' }); continue; }
+    ctx.delegated = !!norm.delegated;
+    const r = applyOne(ctx, norm);
     ctx.delegated = false;
     if (r && r.ok === false) rejects.push({ intent, reason: r.reason });
   }
@@ -187,6 +192,21 @@ function applyOne(ctx, intent) {
         ctx.fact('fate_passed', { title: fateCard?.title || '' });
       }
       return startNight(ctx, intent);
+    }
+    case 'dusk_auto': {
+      // 托管黄昏（策略级输入的兜底解）：「派人出门找吃的」——没点名没点地，
+      // 内核出与黄昏卡同源的最优方案（planDusk 首个出门方案）；rest=话里交代了其余人休息
+      if (s.phase !== 'dusk') return { ok: false, reason: 'NOT_DUSK' };
+      const { plans } = planDusk(s, ctx.pack);
+      const plan = plans.find((p) => p.intent.scavenger && p.intent.location) || plans[0];
+      if (!plan) return { ok: false, reason: 'NOT_DUSK' };
+      const i = { ...plan.intent };
+      if (intent.rest && i.scavenger) {
+        const others = {};
+        for (const c of aliveChars(s)) if (c.id !== i.scavenger) others[c.id] = 'sleep';
+        i.others = others;
+      }
+      return startNight(ctx, i);
     }
     case 'night': {
       if (s.night?.home) return { ok: false, reason: 'HOME_NIGHT' };

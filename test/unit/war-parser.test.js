@@ -2,7 +2,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRun, step, ch, PACK } from '../helpers.js';
-import { parseDirect } from '../../packages/core/index.js';
+import { parseDirect, normalizeIntent } from '../../packages/core/index.js';
 
 describe('战争 W/N 系', () => {
   test('W-01 临沮日固定 D41 且提前 5 天预告（v0.3 同步日历：不掷骰）', () => {
@@ -81,5 +81,56 @@ describe('直读解析器（LLM 离线同构）', () => {
     const { state } = newRun({ roster: ['bron'] });
     const p = parseDirect(state, PACK, '状态');
     assert.deepEqual(p.intents, [{ type: 'meta', query: 'status' }]);
+  });
+});
+
+describe('托管语义：策略级输入选可行动的解（不点名也不猜名）', () => {
+  // 实测伤：手输「派人出门找吃的，其他人休息」→「人」被当成角色名 → NO_CHAR「这个人不在」死胡同。
+  // 规矩：没点名具体人的托管措辞，交给内核选可行动的解——手动输入不该因此作废。
+  test('黄昏：派人出门找吃的，其他人休息 → 内核最优方案出门、其余全睡', () => {
+    const { state } = newRun({ seed: 5, roster: ['bron', 'katya', 'marta'] });
+    const s = step(state, [{ type: 'advance' }]).state; // 到黄昏
+    s.inventory.crowbar = 1;
+    const p = parseDirect(s, PACK, '派人出门找吃的，其他人休息');
+    assert.equal(p.intents[0].type, 'dusk_auto', '托管黄昏 → 内部 dusk_auto（内核最优方案）');
+    const r = step(s, p.intents);
+    const st = r.state;
+    assert.equal(st.phase, 'night', '夜开始了');
+    assert.ok(st.night && !st.night.home, '有人出门（不是留守夜）');
+    const out = ch(st, st.night.charId);
+    assert.ok(out.alive && (out.wound ?? 0) < 3, '出门的是走得动的活人');
+    for (const x of st.chars.filter((y) => y.alive && y.id !== st.night.charId)) {
+      assert.ok(!x.awakeTonight, `${x.name} 应在睡（话里交代了休息）`);
+    }
+  });
+
+  test('白天：派人出门找吃的，其他人休息 → 收卷今天（出门是夜间任务，黄昏方案照派）', () => {
+    const { state } = newRun({ seed: 5, roster: ['bron', 'katya', 'marta'] });
+    const p = parseDirect(state, PACK, '派人出门找吃的，其他人休息');
+    assert.deepEqual(p.intents, [{ type: 'auto_day' }], '白天的出门话头 = 托管收卷，不硬造白天出门');
+  });
+
+  test('act 无执行者（缺失或泛指）：内核选可行动的人，不再「这个人不在」', () => {
+    const { state } = newRun({ seed: 5, roster: ['bron', 'katya', 'marta'] });
+    state.inventory.raw = 2; state.facilities.stove = 1;
+    const r = step(state, [{ type: 'act', action: 'cook' }]); // actor 缺失
+    assert.ok(!r.rejects.some((x) => x.reason === 'NO_CHAR'), '不再拒（修前 NO_CHAR 死胡同）');
+    assert.ok(r.facts.some((f) => f.k === 'cook'), '真的有人去做了');
+    assert.ok(r.facts.some((f) => f.k === 'delegated_pick'), '选谁入账（史官可交代）');
+    // 泛指词（人/谁/有人）在归一化时清掉，不猜名
+    const n = normalizeIntent(state, PACK, { type: 'act', actor: '人', action: 'cook' });
+    assert.equal(n.actor, undefined, '泛指 actor 置空（内核接手）');
+    const d = normalizeIntent(state, PACK, { type: 'dusk_assign', scavenger: '人', location: 'market', gear: [], others: {} });
+    assert.ok(d.scavenger && d.scavenger !== '人' && d.scavenger !== null, 'dusk 泛指 → 内核最优人选（不是留守也不是「人」）');
+  });
+
+  test('点名不越权：具体角色名仍原样解析（托管只兜没点名的）', () => {
+    const { state } = newRun({ seed: 5, roster: ['bron', 'katya', 'marta'] });
+    const n = normalizeIntent(state, PACK, { type: 'act', actor: '石大', action: 'cook' });
+    assert.equal(n.actor, 'bron', '中文名照常翻 id');
+    const s = step(state, [{ type: 'advance' }]).state;
+    const p = parseDirect(s, PACK, '今晚石大出去一趟，其他人睡觉');
+    assert.equal(p.intents[0].type, 'dusk_assign');
+    assert.equal(p.intents[0].scavenger, 'bron', '点名的照旧');
   });
 });
