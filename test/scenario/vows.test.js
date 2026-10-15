@@ -170,6 +170,30 @@ describe('seed 闭环（实测：北津台话头白天点了没反应、晚上�
     assert.ok(!bare.activeEvent, '无种子无步的早晨不凭空开卡');
   });
 
+  test('卡级一局一次：旧种兑现后又种了新种，同一张回应卡不得再发', () => {
+    const { state } = newRun({ seed: 846 });
+    state.day = 31; state.phase = 'day';
+    state.directions = { h1: { id: 'h1', text: HIST, kind: 'hist', seed: 'beacon', day: 30, lastDay: 30, alive: true, watered: 0 } };
+    mainlineAskTick(new Ctx(state, PACK, [], []));
+    assert.equal(state.activeEvent?.cardId, 'hs_beacon', '第一次照发');
+    assert.ok(state.firedOnce['hs_beacon'], '卡级 firedOnce 落账（一局一次的锚）');
+    // 旧种已死（发芽即收）；玩家又点了谋士的北津台选项 → 新种入册
+    state.activeEvent = null; state.day = 32;
+    state.directions = { h2: { id: 'h2', text: '哪天再上北津台看看', kind: 'hist', seed: 'beacon', day: 32, lastDay: 32, alive: true, watered: 0 } };
+    mainlineAskTick(new Ctx(state, PACK, [], []));
+    assert.notEqual(state.activeEvent?.cardId, 'hs_beacon', '同一张卡一局只发一次（重种也换不来第二张）');
+  });
+
+  test('重种闸门：回应卡已发过（卡级在册）的史锚话头不再落新种——落杂念静默散', () => {
+    let s = newRun({ seed: 847 }).state;
+    s = step(s, [{ type: 'advance' }]).state;
+    s.day = 32;
+    s.firedOnce = { hs_beacon: true }; // 这局「北津台的柴」已经发过、答过
+    s = step(s, [{ type: 'direction', text: '北津台该有人举火' }]).state;
+    assert.ok(!Object.values(s.directions).some((d) => d.kind === 'hist' && d.seed === 'beacon'), '已了结的话头不再落新种');
+    assert.ok(Object.values(s.directions).some((d) => d.kind === 'misc'), '落杂念（三天静默散）');
+  });
+
   test('发芽即收种：晨卡长出的那刻种子使命完成（alive 落 false）——之后的枯萎句不会说反话', () => {
     const { state } = newRun({ seed: 836 });
     state.day = 33; state.phase = 'day';
