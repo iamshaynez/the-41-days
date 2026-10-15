@@ -120,7 +120,8 @@ export class Db {
     return true;
   }
   archiveAll(userId) {
-    return this.db.prepare('SELECT kind,key,data_json,first_run_id,at FROM archive_entry WHERE user_id=? ORDER BY at').all(userId)
+    // at 同毫秒时按 rowid（入档顺序）决胜——测试里连发入档也要次序稳定
+    return this.db.prepare('SELECT kind,key,data_json,first_run_id,at FROM archive_entry WHERE user_id=? ORDER BY at, rowid').all(userId)
       .map((r) => ({ kind: r.kind, key: r.key, data: JSON.parse(r.data_json), firstRunId: r.first_run_id, at: r.at }));
   }
 

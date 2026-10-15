@@ -82,8 +82,9 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     doorLevel: 0, homeFurniture: 6,
     house: { opened: { hall: true, living: true, kitchen: true }, searched: {}, hiddenFound: {} },
     knownLocs: [...pack.manifest.startKnowledgeLocations, ...(ids.includes('alexey') ? ['beacon'] : [])], // 逄灶开局识北津台
-    // 周目地点池（城市扩展）：每周目从同组候选里只浮出一部分——一周目去不全城
-    locPool: pickLocPools(seed, pack.manifest),
+    // 周目地点池（城市扩展）：每周目从同组候选里只浮出一部分——一周目去不全城。
+    // 池回声：上一世错过的，这一世确定性补位（缘分回来）
+    locPool: pickLocPools(seed, pack.manifest, echoes),
     locState: {},
     night: null, lastScavenger: null,
     // v0.3 同步日历：军心溶解账（家访配合/家书报平安为正；如实与沉默为负或零）。
