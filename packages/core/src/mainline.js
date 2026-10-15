@@ -185,6 +185,7 @@ export function buildChronicle(state, pack, annalsByDay = null) {
       title: step?.title || '闲笔',
       text,
       anchor: !!step,
+      ...(step?.cite ? { cite: step.cite } : {}), // 史注（0.33.0）：正史落锚的日子带志书引文
       ...(e.echo ? { echo: e.echo } : {}), // 主线×玩家回声（ME-2）：史册步下带一行"你"的影子
       pens: (e.pens || []).map((id) => figureMap[id]).filter(Boolean).map((f) => ({ name: f.name, line: f.line })),
       mirrors: (e.mirrors || []).map((id) => mirrorMap[id]).filter(Boolean).map((m) => m.line),

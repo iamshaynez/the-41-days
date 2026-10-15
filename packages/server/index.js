@@ -140,7 +140,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
 
   /** 结局入档（长线体验 §3：档案馆跨局沉淀）——实现见 ./echoes.js */
   function archiveRun(userId, runId, st) {
-    archiveOutcome(db, userId, runId, st);
+    archiveOutcome(db, userId, runId, st, pack);
   }
 
   // —— 史官校验（叙事双轴 §4.5 的四关；文风圣经 §4.2 禁词的 server 侧副本） ——

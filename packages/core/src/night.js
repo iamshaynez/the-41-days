@@ -3,11 +3,14 @@
 import { charById, combatModOf, moodLevel, aliveChars } from './state.js';
 import { findDoc, docAvailable } from './dayActions.js';
 import { recordCausal } from './causality.js';
+import { locInPool } from './unlock.js';
 
 export function startNight(ctx, { scavenger, location, gear = [], others = {} }) {
   const s = ctx.s, pack = ctx.pack;
   if (s.phase !== 'dusk') return { ok: false, reason: 'NOT_DUSK' };
   if (location && !s.knownLocs.includes(location)) return { ok: false, reason: 'UNKNOWN_LOC' };
+  // 周目池裁剪（城市扩展）：knownLocs 被硬塞也要拦——池外的城门这一世不开
+  if (location && !locInPool(s, pack, location)) return { ok: false, reason: 'UNKNOWN_LOC' };
   for (const [id, plan] of Object.entries(others || {})) {
     const c = charById(s, id);
     if (!c) continue;

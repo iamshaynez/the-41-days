@@ -549,6 +549,7 @@ function gazetteBlock(e) {
   const g = el('div', 'gazette' + (e.track ? ' tr-' + e.track : ''));
   g.innerHTML = `<span class="gz-kicker">露布 · 第${e.day}日</span><b class="gz-title">${esc(e.title)}</b>` +
     (e.text ? `<p class="gz-text">${rich(e.text)}</p>` : '') +
+    (e.cite ? `<p class="gz-cite">${esc(e.cite.text)}<span class="gz-src">——${esc(e.cite.src)}</span></p>` : '') +
     (e.echo ? `<p class="gz-echo">这一家 · ${rich(e.echo)}</p>` : '');
   penNotes(g, e);
   markNouns(g);
@@ -1404,21 +1405,49 @@ function renderEnding(s) {
   const title = s.ending.type === 'sidestory' ? (s.ending.storyline?.title || '别传') : (END_TITLE[s.ending.type] || '无人幸免');
   const story = s.ending.storyline;
   const codex = story?.codex || {};
-  /* ── 幕一 落幕：题名 + 收束行（手写正典文案，逐行浮现）── */
+  /* ── 幕一 落幕：题名 → 正史压卷（慢速逐条，压住注意力）→ 收束行 ── */
   const curtain = el('div', 'finale curtain');
   curtain.appendChild(el('div', 'ending', `<div class="title">${title}</div>`));
+  const annalSlab = codex.annals || [];
+  if (annalSlab.length) {
+    const an = el('div', 'finale-annals');
+    an.appendChild(el('span', 'kicker', '正史 · 建安二十四年冬'));
+    for (const [i, e] of annalSlab.entries()) {
+      const p = el('p', `annal-entry reveal${e.forked ? ' forked' : ''}`);
+      p.innerHTML = `<i>${esc(e.day)}</i>${esc(e.text)}<em>${esc(e.src)}${e.forked ? '——此行被你们改写' : ''}</em>`;
+      p.style.animationDelay = `${1.0 + i * 2.4}s`;
+      an.appendChild(p);
+    }
+    curtain.appendChild(an);
+  }
+  const linesStart = 1.0 + annalSlab.length * 2.4 + 1.4; // 压卷读完，收束行才开口
   for (const [i, line] of (codex.lines || []).entries()) {
     const cls = line.startsWith('变了') ? 'finale-line flip-chg reveal' : line.startsWith('没变') ? 'finale-line flip-keep reveal' : 'finale-line reveal';
     curtain.appendChild(el('p', cls, esc(line)));
-    curtain.lastChild.style.animationDelay = `${1.2 + i * 1.6}s`;
+    curtain.lastChild.style.animationDelay = `${linesStart + i * 1.6}s`;
   }
   box.appendChild(curtain);
+  const afterCurtain = linesStart + (codex.lines || []).length * 1.6 + 1.2; // 后续各幕的基准延时
+
+  /* ── 幕一·五 案语：史源前因后果（《三国志》/《三国演义》扣回本局）── */
+  const notes = codex.notes || [];
+  if (notes.length) {
+    const nt = el('div', 'finale-act notes reveal');
+    nt.style.animationDelay = `${afterCurtain + 0.1}s`;
+    nt.appendChild(el('span', 'kicker', '案语 · 前因后果'));
+    for (const n of notes) {
+      const p = el('p', 'note-entry');
+      p.innerHTML = `<span class="n-src">${esc(n.src)}</span><span class="n-text">${esc(n.text)}</span><em class="n-tie">案：${esc(n.tie)}</em>`;
+      nt.appendChild(p);
+    }
+    box.appendChild(nt);
+  }
 
   /* ── 幕二·五 后日谈：本局结局的开放未来（0.21.0：每局自己的城市肌理）── */
   const futures = codex.futures || [];
   if (futures.length) {
     const fu = el('div', 'finale-act futures reveal');
-    fu.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 1.6}s`;
+    fu.style.animationDelay = `${afterCurtain + (notes.length ? 1.2 : 0.4)}s`;
     fu.appendChild(el('span', 'kicker', '后日谈'));
     for (const l of futures) {
       const cls = l.startsWith('（') ? 'future-line blank' : 'future-line';
@@ -1429,7 +1458,7 @@ function renderEnding(s) {
 
   /* ── 幕二 史册：双轨摊开（城轨 × 将军轨）+ 野史批注 ── */
   const scroll = el('div', 'finale-act codex reveal');
-  scroll.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 1}s`;
+  scroll.style.animationDelay = `${afterCurtain + 0.1}s`;
   scroll.appendChild(el('span', 'kicker', '史册 · 双轨'));
   const dual = el('div', 'dual-track');
   const mkCol = (label, list) => {
@@ -1457,7 +1486,7 @@ function renderEnding(s) {
   const echoes = story?.echoes || [];
   if (echoes.length) {
     const ec = el('div', 'finale-act echoes reveal');
-    ec.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 2.2}s`;
+    ec.style.animationDelay = `${afterCurtain + 1.2}s`;
     ec.appendChild(el('span', 'kicker', '史 × 你'));
     for (const e of echoes) {
       ec.appendChild(el('p', 'echo-line', `<i>第${e.day}天</i>史册记「${esc(e.hist)}」；你的墙上记：${esc(e.deed)}。<b>史书没记这一页。</b>`));
@@ -2196,30 +2225,50 @@ const TRACE_GLYPH = {
   drum: '<circle r="2.6" class="tr-st"/><path d="M-4.6,-4.2 a2.2,2.2 0 0 1 2.8,-0.4 M4.6,-4.2 a2.2,2.2 0 0 0 -2.8,-0.4" class="tr-st"/>',
   ship: '<path d="M-3.2,0 h6.4 l-1.4,2 h-3.6 Z" class="tr-fl"/>',
   ships: '<path d="M-4.4,0 h2 M-1.2,0 h2 M2,0 h2.4 M-2.8,-2.2 h2 M0.4,-2.2 h2 M3.2,-2.2 h1.4 M-1.6,2.2 h3.2" class="tr-st"/>',
-  door: '<rect x="-1.8" y="-3" width="3.6" height="6" class="tr-st"/><path d="M0,-3 v6" class="tr-st"/><circle cx="1.1" cy="0" r=".45" class="tr-fl"/>',
-  door_dry: '<rect x="-1.8" y="-3" width="3.6" height="6" class="tr-st"/><path d="M0,-3 v6 M-1.8,-3 L1.8,3 M1.8,-3 L-1.8,3" class="tr-st"/>',
+  door: '<rect x="-1.8,-3" width="3.6" height="6" class="tr-st"/><path d="M0,-3 v6" class="tr-st"/><circle cx="1.1" cy="0" r=".45" class="tr-fl"/>',
+  door_dry: '<rect x="-1.8,-3" width="3.6" height="6" class="tr-st"/><path d="M0,-3 v6 M-1.8,-3 L1.8,3 M1.8,-3 L-1.8,3" class="tr-st"/>',
   seal: '<rect x="-2" y="-2" width="4" height="4" class="tr-st"/><path d="M-1,-1 l2,2 M1,-1 l-2,2" class="tr-st"/>',
   rut: '<path d="M-4,-1.2 q4,1.2 8,0 M-4,1.6 q4,1.2 8,0" class="tr-st"/>',
   lamp: '<circle cy="-1.4" r="1.1" class="tr-fl"/><path d="M0,-0.3 v3.2 M-1.4,3 h2.8" class="tr-st"/>',
   frost: '', waterline: ''
 };
+/* 地点用途标记（城市扩展 0.30.0）：宝藏/危险/故事/市易/口粮/药材——一眼看懂哪里有什么 */
+const MARK_GLYPH = {
+  treasure: '<path d="M0,-2.8 L2.4,0 L0,2.8 L-2.4,0 Z" class="mk-st mk-treasure"/>',
+  danger: '<path d="M0,-2.6 L2.6,2.2 H-2.6 Z" class="mk-st mk-danger"/>',
+  story: '<path d="M-2.2,-2 h4.4 v4 h-4.4 Z M-2.2,-0.6 h4.4" class="mk-st mk-story"/>',
+  trade: '<circle r="2.4" class="mk-st mk-trade"/><path d="M-1.4,0 h2.8" class="mk-st mk-trade"/>',
+  food: '<path d="M0,2.6 v-5 M0,-2.4 q-2.2,0.6 -1.6,2.4 q1.6,-0.8 1.6,-0.8 q0,0 1.6,0.8 q0.6,-1.8 -1.6,-2.4" class="mk-st mk-food"/>',
+  med: '<path d="M0,-2.6 v5.2 M-2.6,0 h5.2" class="mk-st mk-med"/>'
+};
+const MARK_NAME = { treasure: '宝藏', danger: '危险', story: '故事', trade: '市易', food: '口粮', med: '药材' };
 /** 舆图 SVG 内景（侧栏一览与大观全屏共用同一张手绘） */
 function mapSvgMarkup(mv) {
   const b = mv.base || { viewBox: [0, 0, 100, 100], paths: [] };
   const [x, y, w, h] = b.viewBox || [0, 0, 100, 100];
+  const byId = Object.fromEntries((mv.places || []).map((p) => [p.id, p]));
+  const roadLine = (r) => {
+    const a = byId[r.from], c = byId[r.to];
+    if (!a || !c) return '';
+    return `<line x1="${a.x}" y1="${a.y}" x2="${c.x}" y2="${c.y}" class="mp-road ${r.cls === 'water' ? 'water' : 'lane'}"/>`;
+  };
   return `<svg viewBox="${x} ${y} ${w} ${h}" class="map-svg${mv.winter ? ' frost' : ''}${mv.rain ? ' rainy' : ''}" role="img" aria-label="江陵舆图">
     ${(b.paths || []).map((p) => `<path d="${p.d}" class="mp-${p.cls}"/>${p.label ? `<text x="${p.lx}" y="${p.ly}" class="mp-label">${esc(p.label)}</text>` : ''}`).join('')}
     ${(mv.gates || []).map((g) => `<circle cx="${g.x}" cy="${g.y}" r="0.9" class="mp-gate"><title>${esc(g.name)}</title></circle>`).join('')}
-    ${mv.route && mv.places.find((p) => p.id === mv.route.to) ? (() => {
-      const from = mv.places.find((p) => p.id === 'home') || { x: 50, y: 53 };
-      const to = mv.places.find((p) => p.id === mv.route.to);
+    ${(mv.roads || []).map(roadLine).join('')}
+    ${mv.route && byId[mv.route.to] ? (() => {
+      const from = byId.home || { x: 50, y: 53 };
+      const to = byId[mv.route.to];
       return `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" class="mp-route"/>`;
     })() : ''}
     ${(mv.traces || []).map((t) => `<g transform="translate(${t.x},${t.y})" class="trace"><title>${esc(t.label || '')}</title>${TRACE_GLYPH[t.icon] || ''}</g>`).join('')}
-    ${mv.places.filter((p) => p.state !== 'unknown').map((p) => `
-      <g class="place ${p.state === 'tonight' ? 'tonight' : 'known'}" data-place="${esc(p.id)}" data-name="${esc(p.name)}" data-state="${p.state}"${p.who ? ` data-who="${esc(p.who)}"` : ''} tabindex="0">
+    ${(mv.places || []).filter((p) => p.state !== 'unknown').map((p) => `
+      <g class="place ${p.state === 'tonight' ? 'tonight' : p.state}" data-place="${esc(p.id)}" data-name="${esc(p.name)}" data-state="${p.state}"${p.who ? ` data-who="${esc(p.who)}"` : ''}${p.hint ? ` data-hint="${esc(p.hint)}"` : ''} tabindex="0">
+        ${p.mark && MARK_GLYPH[p.mark] ? `<g transform="translate(${p.x - 3.4},${p.y + 3}) scale(0.9)">${MARK_GLYPH[p.mark]}<title>${esc(MARK_NAME[p.mark] || '')}</title></g>` : ''}
         <circle cx="${p.x}" cy="${p.y}" r="${p.state === 'tonight' ? 2.6 : 1.8}"/>
-        <text x="${p.x + 3}" y="${p.y + 1.4}">${esc(p.name)}${p.who ? `（${esc(p.who)}）` : ''}</text>
+        ${p.state === 'heard' ? `<g transform="translate(${p.x + 2.2},${p.y - 2.2}) scale(0.62)"><rect x="-1.8,-3" width="3.6" height="4.6" class="tr-st"/><path d="M-1.4,-3 v-0.8 a1.4,1.4 0 0 1 2.8,0 v0.8" class="tr-st"/></g>` : ''}
+        <text x="${p.x + 3}" y="${p.y + 1.4}" class="${p.state === 'heard' ? 'pl-heard' : ''}">${esc(p.name)}${p.who ? `（${esc(p.who)}）` : ''}</text>
+        ${p.hint ? `<title>${esc(p.hint)}</title>` : ''}
       </g>`).join('')}
   </svg>`;
 }
@@ -2229,7 +2278,8 @@ function renderMap(mv) {
   if (!mv) { panel.hidden = true; return; }
   panel.hidden = false;
   const box = $('map-box');
-  const sig = [mv.places.filter((p) => p.state !== 'unknown').map((p) => `${p.id}${p.state === 'tonight' ? 'T' : 'K'}`).join(','),
+  const sig = [mv.places.filter((p) => p.state !== 'unknown').map((p) => `${p.id}${p.state === 'tonight' ? 'T' : p.state === 'heard' ? 'H' : 'K'}`).join(','),
+    (mv.roads || []).map((r) => `${r.from}-${r.to}`).join(','),
     mv.traces.map((t) => t.id).join(','), mv.winter ? 'w' : '', mv.rain ? 'r' : '', mv.tonight?.loc || ''].join('|');
   quietSwap(box, sig);
   box.classList.toggle('frost', !!mv.winter);
@@ -2280,7 +2330,9 @@ function ensureMapBig() {
     const g = e.target.closest('g.place');
     if (!g || mbState.dragged) return;
     const note = root.querySelector('.mb-note');
-    const st = g.dataset.state === 'tonight' ? `今夜在此${g.dataset.who ? ' · ' + g.dataset.who : ''}` : '已知的地方';
+    const st = g.dataset.state === 'tonight' ? `今夜在此${g.dataset.who ? ' · ' + g.dataset.who : ''}`
+      : g.dataset.state === 'heard' ? `风闻的地方——${g.dataset.hint || '路子还没摸到'}`
+      : '已知的地方';
     note.textContent = `${g.dataset.name} —— ${st}`;
     note.hidden = false;
   });
@@ -2374,10 +2426,16 @@ function renderChronicle(ch) {
   if (!ch) { panel.hidden = true; return; }
   panel.hidden = false;
   const box = $('chronicle-box');
-  const sig = ch.entries.map((e) => `${e.day}${e.ending ? '!' : ''}${(e.text || '').length}:${(e.pens || []).length}:${(e.mirrors || []).length}`).join('|');
+  const sig = ch.entries.map((e) => `${e.day}${e.ending ? '!' : ''}${(e.text || '').length}:${(e.pens || []).length}:${(e.mirrors || []).length}${e.cite ? 'c' : ''}`).join('|');
   quietSwap(box, sig);
   box.innerHTML = '';
   $('map-act').textContent = ch.currentAct ? `${ch.currentAct.title}` : '';
+  // 幕回目定位（0.33.0）：玩家活在演义第几回的页边——史卷卷首挂一行
+  if (ch.currentAct?.romance) {
+    const r = el('p', 'chron-romance');
+    r.textContent = ch.currentAct.romance;
+    box.appendChild(r);
+  }
   if (!ch.entries.length) {
     box.appendChild(el('p', 'wing-note', '史卷未开——破晓即有一笔。'));
     return;
@@ -2393,6 +2451,7 @@ function renderChronicle(ch) {
       p.innerHTML = rich(e.text);
       d.appendChild(p);
     }
+    if (e.cite) d.appendChild(el('p', 'chron-cite', `${esc(e.cite.text)}<span>——${esc(e.cite.src)}</span>`));
     for (const pn of e.pens || []) {
       const p = el('p', 'chron-pen');
       p.innerHTML = `闲笔 · ${rich(pn.line)}`;

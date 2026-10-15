@@ -34,4 +34,5 @@ export { overviewDecision, overviewThreshold, dayIsQuiet, actOfDay, ROUTINE_DAY_
 export { ensembleTick, validateEnsemble, renderEnsembleDirect, ENS_CANON_BAN } from './src/ensemble.js';
 export { bumpPairArc } from './src/causality.js';
 export { mapView } from './src/map.js';
+export { locVisited, condMet, locInPool, unlockMet, heardMet, echoHeard, pickLocPools, missedPoolLocs } from './src/unlock.js';
 export { parseMarkers, stripMarkers, markerRegistry, validateTextMarkers } from './src/markers.js';

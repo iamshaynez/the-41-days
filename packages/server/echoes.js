@@ -1,5 +1,6 @@
 // 跨周目回响（长线体验-v0.2 §3.3 EC 系）：档案馆读侧/写侧的纯函数化封装。
 // 从 index.js 抽出以便单测：collectEchoes 负责"新局开局装配"，archiveOutcome 负责"局终入档"。
+import { missedPoolLocs } from '../core/index.js';
 
 /** 开局装配：档案馆里有什么，新局就从什么里长出来（含遗愿递减副作用） */
 export function collectEchoes(db, userId) {
@@ -23,17 +24,24 @@ export function collectEchoes(db, userId) {
   // 杠杆卡的知晓度门槛-2/局（上限 3 局）。档案馆的记忆就是玩家的记忆。
   const done = db.listRuns(userId).filter((r) => r.status === 'ended').length;
   if (done > 0) echoes.boon = Math.min(done, 3);
+  // 池回声（城市扩展后续）：最新一局说了算——它没去成的池成员，牵引新局补缺；
+  // 它走全了（或旧版档没有池账），牵引就翻篇。只认池内成员，脏数据在 pickLocPools 处拦。
+  const lastRun = [...arch].reverse().find((e) => e.kind === 'run_memory');
+  const lastMissed = Array.isArray(lastRun?.data.missedLocs) ? lastRun.data.missedLocs.filter(Boolean) : [];
+  if (lastMissed.length) echoes.missedLocs = lastMissed;
   return Object.keys(echoes).length ? echoes : null;
 }
 
 /** 局终入档：run_memory + 史册格野史 + 回响（出江陵）+ 遗愿生成/兑现 */
-export function archiveOutcome(db, userId, runId, st) {
+export function archiveOutcome(db, userId, runId, st, pack = null) {
   db.archivePut(userId, 'run_memory', runId, {
     day: st.day, ending: st.ending?.type || 'wiped',
     survivors: st.chars.filter((c) => c.alive).map((c) => c.name),
     fallen: st.chars.filter((c) => !c.alive).map((c) => c.name),
     threeThings: st.ending?.threeThings || [], docs: st.docsSeen, knowledge: st.knowledge,
-    storyline: st.ending?.storyline || null, memoir: st.ending?.memoir || null
+    storyline: st.ending?.storyline || null, memoir: st.ending?.memoir || null,
+    // 池回声：这一世没去成的（落选在前、失约在后）——下一世补缺与旧梦风闻的原料
+    ...(pack ? { missedLocs: missedPoolLocs(st, pack) } : {})
   }, runId);
   // 史册格·野史栏（EPI-06）：或然/叠加结局的一页野史入馆
   for (const a of st.ending?.storyline?.annals || []) {

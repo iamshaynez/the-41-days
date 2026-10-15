@@ -1430,6 +1430,22 @@ body.motion-off { scroll-behavior: auto; }
 .place.known text { fill: var(--ink-2); }
 .place.tonight circle { fill: var(--accent); stroke: var(--accent-2); stroke-width: .9; }
 .place.tonight text { fill: var(--accent-2); font-weight: 700; }
+/* 风闻（城市扩展 0.30.0）：灰名＋锁形——听说了地方，路子还没摸到 */
+.place.heard circle { fill: none; stroke: var(--ink-3); stroke-width: .45; stroke-dasharray: .9 .7; }
+.place.heard text { fill: var(--ink-3); font-style: italic; opacity: .82; }
+.place.heard .tr-st { stroke: var(--ink-3); stroke-width: .8; fill: none; }
+/* 道路层：官道实虚线，水路波纹虚线——只画两端至少风闻的边 */
+.mp-road { stroke: var(--rule); stroke-width: .38; stroke-dasharray: 1.5 1.3; }
+.mp-road.water { stroke: rgba(106, 138, 154, .66); stroke-dasharray: 1.1 1; stroke-width: .42; }
+/* 用途标记：菱=宝藏 三角=危险 卷=故事 圆杠=市易 穗=口粮 十字=药材 */
+.mk-st { stroke-width: .5; fill: none; }
+.mk-treasure { stroke: var(--brass); }
+.mk-danger { stroke: #8c3b30; }
+.mk-story { stroke: var(--ink-2); }
+.mk-trade { stroke: #57683f; }
+.mk-food { stroke: #57683f; }
+.mk-med { stroke: #4e5d78; }
+.place.tonight .mk-st { opacity: .9; }
 .mp-route { stroke: var(--accent-2); stroke-width: .55; stroke-dasharray: 1.8 1.4; }
 .trace { pointer-events: auto; }
 .trace .tr-st { stroke: var(--accent); stroke-width: .62; fill: none; stroke-linecap: round; }
@@ -1449,6 +1465,10 @@ body.motion-off { scroll-behavior: auto; }
 .chron-pen { font-family: var(--font-kai); font-size: 13px; color: var(--ink-3); line-height: 1.65; margin: 3px 0 0; }
 .chron-mir { font-family: var(--font-kai); font-size: 13px; color: var(--cold); line-height: 1.65; margin: 3px 0 0; }
 .chron-dig { font-size: 12px; color: var(--moss); letter-spacing: .04em; margin: 3px 0 0; }
+/* 0.33.0 史注：露布与史卷的志书引文——宏大历史随时来对表 */
+.chron-cite, .gz-cite { font-family: var(--font-kai); font-size: 12.5px; line-height: 1.8; color: var(--brass, #8a6d3b); margin: 4px 0 2px; padding-left: .9em; border-left: 2px solid rgba(138, 109, 59, .45); }
+.chron-cite span, .gz-src { color: var(--ink-3, #888); font-size: 11.5px; margin-left: .5em; }
+.chron-romance { font-family: var(--font-kai); font-size: 12.5px; line-height: 1.8; color: var(--ink-3, #999); border: 1px dashed rgba(138, 109, 59, .4); border-radius: 5px; padding: 7px 10px; margin: 0 0 10px; }
 .chron-day.chron-end { border-left-color: var(--accent); }
 .chron-day.chron-end .chron-text { color: var(--ink); }
 
@@ -1514,6 +1534,24 @@ body.motion-off { scroll-behavior: auto; }
 .finale-line.flip-keep { color: var(--ink-3, #8a8a8a); padding-left: 1.2em; border-left: 2px solid var(--ink-4, #3a3a3a); }
 .finale-act.futures { border-top: 1px dashed var(--brass, #6a5327); }
 .future-line { font-family: var(--font-kai); font-size: 14px; line-height: 2; color: var(--ink-2, #aaa); margin: 4px auto; max-width: 36em; }
+
+/* 0.31.0 落幕 · 正史压卷：题名之后、收束行之前——足够密度的史实先压住注意力 */
+.finale-annals { margin: 6px auto 22px; max-width: 36em; text-align: left; }
+.finale-annals .kicker { display: block; text-align: center; letter-spacing: .3em; font-size: 12px; color: var(--brass, #8a6d3b); margin-bottom: 16px; }
+.annal-entry { font-family: var(--font-kai); font-size: 14.5px; line-height: 1.95; color: var(--ink-2, #bbb); margin: 0 0 14px; padding-left: 1em; border-left: 2px solid var(--ink-4, #3a3a3a); }
+.annal-entry i { font-style: normal; font-size: 12.5px; color: var(--brass, #8a6d3b); margin-right: .9em; letter-spacing: .08em; }
+.annal-entry em { display: block; font-style: normal; font-size: 11.5px; color: var(--ink-3, #888); opacity: .85; margin-top: 3px; padding-left: .2em; }
+.annal-entry.forked { border-left-color: var(--accent-2, #d8b36a); }
+.annal-entry.forked em { color: var(--accent-2, #d8b36a); opacity: 1; }
+.annal-entry.forked em::after { content: ''; }
+
+/* 0.32.0 落幕 · 案语：史源前因后果——压卷与收束行之间的史官注疏 */
+.finale-act.notes { border-top: 1px dashed var(--brass, #6a5327); }
+.note-entry { font-family: var(--font-kai); font-size: 14px; line-height: 1.9; margin: 0 auto 14px; max-width: 36em; text-align: left; }
+.note-entry .n-src { display: block; font-size: 12px; letter-spacing: .12em; color: var(--brass, #8a6d3b); margin-bottom: 2px; }
+.note-entry .n-text { display: block; color: var(--ink-2, #bbb); }
+.note-entry .n-tie { display: block; font-style: normal; font-size: 13px; color: var(--ink-3, #999); margin-top: 3px; padding-left: 1.6em; text-indent: -1.6em; }
+.note-entry .n-tie::first-letter { color: var(--accent-2, #d8b36a); }
 .future-line.blank { color: var(--ink-4, #555); font-style: italic; }
 
 /* ════════════════════════════════════════════════════════════════
