@@ -268,6 +268,13 @@ export function tickDirections(ctx) {
   // 话头就散——不许留成永不兑现的僵尸（实测：北津台话头被谋士反复重提）
   for (const d of all) {
     if (d.kind !== 'hist' || !d.alive) continue;
+    // 旧档自愈：卡已发过而种未死（旧版「发芽不死种」的遗留形态）——
+    // 承诺已兑现，首个破晓即收，不等窗口末（滞留期话头会被谋士反复重提）
+    if (s.firedOnce['hs_' + d.id]) {
+      d.alive = false; dirty = true;
+      ctx.fact('hist_seed_done', { id: d.id, subject: d.subject, text: d.text, seed: d.seed });
+      continue;
+    }
     const [, hi] = ctx.pack?.cardMap?.['hs_' + d.seed]?.when?.seedWindow || [];
     if (hi !== undefined && s.day > hi) {
       d.alive = false; dirty = true;
