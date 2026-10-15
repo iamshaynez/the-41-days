@@ -1057,6 +1057,93 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
     var(--grain) padding-box,
     linear-gradient(var(--paper-hi), var(--paper-hi)) padding-box;
 }
+
+/* ——— 展卷（rite）：档案馆的全文阅读——卷轴升起，行随幕落 ——— */
+.rite {
+  position: fixed; z-index: 72; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(780px, calc(100vw - 30px)); max-height: 88dvh; overflow-y: auto;
+  background:
+    var(--grain),
+    linear-gradient(180deg, var(--paper-hi), var(--paper));
+  color: var(--ink);
+  border: 2px solid var(--wood);
+  box-shadow: inset 0 0 0 1px var(--gold-hi), 0 18px 60px rgba(0, 0, 0, .6);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  animation: riteIn .65s cubic-bezier(.22, .75, .25, 1) both;
+}
+@keyframes riteIn {
+  from { opacity: 0; transform: translate(-50%, -45%) scale(.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.rite::-webkit-scrollbar { width: 8px; }
+.rite .rite-body { padding: 40px 46px 46px; }
+.rite .rite-x { position: absolute; top: 14px; right: 14px; z-index: 2; }
+/* 逐行显影：.rr 由 JS 按序加 animation-delay（首拍让卷轴先落定） */
+.rite .rr { animation: riteLine .8s ease both; }
+@keyframes riteLine { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .rite { animation: none; } .rite .rr { animation: none; } }
+
+/* 结局大典 */
+.rite .er-head { text-align: center; margin-bottom: 26px; }
+.rite .er-title {
+  font-family: var(--font-carved); font-size: 34px; letter-spacing: .3em; text-indent: .3em;
+  color: var(--ink); margin: 12px 0 14px;
+}
+.rite .er-canon {
+  font-family: var(--font-kai); font-size: 15px; color: var(--ink-2); margin: 0 auto 10px; max-width: 32em; line-height: 1.9;
+}
+.rite .er-meta { font-size: 12.5px; color: var(--ink-3); letter-spacing: .06em; }
+.rite .er-sec { margin: 30px 0 0; }
+.rite .er-h {
+  font-family: var(--font-carved); font-size: 14px; letter-spacing: .3em; color: var(--accent);
+  border-bottom: 1px dashed var(--rule); padding-bottom: 8px; margin: 0 0 16px;
+}
+.rite .er-line { font-family: var(--font-kai); font-size: 14.5px; line-height: 2; color: var(--ink-2); margin: 0 0 4px; }
+.rite .er-line.future { color: var(--ink-3); }
+.rite .er-track { margin-bottom: 14px; }
+.rite .er-track h4 { font-size: 12px; letter-spacing: .2em; color: var(--brass); margin: 0 0 8px; font-family: var(--font-carved); }
+.rite .er-tr { font-size: 13px; color: var(--ink-2); margin: 3px 0; }
+.rite .er-tr i { font-style: normal; color: var(--ink-3); font-size: 11.5px; margin-right: .8em; letter-spacing: .06em; }
+.rite .er-memoir { font-family: var(--font-kai); font-size: 14.5px; line-height: 2.05; color: var(--ink-2); }
+.rite .er-old { margin-top: 26px; font-size: 12px; color: var(--ink-3); text-align: center; letter-spacing: .05em; }
+
+/* 遗档/真相/回忆录展卷：材质随层 */
+.rite .dr-head { margin-bottom: 22px; }
+.rite .dr-title { font-family: var(--font-carved); font-size: 25px; letter-spacing: .22em; color: var(--ink); margin: 10px 0 0; }
+.rite .dr-text p { font-family: var(--font-kai); font-size: 15px; line-height: 2.15; color: var(--ink-2); margin: 0 0 14px; }
+.rite .dr-text.silk p { color: #3a3222; }
+.rite .dr-head.silk .dr-title { color: #241d12; }
+.rite--doc .dr-head.iron, .rite--doc .dr-text.iron {
+  background: #141210; margin-left: -18px; margin-right: -18px; padding: 18px 18px;
+}
+.rite--doc .dr-text.iron p { color: var(--ink-2); }
+@media (max-width: 640px) {
+  .rite .rite-body { padding: 30px 20px 34px; }
+  .rite .er-title { font-size: 27px; }
+  .rite--doc .dr-head.iron, .rite--doc .dr-text.iron { margin-left: -10px; margin-right: -10px; padding: 14px 10px; }
+}
+
+/* 可展卷的卡：手型 + 悬停起势 + 右下「展卷」小字 */
+.doc.readable, .end-card.readable { cursor: pointer; }
+.readable:hover { transform: translateY(-3px); }
+.read-cue {
+  display: block; margin-top: 8px; font-size: 11px; letter-spacing: .24em;
+  color: var(--ink-3); transition: color .2s, letter-spacing .3s;
+}
+.readable:hover .read-cue { color: var(--accent); letter-spacing: .34em; }
+
+/* 封存卡：未开封/未开启——一个大「封」字，不泄露任何内容 */
+.end-card.sealed, .side-card.sealed {
+  display: grid; place-items: center; gap: 6px; min-height: 118px;
+  text-align: center; padding: 18px 14px;
+}
+.end-card.sealed .end-no, .side-card.sealed .end-no { margin: 0; }
+.end-seal-mark {
+  font-family: var(--font-seal); font-size: 34px; line-height: 1;
+  color: var(--ink-3); opacity: .55; transform: rotate(-3deg);
+  border: 1.5px solid var(--ink-3); border-radius: 4px; padding: 10px 12px;
+  opacity: .5;
+}
 .memoir-card .mem-text p { margin: 0 0 9px; line-height: 1.95; text-align: justify; color: var(--ink-2); }
 .doc summary::before { content: '▸ '; color: var(--accent); }
 .doc details[open] summary::before { content: '▾ '; }

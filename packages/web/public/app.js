@@ -7,6 +7,7 @@ import { sfx } from './sfx.js';
 import { ambience } from './ambience.js';
 import { reconnectDelayMs, createTurnWatch, SSE_STALL_MS } from './reconnect.js';
 import { rescueOptions, RESCUE_TITLE } from './rescue.js';
+import { endingRiteSections } from './ritual.js';
 injectIcons();
 
 const $ = (id) => document.getElementById(id);
@@ -1762,11 +1763,11 @@ function streamMemoir(delta) { memoirTypist.feed(delta); }
    ════════════════════════════════════════════════════════════════ */
 function openSheet(id) {
   hideCharPop();
-  for (const x of ['menu', 'homebook']) $(x).hidden = x !== id;
+  for (const x of ['menu', 'homebook', 'rite']) $(x).hidden = x !== id;
   document.body.classList.add('overlay-open');
 }
 function closeSheets() {
-  for (const x of ['menu', 'homebook']) $(x).hidden = true;
+  for (const x of ['menu', 'homebook', 'rite']) $(x).hidden = true;
   closeWing();
   document.body.classList.remove('overlay-open');
 }
@@ -2144,6 +2145,83 @@ const DOC_LAYERS = [
   [2, '密件 · 不该留下的'],
   [3, '铁证 · 烫手的']
 ];
+/* ═══ 展卷（rite）：档案馆的全文阅读——点击展开，仪式感先行 ═══
+   卷轴升起（riteIn），行随幕落逐行显影（.rr 依次起拍，落幕同款节奏）。
+   结局最重：大典五幕把前因后果说清（正史压卷→案语→落幕行→后日谈→双轨），
+   加这一局的人与事、回忆录。遗档/真相按材质入卷。幕布与选单共用一套。 */
+function openRite(html, cls = '') {
+  const r = $('rite');
+  r.className = 'rite' + (cls ? ' ' + cls : '');
+  r.innerHTML = `<button class="rite-x sheet-x" type="button" aria-label="合上">${svgUse('close')}</button><div class="rite-body">${html}</div>`;
+  r.querySelector('.rite-x').addEventListener('click', closeSheets);
+  // 逐行显影：幕内的 .rr 按序起拍（首拍让卷轴先落定）
+  [...r.querySelectorAll('.rr')].forEach((p, i) => { p.style.animationDelay = `${0.35 + i * 0.45}s`; });
+  openSheet('rite');
+  r.scrollTop = 0;
+}
+/** 结局大典：走过的结局才有的五幕全文（数据装配见 ritual.js，老局体面降级） */
+function endingRiteHTML(run, gallery) {
+  const m = endingRiteSections(run, gallery);
+  if (!m) return '';
+  const erSec = (head, inner) => inner ? `<section class="er-sec rr"><h3 class="er-h">${head}</h3>${inner}</section>` : '';
+  const people = [
+    m.survivors.length ? `生还：${esc(m.survivors.join('、'))}` : '',
+    m.fallen.length ? `殁：${esc(m.fallen.join('、'))}` : ''
+  ].filter(Boolean).join(' · ') || '门后没有名字留下';
+  return `
+    <header class="er-head rr">
+      <span class="kicker">结局大典 · 走过的收束</span>
+      <h2 class="er-title">${esc(m.title)}</h2>
+      <p class="er-canon">${esc(m.canon)}</p>
+      <p class="er-meta">第 ${m.day ?? '?'} 天落幕 · ${people}</p>
+    </header>
+    ${erSec('正史 · 压卷', m.annals.map((e) => `
+      <p class="annal-entry reveal${e.forked ? ' forked' : ''}"><i>${esc(e.day)}</i>${esc(e.text)}<em>${esc(e.src)}${e.forked ? '——此行被你们改写' : ''}</em></p>`).join(''))}
+    ${erSec('案语 · 前因后果', m.notes.map((n) => `
+      <p class="note-entry"><span class="n-src">${esc(n.src)}</span><span class="n-text">${esc(n.text)}</span><em class="n-tie">案：${esc(n.tie)}</em></p>`).join(''))}
+    ${erSec('落幕行', m.lines.map((l) => `<p class="er-line">${esc(l)}</p>`).join(''))}
+    ${erSec('后日谈', m.futures.map((l) => `<p class="er-line future">${esc(l)}</p>`).join(''))}
+    ${erSec('史册 · 双轨', (['city', 'gen'].map((k) => m.tracks[k].length ? `
+      <div class="er-track"><h4>${k === 'city' ? '城轨 · 你们的日子' : '将军轨 · 北边的路'}</h4>
+        ${m.tracks[k].slice(-6).map((t) => `<p class="er-tr"><i>第${t.day}天</i>${esc(t.title)}</p>`).join('')}</div>` : '').join('')))}
+    ${erSec('这一局的三件事', m.threeThings.map((t) => `<p class="er-line">第${t.day}天，${esc(t.text)}</p>`).join(''))}
+    ${erSec('回忆录 · 节选', m.memoir ? m.memoir.split('\n').filter(Boolean).map((p) => `<p class="er-memoir">${esc(p)}</p>`).join('') : '')}
+    ${m.hasStory ? '' : '<p class="er-old rr">这一局落幕在旧历上——正史与案语是后来的规矩，这里只记得人与账。</p>'}`;
+}
+/** 遗档展卷：材质随层（碑拓/竹简/缣帛），全文入卷 */
+function docRiteHTML(d) {
+  const mat = d.layer >= 3 ? ' iron' : (d.layer <= 0 ? ' silk' : '');
+  return `
+    <header class="dr-head rr${mat}">
+      <span class="doc-id">${esc(d.id)} · 层 ${d.layer}</span>
+      <h2 class="dr-title">${esc(d.title)}</h2>
+    </header>
+    <div class="dr-text rr${mat}">${String(d.text || '').split('\n').filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join('')}</div>`;
+}
+/** 真相展卷：层 N 的话，配碎封泥 */
+function sealRiteHTML(x) {
+  return `
+    <header class="dr-head rr sealish">
+      <span class="doc-id">层 ${esc(x.layer)} · 显形的真相</span>
+      <h2 class="dr-title">这座城说破的一句话</h2>
+    </header>
+    <div class="dr-text rr sealish"><p>${esc(x.text)}</p></div>`;
+}
+/** 回忆录展卷：整篇复盘入卷 */
+function memoirRiteHTML(run) {
+  const ENDING_NAME = { ceasefire: '开城', maicheng: '麦城得脱', pyrrhic: '惨胜', alt_both: '另一种三国', contract_end: '交割日', wiped: '无人幸免', lighthouse: '还师', join_table: '出江陵记', hostage: '槛车', sidestory: '别传' };
+  const who = [
+    run.survivors?.length ? `生还：${run.survivors.join('、')}` : '',
+    run.fallen?.length ? `殁：${run.fallen.join('、')}` : ''
+  ].filter(Boolean).join('；') || '没有人走出来';
+  return `
+    <header class="dr-head rr">
+      <span class="doc-id">${esc(ENDING_NAME[run.ending] || run.ending || '终局')}</span>
+      <h2 class="dr-title">第 ${run.day} 天的一局</h2>
+      <p class="er-meta">${esc(who)}</p>
+    </header>
+    <div class="dr-text rr">${String(run.memoir || '').split('\n').filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join('')}</div>`;
+}
 async function loadArchive() {
   const [r, sides] = await Promise.all([
     (await fetch('/api/archive')).json(),
@@ -2179,7 +2257,8 @@ async function loadArchive() {
     wall.appendChild(el('div', 'layer-state' + (unlocked ? '' : ' locked'),
       `<b>${esc(name)}</b><span class="tag-line">${unlocked ? '已显形' : '尚未显形'}</span>`));
   }
-  // 遗档按层分组（重构）：层是这座城的深浅——私物在最上，铁证在最下
+  // 遗档按层分组（重构）：层是这座城的深浅——私物在最上，铁证在最下。
+  // 点卡展卷读全文（原来的 <details> 太素——现在全文有仪式）
   const dw = $('doc-wall'); dw.innerHTML = '';
   const docs = r.docs || [];
   if (!docs.length) dw.appendChild(el('p', 'hint', '还没有任何文件。夜晚去驿亭、里社、宅区翻一翻——或者在自家地窖的墙皮后面。'));
@@ -2192,15 +2271,15 @@ async function loadArchive() {
     for (const d of group) {
       // 材质分级：层 3 铁证=碑拓（黑底白文），层 0 私物=缣帛（家书/死信），其余=竹简
       const mat = d.layer >= 3 ? ' iron' : (d.layer <= 0 ? ' silk' : '');
-      const doc = el('div', 'doc' + mat);
-      doc.innerHTML = `<span class="doc-id">${esc(d.id)}</span><b>${esc(d.title)}</b>
-        <details><summary>读</summary><p>${esc(d.text)}</p></details>`;
+      const doc = el('div', 'doc readable' + mat);
+      doc.innerHTML = `<span class="doc-id">${esc(d.id)}</span><b>${esc(d.title)}</b><span class="read-cue">展卷</span>`;
+      doc.addEventListener('click', () => openRite(docRiteHTML(d), 'rite--doc'));
       gw.appendChild(doc);
     }
     g.appendChild(gw);
     dw.appendChild(g);
   }
-  // 显形的真相（封印注入协议：解锁过的才在墙上）——与遗档同居「线索」节
+  // 显形的真相（封印注入协议：解锁过的才在墙上）——与遗档同居「线索」节，点卡展卷
   const sealWall = $('seal-wall');
   const seals = r.seals || [];
   $('seal-sub').hidden = !seals.length;
@@ -2209,8 +2288,9 @@ async function loadArchive() {
   for (const x of seals) {
     // 类名用 seal-card（不带 .seal——那是 landing 封面大印的类，撞车会把整张卡
     // 变成绝位旋转的方章：真相卡叠在板块右上、文字溢出，即"印章错位"旧疾）
-    const d = el('div', 'doc seal-card');
-    d.innerHTML = `<span class="doc-id">层 ${esc(x.layer)} · 真相</span><p>${esc(x.text)}</p>`;
+    const d = el('div', 'doc seal-card readable');
+    d.innerHTML = `<span class="doc-id">层 ${esc(x.layer)} · 真相</span><p>${esc(x.text)}</p><span class="read-cue">展卷</span>`;
+    d.addEventListener('click', () => openRite(sealRiteHTML(x)));
     sealWall.appendChild(d);
   }
   // 史册格（GDD-v0.2 §12.1）：正史栏=通行叙事；野史栏=你打出来的那几页
@@ -2223,28 +2303,35 @@ async function loadArchive() {
     d.innerHTML = `<span class="doc-id">${esc(ENDING_NAME[a.id] || '或然')}</span>${a.text ? `<p>${esc(a.text)}</p>` : ''}<p class="mem-meta">批注：${esc(a.note)}</p>`;
     aa.appendChild(d);
   }
-  // 结局九格（重构新增）：走到的亮正史，没走到的亮轮廓——收藏馆的骨架
+  // 结局九格（重构新增）：走到的点开大典（前因后果全文），没走到的一律封存——
+  // 「未开封」不泄露题名与走向（收藏馆的规矩：没挣到的不给看）
   const seenEnd = new Map();
   for (const run of r.runs || []) {
     if (!run.ending) continue;
     seenEnd.set(run.ending, (seenEnd.get(run.ending) || 0) + 1);
   }
   const eg = $('end-grid'); eg.innerHTML = '';
-  for (const g of ENDING_GALLERY) {
+  ENDING_GALLERY.forEach((g, i) => {
     const n = seenEnd.get(g.type) || 0;
-    const card = el('div', 'end-card' + (n ? ' seen' : ' locked'));
-    card.innerHTML = n
-      ? `<span class="end-no">走过 ×${n}</span><b class="end-title">${esc(g.title)}</b><p class="end-canon">${esc(g.canon)}</p>`
-      : `<span class="end-no">未竟</span><b class="end-title">${esc(g.title)}</b><p class="end-hint">${esc(g.hint)}</p>`;
+    const card = el('div', 'end-card' + (n ? ' seen readable' : ' sealed'));
+    if (n) {
+      const run = (r.runs || []).filter((x) => x.ending === g.type).at(-1); // 最近一局
+      card.innerHTML = `<span class="end-no">走过 ×${n}</span><b class="end-title">${esc(g.title)}</b><p class="end-canon">${esc(g.canon)}</p><span class="read-cue">展卷 · 大典</span>`;
+      card.addEventListener('click', () => openRite(endingRiteHTML(run, g), 'rite--ending'));
+    } else {
+      card.innerHTML = `<span class="end-no">第 ${i + 1} 种收束 · 未开封</span><b class="end-seal-mark">封</b>`;
+    }
     eg.appendChild(card);
-  }
-  // 别传墙（重构新增）：所有门都列出——开着的给故事，锁着的给门槛
+  });
+  // 别传墙（重构新增）：开着的门给故事；锁着的一律封存——「未开启」，不给门槛
   const sw = $('side-wall'); sw.innerHTML = '';
   for (const st of sides.stories || []) {
-    const card = el('div', 'side-card' + (st.unlocked ? '' : ' locked'));
-    card.innerHTML = `<span class="side-days">${st.days} 日</span><b class="side-title">${esc(st.title)}</b>
-      <p class="side-blurb">${esc(st.blurb || '')}</p>
-      <p class="side-gate">${st.unlocked ? '门开着——菜单「别传」里进去。' : esc(st.unlockHint || '这扇门还没认你。')}</p>`;
+    const card = el('div', 'side-card' + (st.unlocked ? '' : ' sealed'));
+    card.innerHTML = st.unlocked
+      ? `<span class="side-days">${st.days} 日</span><b class="side-title">${esc(st.title)}</b>
+        <p class="side-blurb">${esc(st.blurb || '')}</p>
+        <p class="side-gate">门开着——菜单「别传」里进去。</p>`
+      : `<span class="end-no">一扇没认你的门 · 未开启</span><b class="end-seal-mark">封</b>`;
     sw.appendChild(card);
   }
   // 回响区（EC）：时间胶囊、遗愿、商路的记性
@@ -2270,19 +2357,20 @@ async function loadArchive() {
     shelf.before(dl);
   }
   for (const run of memoirs) {
-    const card = el('div', 'doc memoir-card');
+    const card = el('div', 'doc memoir-card readable');
     const who = [
       run.survivors?.length ? `生还：${run.survivors.join('、')}` : '',
       run.fallen?.length ? `殁：${run.fallen.join('、')}` : ''
     ].filter(Boolean).join('；');
     card.innerHTML = `<span class="doc-id">${esc(ENDING_NAME[run.ending] || run.ending || '终局')}</span><b>${run.day} 天的一局</b>
-      <p class="mem-meta">${esc(who || '没有人走出来')}</p>
-      <details><summary>读复盘</summary><div class="mem-text">${String(run.memoir).split('\n').filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join('')}</div></details>`;
-    // 删掉这一局：复盘随局走（档案馆其余收录保留），两步确认
+      <p class="mem-meta">${esc(who || '没有人走出来')}</p><span class="read-cue">展卷</span>`;
+    card.addEventListener('click', () => openRite(memoirRiteHTML(run), 'rite--doc'));
+    // 删掉这一局：复盘随局走（档案馆其余收录保留），两步确认——别误触展卷
     if (run.runId) {
       const del = el('button', 'memoir-del', '删掉这一局');
       del.type = 'button';
-      del.addEventListener('click', async () => {
+      del.addEventListener('click', async (e) => {
+        e.stopPropagation();
         if (!del.dataset.armed) {
           del.dataset.armed = '1';
           del.textContent = '再按一次：复盘与存档一并删去';
