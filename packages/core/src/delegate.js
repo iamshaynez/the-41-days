@@ -869,11 +869,24 @@ export function suggests(state, pack) {
         });
       }
     }
-    // 劈家具攒柴：wood 可代柴烧饭（厨房认 firewood 或 wood）——柴与板材见底才出，不唠叨
+    // 路子进选项（玩家看见→选择→角色实现）：柴将见底时，把补柴的整条链亮成策略行——
+    // 有斧劈、没斧先造斧、没砧先把铁砧搭起来。静默兜底是地板（planDay），选项是认知。
     {
-      if ((s.inventory.axe || 0) > 0 && (s.homeFurniture || 0) > 0 && ((s.inventory.firewood || 0) + (s.inventory.wood || 0)) <= 3) {
-        const who = aliveChars(s).find((c) => c.ap > 0 && !c.bedRest);
-        if (who) out.push({ label: '劈件旧家具，攒柴烧饭过冬', intents: [{ type: 'act', actor: who.id, action: 'chop' }, close] });
+      const estFuel = (s.inventory.firewood || 0) + (s.inventory.wood || 0) + (s.inventory.book || 0);
+      const winterSoon = s.winterActive || s.day >= (s.winterStart || 12) - 4;
+      const stress = estFuel <= 5 || (winterSoon && (s.inventory.firewood || 0) < 4);
+      if (stress && (s.homeFurniture || 0) > 0) {
+        const free1 = (ap) => aliveChars(s).find((c) => c.ap >= ap && !c.bedRest);
+        if ((s.inventory.axe || 0) > 0) {
+          const who = free1(1);
+          if (who) out.push({ label: '劈一天旧家具，把柴囤足过冬', intents: [{ type: 'act', actor: who.id, action: 'chop' }, { type: 'act', actor: who.id, action: 'chop' }, close] });
+        } else if (s.facilities.metal && (s.inventory.wood || 0) >= 2 && (s.inventory.comp || 0) >= 3) {
+          const who = free1(3);
+          if (who) out.push({ label: '先打把斧头，再把旧家具劈成柴', intents: [{ type: 'act', actor: who.id, action: 'craft', target: 'make_axe' }, { type: 'act', actor: who.id, action: 'chop' }, close] });
+        } else if (!s.facilities.metal && winterSoon && (s.inventory.wood || 0) >= 6 && (s.inventory.parts || 0) >= 10 && (s.inventory.comp || 0) >= 5) {
+          const who = free1(3);
+          if (who) out.push({ label: '搭起铁砧——斧头和柴从此不愁', intents: [{ type: 'act', actor: who.id, action: 'build', target: 'metal' }, close] });
+        }
       }
     }
     if (s.facilities.radio) {

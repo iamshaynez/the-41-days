@@ -202,6 +202,37 @@ describe('晨报问题（dawnProblems）与情境建议（suggests）', () => {
     for (const x of sg.filter((y) => y.label !== '我能做什么？')) assert.equal(x.intents.at(-1).type, 'auto_day', `${x.label} 应收卷`);
   });
 
+  test('路子进选项（玩家看见→选择→角色实现）：没斧时今日卡出「先打斧再劈柴」，没铁砧时出「搭铁砧」', () => {
+    // 没斧、铁砧在手、料齐：策略选项直接亮出这条链
+    let s = newRun();
+    s.inventory.firewood = 0; s.inventory.wood = 2; s.inventory.comp = 3; s.inventory.axe = 0;
+    s.facilities.metal = 1; s.homeFurniture = 3;
+    let sg = suggests(s, pack);
+    const forge = sg.find((x) => /打把斧头|先打斧/.test(x.label) && x.intents?.some((i) => i.action === 'craft' && i.target === 'make_axe'));
+    assert.ok(forge, `出「先打斧再劈柴」策略行：${sg.map((x) => x.label).join('｜')}`);
+    assert.ok(forge.intents.some((i) => i.action === 'chop'), '打完斧头接着劈（同批链式）');
+    assert.equal(forge.intents.at(-1).type, 'auto_day', '照旧收卷');
+    // 没斧也没铁砧、入冬在即、料齐：亮出「搭铁砧」这条路
+    s.facilities.metal = 0; s.inventory.wood = 8; s.inventory.parts = 12; s.inventory.comp = 6;
+    s.day = Math.max(1, (s.winterStart || 10) - 3);
+    sg = suggests(s, pack);
+    assert.ok(sg.some((x) => /铁砧/.test(x.label) && x.intents?.some((i) => i.action === 'build' && i.target === 'metal')), '出「搭铁砧」策略行');
+    // 柴足时不出（不唠叨）
+    s.inventory.firewood = 8;
+    assert.ok(!suggests(s, pack).some((x) => /斧头|铁砧/.test(x.label)), '柴足不唠叨');
+  });
+
+  test('输入即实现（角色张罗，考虑用户 input）：打「劈柴补柴」没斧但可造——先造后劈，不再被「没有斧头」挡死', () => {
+    const s = newRun();
+    s.inventory.firewood = 0; s.inventory.wood = 2; s.inventory.comp = 3; s.inventory.axe = 0;
+    s.facilities.metal = 1; s.homeFurniture = 3;
+    s.facilities.stove = 1; // 别让建造序抢人
+    const r = resolveInput(structuredClone(s), pack, [{ type: 'act', actor: s.chars[0].id, action: 'chop' }]);
+    assert.ok(r.facts.some((f) => f.k === 'self_reliant'), '角色自足落账（先造后劈）');
+    assert.ok(r.facts.some((f) => f.k === 'chop'), '斧头打出来，柴也劈上了');
+    assert.ok((r.state.inventory.firewood || 0) >= 1, '真劈出柴');
+  });
+
   test('管家常识·燃料保障：柴见底时有斧有家具，托管日自动劈——玩家不学链路', () => {
     let s = newRun();
     s.inventory.firewood = 0; s.inventory.wood = 0; s.inventory.book = 0;
