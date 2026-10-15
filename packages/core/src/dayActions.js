@@ -411,10 +411,12 @@ export function findDoc(ctx, docId, c) {
 
 function actChop(ctx, c) {
   const s = ctx.s;
-  if (!ctx.hasItem('axe')) { ctx.fact('no_tool', { tool: '斧头' }); return { ok: false, reason: 'NO_ITEM' }; }
+  // 撞墙即教学：拒绝不是句号，要说清工具从哪来（链路口径住内容包 item.how）
+  if (!ctx.hasItem('axe')) { ctx.fact('no_tool', { tool: '斧头', how: ctx.pack.itemMap?.axe?.how || '夜里翻有工具箱的地方，或等鲁舟的船' }); return { ok: false, reason: 'NO_ITEM' }; }
   if (s.homeFurniture <= 0) { ctx.fact('no_furniture', {}); return { ok: false, reason: 'NO_ITEM' }; }
   ctx.setFlag('homeFurniture', s.homeFurniture - 1);
-  ctx.addItem('wood', 2, '劈柴'); ctx.addItem('parts', 1, '劈柴');
+  // 劈家具：既有板材（烧饭/建材）也有柴（取暖只认柴）——「劈柴」名实相符
+  ctx.addItem('wood', 2, '劈柴'); ctx.addItem('firewood', 1, '劈柴'); ctx.addItem('parts', 1, '劈柴');
   ctx.spendAp(c, 1);
   ctx.fact('chop', { char: c.id });
   return { ok: true };

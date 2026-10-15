@@ -263,6 +263,16 @@ export function dawnProblems(state, pack) {
   if (foodTotal === 0) out.push({ sev: 3, key: 'food_out', text: '家里一点吃的都没有了。' });
   else if (foodTotal <= 2 && !s.facilities.stove) out.push({ sev: 2, key: 'food_low', text: `存粮只剩 ${foodTotal} 份对 ${alive} 张嘴，而且没有炉灶。` });
   else if (foodTotal <= 2) chronic('food_low', 1, `存粮只剩 ${foodTotal} 份，对 ${alive} 张嘴——只够一两顿。`);
+  // 柴将尽预警（实测：没柴了才知道要斧头，攻略外无解）：有斧指劈家具，没斧指打造/夜访
+  {
+    const fuelTotal = (s.inventory.firewood || 0) + (s.inventory.wood || 0);
+    if (fuelTotal <= 2) {
+      const canChop = (s.inventory.axe || 0) > 0 && (s.homeFurniture || 0) > 0;
+      chronic('fuel_low', 1, canChop
+        ? `柴将尽（柴+板材只剩 ${fuelTotal}）——白天可劈旧家具，板材顶柴烧饭、柴取暖`
+        : `柴将尽（柴+板材只剩 ${fuelTotal}）——没斧头劈不了：铁砧打造（2 板材 3 铁件），或夜里翻军辎营辎重箱`);
+    }
+  }
   for (const c of aliveChars(s)) {
     if (c.hunger === 0) out.push({ sev: 3, key: `hunger_${c.id}`, text: `${c.name}已经饿到极限了。` });
     else if (c.hunger === 1) chronic(`hunger_${c.id}`, 2, `${c.name}饿得发慌。`);
