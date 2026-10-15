@@ -45,7 +45,16 @@ export function mainlineAskTick(ctx) {
     : seedPick; // 无步的早晨：种子直接发芽（无池可选）
   const card = ctx.pack.cardMap[picked.card];
   if (step) s.firedOnce['ask_' + step.id] = true;
-  if (picked.seedOf) s.firedOnce['hs_' + picked.seedOf] = true; // 史种落地双账
+  if (picked.seedOf) {
+    s.firedOnce['hs_' + picked.seedOf] = true; // 史种落地双账
+    // 发芽即收种：种子长成卡，使命就完成了——不留活种（否则窗口末的枯萎句
+    // 会对着已兑现的话头说「没人接」）
+    const seedDir = s.directions?.[picked.seedOf];
+    if (seedDir && seedDir.alive) {
+      seedDir.alive = false;
+      ctx.setFlag('directions', structuredClone(s.directions));
+    }
+  }
   ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
   s.activeEvent = { cardId: picked.card };
   ctx.emit('EVENT_FIRED', { cardId: picked.card });
