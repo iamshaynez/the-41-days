@@ -284,6 +284,17 @@ export function buildEnding(state, pack) {
       futures: pack.mainline?.futures?.[s.war.endingType] || [],
       tracks
     };
+    // 尾句（小说层·反转回收）：最后一夜的门、纸的去处——玩家 41 天的选择在此回声
+    {
+      const F = s.eventFlags || {};
+      const tail = [];
+      if (F.final_door_open) tail.push('第四十一天的门是开着的——你救散的人，最后一夜替你守了整条巷子。你曾在家书里写「都好」，这一夜他们来核对了这两个字，然后信了。');
+      else if (F.final_door_shut) tail.push('第四十夜你守住了门。门外的人没砸——散掉的人砸不动任何东西了。他们靠着你家的墙坐到天亮，门里门外，听着彼此的呼吸。');
+      if (F.mercy_debt_paid) tail.push('那碗粥后来替你巡了夜巷。善有善报不是天道，是那个吃过粥的人记得。');
+      if (F.archive_smuggled) tail.push('档案馆的纸出了城——这座城的记忆，在某条你看不见的船上活着。');
+      else if (F.archive_walled) tail.push('纸留在了墙里。城会忘，墙不会。');
+      if (tail.length) story.codex.lines = [...story.codex.lines, ...tail];
+    }
   }
   const epById = Object.fromEntries(story.epilogues.map((e) => [e.id, e]));
   const chars = [...alive, ...dead].map((c) => {

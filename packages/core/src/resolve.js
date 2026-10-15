@@ -15,6 +15,7 @@ import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
 import { planDay, planNightStep, tickDawnLedgers, tickDrama } from './delegate.js';
 import { mainlineAskTick } from './mainline.js';
+import { tickThreads } from './threads.js';
 import { preludeBeats } from './prelude.js';
 import { mainlineTick } from './mainline.js';
 import { ensembleTick } from './ensemble.js';
@@ -385,6 +386,7 @@ function toDawn(ctx) {
   if (overviewDecision(ctx).fire) { collapseDay(ctx); return; }
   tickDrama(ctx);         // 戏剧弧（C/E）：危机头卡与心事保底——一晨至多一张，让过正史、
                           // 随机与概述收卷（平淡日收卷的日子不开卡；忙日子才轮得到心事）
+  tickThreads(ctx);       // 回响节拍器（小说层）：长线轻触/物化 token/翻转卡/幕问幕结
   s.phase = 'day';
   ctx.emit('PHASE', { to: 'day' });
   ctx.fact('phase_day', { day: s.day, weather: s.weather });

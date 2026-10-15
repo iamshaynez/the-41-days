@@ -106,6 +106,7 @@ async function startRun(_difficulty, sidestory, { quick = false } = {}) {
     narrateRaw(r.mode === 'llm'
       ? '（日子他们会自己张罗；轮到你时，世界会停下来问。任何时候，都可以随口说点什么。）'
       : '（日子他们会自己张罗；轮到你时，世界会停下来问。直读模式认得大白话，比如「照常过吧」「省着吃」。）', { cls: 'sys' });
+    if (r.state.contract) narrateRaw(`（${esc(r.state.contract)}）`, { cls: 'sys' });
   }, wantRM() ? 0 : 400 + living.length * 550 + 500);
   enterGame(r.mode, r.state); // 状态入座在后：露布插页落在开场白之后，不抢卷首
 }
@@ -1147,8 +1148,8 @@ function syncAsks(s) {
       node.innerHTML = askHead('今天', s.careView?.title || '这一天怎么过', 'sun');
       if (s.careView?.problems?.length) {
         const body = el('div', 'ask-body');
-        for (const p of s.careView.problems.slice(0, 4)) {
-          body.appendChild(el('p', 'care-line' + (p.sev >= 3 ? ' bad' : p.sev >= 2 ? ' mid' : ''), esc(p.text)));
+        for (const p of s.careView.problems.slice(0, 5)) {
+          body.appendChild(el('p', 'care-line' + (p.sev >= 3 ? ' bad' : p.sev >= 2 ? ' mid' : '') + (String(p.key || '').startsWith('thread_') ? ' thread-line' : ''), esc(p.text)));
         }
         node.appendChild(body);
       }

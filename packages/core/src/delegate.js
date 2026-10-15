@@ -4,6 +4,7 @@
 import { aliveChars, apMaxOf, policyOf, moodLevel } from './state.js';
 import { DAY_ACTIONS, AP_COST } from './dayActions.js';
 import { LOC_ALIAS } from './parser.js';
+import { threadsStateLines } from './threads.js';
 
 const itemName = (pack, id) => pack.itemMap[id]?.name || id;
 const has = (s, id, n = 1) => (s.inventory[id] || 0) >= n;
@@ -305,6 +306,8 @@ export function dawnProblems(state, pack) {
     }
   }
   if (s.war?.telegraphed) chronic('war_soon', 0, '炮声稀了——懂行的人说，可能快了。');
+  // 线的状态行（回响节拍器）：长线常驻一行——游戏替玩家记住，扫一眼就通电
+  out.push(...threadsStateLines(s, pack));
   return out.sort((a, b) => b.sev - a.sev);
 }
 
