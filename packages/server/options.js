@@ -169,7 +169,16 @@ export function cardBrief(state, pack, card) {
   const closed = closedThemesLine(state);
   const menu = `\n\n【分工商簿——现在真正能做的事，按人一行行列；act 的 action/actor/target 从各人名下选，清单外的愿望用 direction】\n${actionMenu(state, pack)}`;
   if (card === 'dusk') {
-    const known = (state.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]).map((l) => pack.locMap[l].name).join('、');
+    // 地点标注搜空状态（实测：被反复派去已搜空的地点，扑空一夜还以为有收获）——
+    // 搜空的地点等城里回补，谋士不该当正经去处反复推荐
+    const pickedDry = (l) => {
+      const loc = pack.locMap[l]; const st = state.locState?.[l];
+      if (!loc || !st) return false;
+      const conts = (loc.rooms || []).flatMap((r) => r.containers || []);
+      return conts.length > 0 && conts.every((c) => st.searched[c.id] !== undefined);
+    };
+    const known = (state.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l])
+      .map((l) => pack.locMap[l].name + (pickedDry(l) ? '（已搜空，等城里回补——别当正经去处反复派）' : '')).join('、');
     return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
   }
   if (card === 'night') {

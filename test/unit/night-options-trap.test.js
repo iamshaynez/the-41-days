@@ -122,6 +122,18 @@ describe('黄昏卡不收非答案：守誓／改约类纯念头不留', () => {
     const clean = duskState();
     assert.ok(!/已了结的话头/.test(cardBrief(clean, PACK, 'day')), '没有已了结主题时不硬塞');
   });
+
+  test('黄昏简报标注搜空地点：全容器搜过的地点标「已搜空，别当正经去处反复派」', () => {
+    const s = duskState();
+    const loc = PACK.locMap.market;
+    const conts = (loc.rooms || []).flatMap((r) => r.containers || []);
+    assert.ok(conts.length > 0, '前提：南市有容器');
+    s.locState.market = { searched: Object.fromEntries(conts.map((c) => [c.id, s.day])), npcState: {} };
+    const brief = cardBrief(s, PACK, 'dusk');
+    assert.match(brief, /南市（已搜空，等城里回补——别当正经去处反复派）/, '搜空地点带标注');
+    const clean = duskState();
+    assert.ok(!/已搜空/.test(cardBrief(clean, PACK, 'dusk')), '没搜过/没搜空的地点不标');
+  });
 });
 
 describe('内核行为锚定：岔路等的是答案，戏文不替玩家答', () => {
