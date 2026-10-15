@@ -300,11 +300,19 @@ export function buildEnding(state, pack) {
   const chars = [...alive, ...dead].map((c) => {
     const ep = epById[c.id] || {};
     const ep2 = ep.epithet ? `——${ep.epithet}` : '';
-    const fate = ep.direction === 'fallen'
+    // 誓的结账（念头演化）：这个人的誓——践了写「放下」，赖账念「说过几遍」
+    const myVows = Object.values(s.directions || {}).filter((d) => d.kind === 'vow' && (d.subject ? d.subject === c.id : true));
+    const done = myVows.find((d) => d.fulfilledDay);
+    const owe = myVows.find((d) => !d.fulfilledDay && (d.watered || 0) >= 1);
+    const vowLine = done
+      ? `第 ${done.fulfilledDay} 天，那句「${(done.text || '').slice(0, 12)}」落了地——放下了。`
+      : owe ? `你说过${(owe.watered || 0) + 1}遍「${(owe.text || '').slice(0, 12)}」。最后那遍之后，${c.name}不再数了。`
+      : '';
+    const fate = (ep.direction === 'fallen'
       ? `没能撑过去。第 ${deathsDay(s, c.id)} 天，橘里的墙上多了一个名字${ep2}。`
       : ep.direction === 'haunted' ? `活下来了，但有些夜晚会突然惊醒，手先于他摸向不存在的刀${ep2}。`
       : ep.direction === 'honored' ? `活下来了。战争结束后很久，还有人敲他家的门——为了道谢，不是为了讨债${ep2}。`
-      : `活下来了。就是活下来了。在这个年头，这四个字已经够写一整页${ep2}。`;
+      : `活下来了。就是活下来了。在这个年头，这四个字已经够写一整页${ep2}。`) + (vowLine ? vowLine : '');
     return { id: c.id, name: c.name, alive: c.alive, fate, direction: ep.direction || 'survived' };
   });
   // 三件事（EX-02）：戏剧分 top3。deeds 只在击杀等重事落笔——和平局的账在因果引擎里

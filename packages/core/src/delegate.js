@@ -308,6 +308,11 @@ export function dawnProblems(state, pack) {
   if (s.war?.telegraphed) chronic('war_soon', 0, '炮声稀了——懂行的人说，可能快了。');
   // 线的状态行（回响节拍器）：长线常驻一行——游戏替玩家记住，扫一眼就通电
   out.push(...threadsStateLines(s, pack));
+  // 誓的状态行（念头演化）：未践的誓占一行「未践·第N天」——债在晨报上挂着
+  for (const d of Object.values(s.directions || {})) {
+    if (d.kind !== 'vow' || !d.alive) continue;
+    out.push({ sev: 0, key: 'vow_' + d.id, text: `未践·第${s.day - d.day}天——「${(d.text || '').slice(0, 14)}」` });
+  }
   return out.sort((a, b) => b.sev - a.sev);
 }
 
@@ -408,6 +413,18 @@ const LOC_BLURB = {
   hospital: '药', post: '死信和旧纸', frontline: '最险，也最肥'
 };
 
+/** 话里点名的地点（誓的判定与 planDusk 共用同一张别名表） */
+export function locOfText(state, pack, text) {
+  const known = state.knownLocs || [];
+  let best = null, bestAt = Infinity;
+  for (const [alias, id] of Object.entries(LOC_ALIAS)) {
+    if (id === 'home' || !known.includes(id)) continue;
+    const at = Math.min(...[text.indexOf(alias), text.indexOf(pack.locMap[id]?.name || '\u0000')].filter((i) => i >= 0));
+    if (at >= 0 && at < bestAt) { best = id; bestAt = at; }
+  }
+  return best;
+}
+
 export function planDusk(state, pack) {
   const s = state;
   const alive = aliveChars(s);
@@ -468,8 +485,8 @@ export function planDusk(state, pack) {
     }
     return best;
   };
-  const dirHit = aliveDirs.find((d) => locMentioned(d.text)) || null;
-  const dirLoc = dirHit ? locMentioned(dirHit.text) : null;
+  const dirHit = aliveDirs.find((d) => d.kind === 'vow' && d.target) || null; // 只有誓提级——杂念史种不掺和
+  const dirLoc = dirHit ? dirHit.target : null;
   const NIGHT_TOOLS = ['lockpick', 'crowbar', 'shovel', 'saw', 'axe', 'knife'];
   const dirGear = aliveDirs
     .flatMap((d) => NIGHT_TOOLS.filter((id) => d.text.includes(pack.itemMap[id]?.name || '\u0000')))
@@ -487,7 +504,7 @@ export function planDusk(state, pack) {
     // 情绪风险前置：抑郁者今晚可能不肯动身（50%）——玩家点卡之前就该看见
     const scavChar = s.chars.find((c) => c.id === scavId);
     const mindWarn = scavChar && lowMind(scavChar) ? `；${scavName}情绪很低，今晚可能不肯出门` : '';
-    const dirNote = dirLoc === locId && dirHit ? `惦记着念头「${dirHit.text.slice(0, 14)}」；` : '';
+    const dirNote = dirLoc === locId && dirHit ? `践誓——「${dirHit.text.slice(0, 14)}」；` : '';
     return { key, label: lines.join('，'), hint: `${dirNote}${LOC_BLURB[locId] || ''}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
   };
 

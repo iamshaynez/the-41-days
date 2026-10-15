@@ -349,11 +349,6 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     // 情境建议（替代静态 chips）：玩家可能想说的话，由状态现算
     view.suggests = suggests(state, pack);
     view.policy = policyOf(state);
-    // v3 命运导演：活着的念头（晨报区展示）+ 自由输入语境示例（停问卡末位输入行）
-    view.directions = Object.values(state.directions || {}).filter((d) => d.alive).map((d) => ({
-      id: d.id, text: d.text, day: d.day,
-      name: d.subject ? (state.chars.find((c) => c.id === d.subject)?.name || d.subject) : '这个家'
-    }));
     view.freeExamples = freeExamples(state, pack);
     // 人物视图（人话状态；desc 供名词情报卡引用——只转述内核已知，不现编）
     view.charView = state.chars.map((c) => ({
