@@ -1404,21 +1404,35 @@ function renderEnding(s) {
   const title = s.ending.type === 'sidestory' ? (s.ending.storyline?.title || '别传') : (END_TITLE[s.ending.type] || '无人幸免');
   const story = s.ending.storyline;
   const codex = story?.codex || {};
-  /* ── 幕一 落幕：题名 + 收束行（手写正典文案，逐行浮现）── */
+  /* ── 幕一 落幕：题名 → 正史压卷（慢速逐条，压住注意力）→ 收束行 ── */
   const curtain = el('div', 'finale curtain');
   curtain.appendChild(el('div', 'ending', `<div class="title">${title}</div>`));
+  const annalSlab = codex.annals || [];
+  if (annalSlab.length) {
+    const an = el('div', 'finale-annals');
+    an.appendChild(el('span', 'kicker', '正史 · 建安二十四年冬'));
+    for (const [i, e] of annalSlab.entries()) {
+      const p = el('p', `annal-entry reveal${e.forked ? ' forked' : ''}`);
+      p.innerHTML = `<i>${esc(e.day)}</i>${esc(e.text)}<em>${esc(e.src)}${e.forked ? '——此行被你们改写' : ''}</em>`;
+      p.style.animationDelay = `${1.0 + i * 2.4}s`;
+      an.appendChild(p);
+    }
+    curtain.appendChild(an);
+  }
+  const linesStart = 1.0 + annalSlab.length * 2.4 + 1.4; // 压卷读完，收束行才开口
   for (const [i, line] of (codex.lines || []).entries()) {
     const cls = line.startsWith('变了') ? 'finale-line flip-chg reveal' : line.startsWith('没变') ? 'finale-line flip-keep reveal' : 'finale-line reveal';
     curtain.appendChild(el('p', cls, esc(line)));
-    curtain.lastChild.style.animationDelay = `${1.2 + i * 1.6}s`;
+    curtain.lastChild.style.animationDelay = `${linesStart + i * 1.6}s`;
   }
   box.appendChild(curtain);
+  const afterCurtain = linesStart + (codex.lines || []).length * 1.6 + 1.2; // 后续各幕的基准延时
 
   /* ── 幕二·五 后日谈：本局结局的开放未来（0.21.0：每局自己的城市肌理）── */
   const futures = codex.futures || [];
   if (futures.length) {
     const fu = el('div', 'finale-act futures reveal');
-    fu.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 1.6}s`;
+    fu.style.animationDelay = `${afterCurtain + 0.4}s`;
     fu.appendChild(el('span', 'kicker', '后日谈'));
     for (const l of futures) {
       const cls = l.startsWith('（') ? 'future-line blank' : 'future-line';
@@ -1429,7 +1443,7 @@ function renderEnding(s) {
 
   /* ── 幕二 史册：双轨摊开（城轨 × 将军轨）+ 野史批注 ── */
   const scroll = el('div', 'finale-act codex reveal');
-  scroll.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 1}s`;
+  scroll.style.animationDelay = `${afterCurtain + 0.1}s`;
   scroll.appendChild(el('span', 'kicker', '史册 · 双轨'));
   const dual = el('div', 'dual-track');
   const mkCol = (label, list) => {
@@ -1457,7 +1471,7 @@ function renderEnding(s) {
   const echoes = story?.echoes || [];
   if (echoes.length) {
     const ec = el('div', 'finale-act echoes reveal');
-    ec.style.animationDelay = `${1.6 + (codex.lines || []).length * 1.6 + 2.2}s`;
+    ec.style.animationDelay = `${afterCurtain + 1.2}s`;
     ec.appendChild(el('span', 'kicker', '史 × 你'));
     for (const e of echoes) {
       ec.appendChild(el('p', 'echo-line', `<i>第${e.day}天</i>史册记「${esc(e.hist)}」；你的墙上记：${esc(e.deed)}。<b>史书没记这一页。</b>`));

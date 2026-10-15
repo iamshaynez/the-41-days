@@ -269,7 +269,7 @@ export function buildEnding(state, pack) {
     }
     story.echoes = echoes;
   }
-  // ── codex（结局屏自足数据：落幕行/双轨/题卷）──
+  // ── codex（结局屏自足数据：正史压卷/落幕行/双轨/题卷）──
   {
     const stepMap = new Map((pack.mainline?.steps || []).map((x) => [x.id, x]));
     const tracks = { city: [], gen: [] };
@@ -279,7 +279,15 @@ export function buildEnding(state, pack) {
       const t = def.track === 'gen' ? tracks.gen : tracks.city;
       t.push({ day: m.day, title: def.title, text: def.fallback || '' });
     }
+    // 正史压卷（0.31.0 落幕仪式感）：正脊各结局共享——历史不因玩家而动；
+    // 分岔结局在 fork 点换行，forked 标记给前端做「改注」特排
+    const annals = (pack.mainline?.annals || []).map((e) => {
+      const f = e.fork?.[s.war.endingType];
+      return f ? { day: e.day, text: f.text, src: f.src || e.src, forked: true }
+        : { day: e.day, text: e.text, src: e.src };
+    });
     story.codex = {
+      annals,
       lines: pack.mainline?.endings?.[s.war.endingType] || [],
       futures: pack.mainline?.futures?.[s.war.endingType] || [],
       tracks
