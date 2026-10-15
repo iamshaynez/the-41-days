@@ -854,6 +854,15 @@ export function suggests(state, pack) {
       if (eats.length) out.push({ label: '让挨饿的都吃上，今天交给他们', intents: [...eats, close] });
     }
     if (foodTotal <= 3 && foodTotal > 0) out.push({ label: '省着吃，今天交给他们', intents: [{ type: 'policy', key: 'rationing', value: true }, close] });
+    // 保底活路亮出来（设计北极星：想活总有办法）：断粮时野菜是地板——
+    // 苦（掉心情）、低效（两蔬一锅），但任何人任何天气都挖得到
+    if (foodTotal <= 2) {
+      const diggers = aliveChars(s).filter((c) => c.ap >= 1 && !c.bedRest).slice(0, 2);
+      if (diggers.length) out.push({
+        label: `去城根挖野菜（保底的口粮，苦但饿不死——${diggers.map((c) => c.name).join('、')}去）`,
+        intents: [...diggers.map((c) => ({ type: 'act', actor: c.id, action: 'forage' })), close]
+      });
+    }
     if (policyOf(s).rationing && foodTotal > 3) out.push({ label: '恢复正常吃饭，今天交给他们', intents: [{ type: 'policy', key: 'rationing', value: false }, close] });
     // 白天能做的事要看得见（玩家实测：白天似乎没事可做）——把既有机制一键化亮出来。
     // 补觉：疲惫的人打盹是最常被问的「白天能干嘛」

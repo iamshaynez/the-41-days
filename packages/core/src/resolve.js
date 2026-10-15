@@ -507,6 +507,21 @@ function runDirectiveNight(ctx, rejects, stance) {
   const s = ctx.s;
   let guard = 0;
   while (s.phase === 'night' && s.night && !s.night.home && guard++ < 48) {
+    // 道德换资源要走得通（宏观）：放手干的方针放倒了人，连搜身一起办——
+    // 夺物不该逼玩家切微操（实测：bold 方针杀完就走，carry 白配）
+    if (stance === 'bold') {
+      const loc0 = ctx.pack.locMap[s.night.locId];
+      const st0 = s.locState[s.night.locId] || {};
+      const downNpc = (loc0?.npcs || []).find((x) => st0.npcState?.[x.id] === 'down' && (x.carry || []).length);
+      if (downNpc) {
+        ctx.fact('night_choice', { why: stance, label: `搜${downNpc.name}的身` });
+        ctx.delegated = true;
+        const rr0 = applyOne(ctx, { type: 'night', action: 'search', target: downNpc.id, delegated: true });
+        ctx.delegated = false;
+        if (rr0 && rr0.ok === false) break;
+        continue;
+      }
+    }
     if (s.activeEvent) { // 夜里触发的事件卡：按立场自动应
       const card = ctx.pack.cardMap[s.activeEvent.cardId] || s.geCards?.[s.activeEvent.cardId];
       const opt = card ? pickEventOptionByStance(card, ctx, stance) : null;

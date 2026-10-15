@@ -233,6 +233,40 @@ describe('晨报问题（dawnProblems）与情境建议（suggests）', () => {
     assert.ok((r.state.inventory.firewood || 0) >= 1, '真劈出柴');
   });
 
+  test('道德换资源·搜身：放倒的人可搜出携带物（道德账照记），活人搜不得', () => {
+    let s = toNight('market');
+    if (s.phase !== 'night' || !s.night) return; // 防御：夜访没建成
+    const npc = (pack.locMap.market.npcs || [])[0];
+    assert.ok(npc && (npc.carry || []).length, '前提：溃兵带携带物（内容契约——杀夺要有产）');
+    s.locState.market.npcState[npc.id] = 'down';
+    const r = resolveInput(s, pack, [{ type: 'night', action: 'search', target: npc.id }]);
+    assert.ok(r.facts.some((f) => f.k === 'night_rob'), '搜身落道德账（steal_civ——从人身上拿东西）');
+    assert.ok(r.facts.some((f) => f.k === 'night_search_hit'), '真拿到东西（kill→search 链有产）');
+    assert.equal(s.locState.market.npcState[npc.id], 'looted', '搜过记账（不重复产）');
+    // 活人搜不得
+    const s2 = toNight('market');
+    if (s2.phase === 'night' && s2.night) {
+      const npc2 = (pack.locMap.market.npcs || [])[0];
+      s2.locState.market.npcState[npc2.id] = 'greeted';
+      const r2 = resolveInput(s2, pack, [{ type: 'night', action: 'search', target: npc2.id }]);
+      assert.ok(!r2.facts.some((f) => f.k === 'night_rob'), '活人身上搜不得');
+    }
+  });
+
+  test('保底活路·挖野菜：任何处境都挖得到（最低效口粮），代价是心情——想活总有办法，体面难', () => {
+    const s = newRun();
+    s.inventory.veg = 0;
+    const before = s.chars[0].moodPts;
+    const r = resolveInput(s, pack, [{ type: 'act', actor: s.chars[0].id, action: 'forage' }]);
+    assert.equal(r.state.inventory.veg, 1, '挖到 1 蔬菜（两蔬一锅的最低效口粮——饿不死，也吃不饱）');
+    assert.ok(r.facts.some((f) => f.k === 'forage'), '落账');
+    assert.ok(r.state.chars[0].moodPts < before, '心情受损（苦活屈辱）');
+    const w = newRun(); w.winterActive = true;
+    const r2 = resolveInput(w, pack, [{ type: 'act', actor: w.chars[0].id, action: 'forage' }]);
+    assert.equal((r2.state.inventory.veg || 0) - 0, 1, '冬天也有挖（保底不因季节断）');
+    assert.ok(r2.state.chars[0].moodPts < r.state.chars[0].moodPts - 0.5, '冬天心情代价更大');
+  });
+
   test('管家常识·燃料保障：柴见底时有斧有家具，托管日自动劈——玩家不学链路', () => {
     let s = newRun();
     s.inventory.firewood = 0; s.inventory.wood = 0; s.inventory.book = 0;
