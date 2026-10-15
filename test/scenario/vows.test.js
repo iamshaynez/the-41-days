@@ -158,6 +158,59 @@ describe('seed 闭环（实测：北津台话头白天点了没反应、晚上�
     mainlineAskTick(new Ctx(bare, PACK, [], []));
     assert.ok(!bare.activeEvent, '无种子无步的早晨不凭空开卡');
   });
+
+  test('发芽即收种：晨卡长出的那刻种子使命完成（alive 落 false）——之后的枯萎句不会说反话', () => {
+    const { state } = newRun({ seed: 836 });
+    state.day = 33; state.phase = 'day';
+    state.directions = { h1: { id: 'h1', text: HIST, kind: 'hist', seed: 'beacon', day: 31, lastDay: 31, alive: true, watered: 0 } };
+    mainlineAskTick(new Ctx(state, PACK, [], []));
+    assert.equal(state.activeEvent?.cardId, 'hs_beacon', '前提：卡长出来了');
+    assert.equal(state.directions.h1.alive, false, '长成卡 = 种子终局，不留活口');
+  });
+});
+
+describe('闭环纪律：要么必闭合，要么只在能闭合时冒头', () => {
+  test('过窗不种：明晨已无发芽机会的史锚话头落杂念，不种注定枯萎的空诺', () => {
+    let s = newRun({ seed: 840 }).state;
+    s = step(s, [{ type: 'advance' }]).state;
+    s.day = 36; // beacon 窗口 [29,36] 的最后一日——下一晨（37）已出窗，永无发芽机会
+    s = step(s, [{ type: 'direction', text: '再去北津台看看' }]).state;
+    assert.ok(!Object.values(s.directions).some((d) => d.kind === 'hist' && d.seed === 'beacon'), '末日不落史种');
+    assert.ok(Object.values(s.directions).some((d) => d.kind === 'misc'), '落杂念（静默三天散）');
+
+    let s2 = newRun({ seed: 841 }).state;
+    s2 = step(s2, [{ type: 'advance' }]).state;
+    s2.day = 35; // 还有一晨（36）在窗内——照种
+    s2 = step(s2, [{ type: 'direction', text: '再去北津台看看' }]).state;
+    assert.ok(Object.values(s2.directions).some((d) => d.kind === 'hist' && d.seed === 'beacon'), '窗内仍有发芽机会 → 照种');
+  });
+
+  test('同题去重：同 seed 的史种换措辞再提 = 浇水，不另种（防同卡两晨连发）', () => {
+    let s = newRun({ seed: 842 }).state;
+    s = step(s, [{ type: 'advance' }]).state;
+    s.day = 30;
+    s = step(s, [{ type: 'direction', text: '北津台该有人举火' }]).state;
+    const r = step(s, [{ type: 'direction', text: '哪天再登一次北津台吧' }]); // 换措辞、同主题
+    const histSeeds = Object.values(r.state.directions).filter((d) => d.kind === 'hist' && d.seed === 'beacon');
+    assert.equal(histSeeds.length, 1, '同 seed 只有一粒');
+    assert.ok(r.facts.some((f) => f.k === 'direction_watered'), '第二遍按浇水入账（有响应，不是无声）');
+  });
+
+  test('誓主亡故即散：人不在了誓没了主——晨报撤行，终局列传照旧核账', () => {
+    const { state } = newRun({ seed: 843, roster: ['anton', 'marta', 'bron'] });
+    state.day = 20;
+    state.directions = { v1: { id: 'v1', text: '替辛夷去医棚取药', kind: 'vow', target: 'hospital', subject: 'marta', day: 12, lastDay: 19, alive: true, watered: 1 } };
+    const marta = state.chars.find((c) => c.id === 'marta');
+    marta.alive = false; // 立誓的人没了
+    const ctx = new Ctx(state, PACK, [], []);
+    tickDirections(ctx);
+    assert.equal(state.directions.v1.alive, false, '誓主亡故 → 誓散');
+    assert.ok(ctx.facts.some((f) => f.k === 'vow_orphaned'), '散场落账（有响应）');
+    assert.ok(!dawnProblems(state, PACK).some((p) => p.key === 'vow_v1'), '晨报不再挂「未践」');
+    const ending = buildEnding(state, PACK);
+    const martaFate = ending.chars.find((c) => c.id === 'marta');
+    assert.ok(martaFate, '终局列传仍在（亡者的账在终局收）');
+  });
 });
 
 describe('杂念：静默快散', () => {
