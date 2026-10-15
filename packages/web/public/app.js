@@ -6,6 +6,7 @@ import { splitSentences, SentenceBuffer } from './typist.js';
 import { sfx } from './sfx.js';
 import { ambience } from './ambience.js';
 import { reconnectDelayMs, createTurnWatch, SSE_STALL_MS } from './reconnect.js';
+import { rescueOptions, RESCUE_TITLE } from './rescue.js';
 injectIcons();
 
 const $ = (id) => document.getElementById(id);
@@ -79,17 +80,34 @@ function updateWatch(s) {
 async function startRun(_difficulty, sidestory, { quick = false } = {}) {
   // 模式不由玩家选：服务端按 LLM 路由配置决定（直读是测试与降级通道，不作为游戏模式提供）
   // 难度也不由玩家选：单一难度（低门槛进入，残酷由江陵自己负责）
-  const res = await fetch('/api/runs', {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(sidestory ? { sidestory } : quick ? { quick: true } : {})
-  });
-  const r = await res.json();
+  let r = null;
+  try {
+    const res = await fetch('/api/runs', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(sidestory ? { sidestory } : quick ? { quick: true } : {})
+    });
+    r = await res.json();
+    if (!res.ok || !r.id || !r.state) {
+      // 开不了这扇门：话要说给玩家，书一页都不动（旧疾：500 被当正常开局，书被清空成一页白纸）
+      const msg = `（这扇门开不了：${esc(r.error || '服务器没有应答')}${r.hint ? `——${esc(r.hint)}` : ''}）`;
+      if ($('game').hidden) $('setup').appendChild(el('p', 'hint', msg));
+      else narrateRaw(msg, { cls: 'sys' });
+      return;
+    }
+  } catch (e) {
+    if ($('game').hidden) $('setup').appendChild(el('p', 'hint', '（够不着服务器——稍后再试一次。）'));
+    else narrateRaw('（够不着服务器——稍后再试一次。）', { cls: 'sys' });
+    return;
+  }
   state.runId = r.id;
   clearBook();
   const startDay = r.state.day || 1;
   dayDivider(startDay);
   // 开局仪式：三个名字，一个一个写上门后的墙（别传：先念开场白）
-  if (r.state.sidestory) narrateRaw(`—— ${esc(r.state.sidestory.title)} ——\n${esc(r.state.sidestory.intro || '')}`, {});
+  if (r.state.sidestory) {
+    narrateRaw(`—— ${esc(r.state.sidestory.title)} ——\n${esc(r.state.sidestory.intro || '')}`, {});
+    narrateRaw('（别传是独立的一局——菜单「没写完的局」里随时翻回主线。）', { cls: 'sys' });
+  }
   if (quick) narrateRaw('（快局 · 从第 21 天入局——这个家已经过了二十天，前情见右侧史卷。）', { cls: 'sys' });
   narrateRaw(`第 ${startDay} 天。`, { dropcap: true });
   const living = r.state.charView.filter((c) => c.alive);
@@ -129,6 +147,7 @@ function clearBook() {
   typist.para = null; memoirTypist.para = null;
   $('narration').innerHTML = '';
   state.asks = {};
+  dropRescue();
   state.lastAlive = null; state.lastDay = null; state.lastPhase = null;
   state.lastPrologueCard = null;
   state.pendingDropcap = false; state.follow = true;
@@ -183,7 +202,12 @@ async function resumeRun(id) {
     if (!r.id) return false;
     applyResume(r);
     return true;
-  } catch { return false; /* 网络断：调用方决定是否挂断线卡 */ }
+  } catch (e) {
+    // 翻页失败要留痕（旧疾：静默吞掉，页面停在半途没人知道为什么）
+    console.error('[resume] 续局失败', e);
+    if (!$('game').hidden) narrateRaw('（翻回这一页时有几行烂了——点「重新接上」再试，或从菜单重进。）', { cls: 'sys' });
+    return false;
+  }
 }
 /** 书页原地重铺（续局与断线重连同一条路）：前文落过库，翻回去就能接上 */
 function applyResume(r) {
@@ -820,19 +844,27 @@ function applyState(s) {
   if (act && state.lastActId && act.id !== state.lastActId && s.phase !== 'prologue' && !s.over) actDivider(act);
   if (act) state.lastActId = act.id;
   // 露布插页：新落定的大事步从史卷走进正文——史与家在同一页上；闲笔作页边批注
-  if (s.chronicle && s.phase !== 'prologue' && !s.over) renderNewChronicle(s.chronicle);
+  safeRender('露布', () => { if (s.chronicle && s.phase !== 'prologue' && !s.over) renderNewChronicle(s.chronicle); });
 
   const weather = WEATHER_NAME[s.weather] || s.weather;
   $('clock').innerHTML = `${svgUse(WEATHER_ICON[s.weather] || 'clear', 'clock-ic')} 第 ${s.day} 日 · ${weather} · ${PHASE_NAME[s.phase] || s.phase}${s.winterActive ? ' · 冬' : ''}`;
 
-  renderPartyline(s);
-  renderHomeline(s);
-  renderPrologue(s); // 序章三幕（文本幕翻页 + 卡拍选择）排进正文流
-  renderMap(s.mapView);       // 右翼上：舆图（三态 + 走向 + 留痕）
-  renderChronicle(s.chronicle); // 右翼下：史卷（大事步 + 闲笔 + 我方一行）
-  syncAsks(s);       // 世界停问的卡，嵌在正文流里
-  if (state.popFor) fillCharPop(state.popFor); // 浮卡开着时随状态刷新
-  if (s.over && s.ending && !s.endingRendered) { renderEnding(s); s.endingRendered = true; }
+  // 渲染隔离（卡死存档的教训）：任何一段视图烂了（旧档遇上新视图、
+  // 半途状态缺字段），只烂那一段——停问卡永远要渲染到，日子永远能往下走。
+  // 异常落在控制台供排查，不吞进无声。
+  safeRender('人物行', () => renderPartyline(s));
+  safeRender('家底行', () => renderHomeline(s));
+  safeRender('序章', () => renderPrologue(s)); // 序章三幕（文本幕翻页 + 卡拍选择）排进正文流
+  safeRender('舆图', () => renderMap(s.mapView));       // 右翼上：舆图（三态 + 走向 + 留痕）
+  safeRender('史卷', () => renderChronicle(s.chronicle)); // 右翼下：史卷（大事步 + 闲笔 + 我方一行）
+  safeRender('停问卡', () => syncAsks(s));       // 世界停问的卡，嵌在正文流里
+  if (state.popFor) safeRender('浮卡', () => fillCharPop(state.popFor)); // 浮卡开着时随状态刷新
+  if (s.over && s.ending && !s.endingRendered) safeRender('落幕', () => { renderEnding(s); s.endingRendered = true; });
+  ensureAskability(s); // 兜底：一张卡都没落出来时，补笔卡保住「能往下走」
+}
+/** 渲染隔离：一段视图的异常不外溢——记录在案，书照常翻 */
+function safeRender(name, fn) {
+  try { fn(); } catch (e) { console.error(`[render] ${name} 段落渲染失败`, e); }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1122,7 +1154,11 @@ function syncAsk(key, present, sig, build) {
   node.dataset.ask = key;
   node.id = 'ask-' + key;
   closePara(); // 先收笔再开停问页——卡永远落在写完的句子后面
-  build(node);
+  try { build(node); } catch (e) { // 一张卡烂了不连坐：记案、收走，别砸断后面所有的卡
+    console.error(`[render] 停问卡 ${key} 构建失败`, e);
+    node.remove();
+    return;
+  }
   $('narration').appendChild(node);
   state.asks[key] = { sig, el: node };
   node.classList.add('flash');
@@ -1265,9 +1301,11 @@ function syncAsks(s) {
   const inPrologue = s.phase === 'prologue';
   // 今日卡（统一交互面）：白天常驻——晨报 + 念头 + 情境选项 + 刷新命运 + 输入行。
   // 有急件时让位（门口的事优先）；夜访/黄昏各由自己的卡接管。
+  // directions 是内核的念头登记簿（id→条目的对象，非数组）——曾按数组 .map，
+  // 每一次今日卡渲染都炸（syncAsks 整段中断=「存档卡死」的根因），Object.values 才对。
   syncAsk('day', !!(!inPrologue && s.phase === 'day' && !s.eventView && !s.over),
     [s.day, s.phase, s.rngCursor, (s.careView?.problems || []).map((p) => p.text).join('|'),
-      (s.suggests || []).map((x) => x.label).join('|'), (s.directions || []).map((d) => d.text).join('|')].join('§'), (node) => {
+      (s.suggests || []).map((x) => x.label).join('|'), Object.values(s.directions || {}).map((d) => d.text).join('|')].join('§'), (node) => {
       node.innerHTML = askHead('今天', s.careView?.title || '这一天怎么过', 'sun');
       if (s.careView?.problems?.length) {
         const body = el('div', 'ask-body');
@@ -1439,6 +1477,39 @@ function syncAsks(s) {
       node.appendChild(freeOptRow(s, 'night'));
       if (nightReveal) revealCardVeiled(node, opts, 'night', s, nightReveal); // 整卷等墨（岔路/继续分支不等）
     });
+}
+
+/* ═══ 补笔卡（兜底推进）：一本翻不动的书，也要有路走 ═══
+   断线、旧档、半途状态都可能让「该有的停问卡」一张都没落出来——玩家面对
+   死书。applyState 收尾时对账：无卡且局未终 → 按相位补一张推进卡（选项只走
+   内核认得的既有宏，自由输入行照常在）。有卡即收，永不与正常卡同屏。 */
+let rescueCard = null;
+function ensureAskability(s) {
+  if (!s || s.over || state.view !== 'play' || $('game').hidden || !state.runId) { dropRescue(); return; }
+  const hasAsk = Object.keys(state.asks).length > 0 || !!document.querySelector('.prologue:not(.settled)');
+  if (hasAsk) { dropRescue(); return; }
+  const sig = s.day + ':' + s.phase;
+  if (rescueCard?.isConnected && rescueCard.dataset.sig === sig) return;
+  dropRescue();
+  const node = el('div', 'ask rescue-card');
+  node.dataset.sig = sig;
+  closePara();
+  node.innerHTML = askHead('补笔', RESCUE_TITLE[s.phase] || '把日子往下过', 'sun');
+  const opts = el('div', 'ask-opts');
+  for (const o of rescueOptions(s)) {
+    const b = optBtn(o.label, '▸', () => (o.intents ? sendIntents(o.intents, o.label) : sendInput(o.input, o.label)), o.hint || '');
+    opts.appendChild(b);
+  }
+  node.appendChild(opts);
+  node.appendChild(freeOptRow(s, 'day'));
+  node.appendChild(el('p', 'ask-hint', '这一页没有停问落出来——多半是旧档或断线留下的。点一下就能接上；想说的话照常算数。'));
+  $('narration').appendChild(node);
+  node.classList.add('flash');
+  revealFlow();
+  rescueCard = node;
+}
+function dropRescue() {
+  if (rescueCard) { rescueCard.remove(); rescueCard = null; }
 }
 
 /** 序章三幕（叙事双轴 §2）：文本幕（天下/围城/前传/合流）翻页推进，卡拍沿用停问版式。
@@ -2052,8 +2123,32 @@ function nounIntel(entry) {
 })();
 
 // ——— 档案馆 ———
+/* ═══ 档案馆（重构）：这座城记得的一切，一页装下 ═══
+   线索（遗档按层分组 + 显形的真相）→ 史册（正史/野史）→ 结局九格 →
+   别传（解锁门）→ 江陵记得（回响）→ 回忆录书架。结局文案的正史行
+   引自内核 ANNALS（收官压卷同源）；未走到的结局只给走向，不剧透正文。 */
+const ENDING_GALLERY = [
+  { type: 'ceasefire', title: '开城', canon: '是岁闰十月，江陵易主，不血刃。', hint: '军心的账摊平——家访与家书把刀磨钝，第四十一日城门自开。' },
+  { type: 'maicheng', title: '麦城得脱', canon: '十二月，羽自麦城走房陵，得脱。', hint: '军心留住，北津台的鼓声早到六个时辰——史书被改了半行。' },
+  { type: 'pyrrhic', title: '惨胜', canon: '吕蒙弃城北渡，羽复入江陵。是岁，大饥。', hint: '守住了城，米缸见了底。' },
+  { type: 'lighthouse', title: '还师', canon: '烽鼓之信先于刀至，羽收兵，全军而退。', hint: '把真相送上北津台的烽火——真话让下一个谎更难开口。' },
+  { type: 'join_table', title: '出江陵记', canon: '有舟夜发，符传三张。', hint: '收下符传——活着离开江陵，这句话要说很多年。' },
+  { type: 'hostage', title: '槛车', canon: '吴人获羽于章乡，不杀，槛送武昌。', hint: '联名帖救下的不是对错，是一条命。' },
+  { type: 'contract_end', title: '交割日', canon: '契书用印，城易其主。', hint: '章比刀兵体面，一样凉。' },
+  { type: 'alt_both', title: '另一种三国', canon: '门未竟开，军未尽散，刀未尝落。', hint: '两卷史书并排放着——都是真的。' },
+  { type: 'wiped', title: '无人幸免', canon: '是岁，江陵易主。橘里九号，无人生还。', hint: '门后再没有人应门。' }
+];
+const DOC_LAYERS = [
+  [0, '私物 · 家书与死信'],
+  [1, '公牍 · 城里的纸'],
+  [2, '密件 · 不该留下的'],
+  [3, '铁证 · 烫手的']
+];
 async function loadArchive() {
-  const r = await (await fetch('/api/archive')).json();
+  const [r, sides] = await Promise.all([
+    (await fetch('/api/archive')).json(),
+    fetch('/api/sidestories').then((x) => x.json()).catch(() => ({ stories: [] }))
+  ]);
   // 合上兰台（§3.6）：条件齐了才出现，两步确认，谢幕是内容不是彩蛋
   const cb = $('closure-box');
   if (cb) {
@@ -2076,7 +2171,7 @@ async function loadArchive() {
       cb.appendChild(b);
     }
   }
-  const ENDING_NAME = { ceasefire: '开城', maicheng: '开城·麦城得脱', pyrrhic: '惨胜', alt_both: '另一种三国', contract_end: '交割日', wiped: '无人幸免', lighthouse: '还师', join_table: '出江陵记', sidestory: '别传' };
+  const ENDING_NAME = { ceasefire: '开城', maicheng: '开城·麦城得脱', pyrrhic: '惨胜', alt_both: '另一种三国', contract_end: '交割日', wiped: '无人幸免', lighthouse: '还师', join_table: '出江陵记', hostage: '槛车', sidestory: '别传' };
   $('archive-progress').textContent = `已入档 ${r.layers.progress.docs} / ${r.layers.progress.total} 份文件——这座城还没说完的话，都在纸上。`;
   const wall = $('layer-states'); wall.innerHTML = '';
   for (const [k, name] of Object.entries(r.layers.layerNames)) {
@@ -2084,28 +2179,39 @@ async function loadArchive() {
     wall.appendChild(el('div', 'layer-state' + (unlocked ? '' : ' locked'),
       `<b>${esc(name)}</b><span class="tag-line">${unlocked ? '已显形' : '尚未显形'}</span>`));
   }
+  // 遗档按层分组（重构）：层是这座城的深浅——私物在最上，铁证在最下
   const dw = $('doc-wall'); dw.innerHTML = '';
-  if (!r.docs.length) dw.appendChild(el('p', 'hint', '还没有任何文件。夜晚去驿亭、里社、宅区翻一翻——或者在自家地窖的墙皮后面。'));
-  for (const d of r.docs) {
-    // 材质分级：层 3 铁证=碑拓（黑底白文），层 0 私物=缣帛（家书/死信），其余=竹简
-    const mat = d.layer >= 3 ? ' iron' : (d.layer <= 0 ? ' silk' : '');
-    const doc = el('div', 'doc' + mat);
-    doc.innerHTML = `<span class="doc-id">${esc(d.id)}</span><b>${esc(d.title)}</b>
-      <details><summary>读</summary><p>${esc(d.text)}</p></details>`;
-    dw.appendChild(doc);
-  }
-  // 已显形的真相（封印注入协议：解锁过的才在墙上）
-  const sealWall = $('seal-wall');
-  if (sealWall) {
-    sealWall.innerHTML = '';
-    const seals = r.seals || [];
-    $('archive-seals-box').hidden = !seals.length;
-    if (seals.length) sfx.crack(); // 语义音：封泥碎裂——墙上有你挣出来的真相
-    for (const x of seals) {
-      const d = el('div', 'doc seal');
-      d.innerHTML = `<span class="doc-id">层 ${esc(x.layer)}</span><p>${esc(x.text)}</p>`;
-      sealWall.appendChild(d);
+  const docs = r.docs || [];
+  if (!docs.length) dw.appendChild(el('p', 'hint', '还没有任何文件。夜晚去驿亭、里社、宅区翻一翻——或者在自家地窖的墙皮后面。'));
+  for (const [layer, name] of DOC_LAYERS) {
+    const group = docs.filter((d) => d.layer === layer);
+    if (!group.length) continue;
+    const g = el('div', 'wall-group');
+    g.appendChild(el('h4', 'wall-g-head', `${name}<span class="wall-g-count">×${group.length}</span>`));
+    const gw = el('div', 'doc-wall');
+    for (const d of group) {
+      // 材质分级：层 3 铁证=碑拓（黑底白文），层 0 私物=缣帛（家书/死信），其余=竹简
+      const mat = d.layer >= 3 ? ' iron' : (d.layer <= 0 ? ' silk' : '');
+      const doc = el('div', 'doc' + mat);
+      doc.innerHTML = `<span class="doc-id">${esc(d.id)}</span><b>${esc(d.title)}</b>
+        <details><summary>读</summary><p>${esc(d.text)}</p></details>`;
+      gw.appendChild(doc);
     }
+    g.appendChild(gw);
+    dw.appendChild(g);
+  }
+  // 显形的真相（封印注入协议：解锁过的才在墙上）——与遗档同居「线索」节
+  const sealWall = $('seal-wall');
+  const seals = r.seals || [];
+  $('seal-sub').hidden = !seals.length;
+  sealWall.innerHTML = '';
+  if (seals.length) sfx.crack(); // 语义音：封泥碎裂——墙上有你挣出来的真相
+  for (const x of seals) {
+    // 类名用 seal-card（不带 .seal——那是 landing 封面大印的类，撞车会把整张卡
+    // 变成绝位旋转的方章：真相卡叠在板块右上、文字溢出，即"印章错位"旧疾）
+    const d = el('div', 'doc seal-card');
+    d.innerHTML = `<span class="doc-id">层 ${esc(x.layer)} · 真相</span><p>${esc(x.text)}</p>`;
+    sealWall.appendChild(d);
   }
   // 史册格（GDD-v0.2 §12.1）：正史栏=通行叙事；野史栏=你打出来的那几页
   const ca = $('canon-annals'); ca.innerHTML = '';
@@ -2116,6 +2222,30 @@ async function loadArchive() {
     const d = el('div', 'doc annal-alt');
     d.innerHTML = `<span class="doc-id">${esc(ENDING_NAME[a.id] || '或然')}</span>${a.text ? `<p>${esc(a.text)}</p>` : ''}<p class="mem-meta">批注：${esc(a.note)}</p>`;
     aa.appendChild(d);
+  }
+  // 结局九格（重构新增）：走到的亮正史，没走到的亮轮廓——收藏馆的骨架
+  const seenEnd = new Map();
+  for (const run of r.runs || []) {
+    if (!run.ending) continue;
+    seenEnd.set(run.ending, (seenEnd.get(run.ending) || 0) + 1);
+  }
+  const eg = $('end-grid'); eg.innerHTML = '';
+  for (const g of ENDING_GALLERY) {
+    const n = seenEnd.get(g.type) || 0;
+    const card = el('div', 'end-card' + (n ? ' seen' : ' locked'));
+    card.innerHTML = n
+      ? `<span class="end-no">走过 ×${n}</span><b class="end-title">${esc(g.title)}</b><p class="end-canon">${esc(g.canon)}</p>`
+      : `<span class="end-no">未竟</span><b class="end-title">${esc(g.title)}</b><p class="end-hint">${esc(g.hint)}</p>`;
+    eg.appendChild(card);
+  }
+  // 别传墙（重构新增）：所有门都列出——开着的给故事，锁着的给门槛
+  const sw = $('side-wall'); sw.innerHTML = '';
+  for (const st of sides.stories || []) {
+    const card = el('div', 'side-card' + (st.unlocked ? '' : ' locked'));
+    card.innerHTML = `<span class="side-days">${st.days} 日</span><b class="side-title">${esc(st.title)}</b>
+      <p class="side-blurb">${esc(st.blurb || '')}</p>
+      <p class="side-gate">${st.unlocked ? '门开着——菜单「别传」里进去。' : esc(st.unlockHint || '这扇门还没认你。')}</p>`;
+    sw.appendChild(card);
   }
   // 回响区（EC）：时间胶囊、遗愿、商路的记性
   const echoes = r.echoes || [];

@@ -92,7 +92,7 @@
     </section>
   </main>
 
-  <!-- ═══ 档案馆 ═══ -->
+  <!-- ═══ 档案馆：这座城记得的一切，一页装下 ═══ -->
   <main id="view-archive" class="view" hidden>
     <section class="panel paper archive-head">
       <p class="kicker">跨局 · 这座城的记忆</p>
@@ -100,7 +100,13 @@
       <p class="lede" id="archive-progress"></p>
       <div id="layer-states"></div>
       <div id="closure-box" hidden></div>
+    </section>
+    <section class="panel paper" id="archive-clues-box">
+      <h2>线索 · 遗档与真相</h2>
+      <p class="hint">夜里翻出来的纸，与这座城不肯说破的话。层越深，越烫手。</p>
       <div id="doc-wall" class="doc-wall"></div>
+      <h3 class="wall-sub" id="seal-sub" hidden>显形的真相</h3>
+      <div id="seal-wall" class="doc-wall"></div>
     </section>
     <section class="panel paper" id="archive-annals-box">
       <h2>史册</h2>
@@ -109,14 +115,19 @@
         <div><h3 class="annal-h">野史</h3><div id="alt-annals"></div></div>
       </div>
     </section>
+    <section class="panel paper" id="archive-endings-box">
+      <h2>结局 · 九种收束</h2>
+      <p class="hint">围城总有尽头。走到的收束亮着正史一行；没走到的，路还亮着轮廓。</p>
+      <div id="end-grid" class="end-grid"></div>
+    </section>
+    <section class="panel paper" id="archive-sides-box">
+      <h2>别传 · 门后还有门</h2>
+      <p class="hint">别人的围城。档案馆认出你之后，那些门会一扇扇开。</p>
+      <div id="side-wall" class="side-wall"></div>
+    </section>
     <section class="panel paper" id="archive-echoes-box" hidden>
       <h2>江陵记得</h2>
       <div id="echoes-wall" class="doc-wall"></div>
-    </section>
-    <section class="panel paper" id="archive-seals-box" hidden>
-      <p class="kicker">显形的真相 · 你挣出来的</p>
-      <h1>这座城的另一面</h1>
-      <div id="seal-wall" class="doc-wall"></div>
     </section>
     <section class="panel paper" id="archive-memoirs-box" hidden>
       <p class="kicker">回忆录 · 每一局都值得被写下来</p>

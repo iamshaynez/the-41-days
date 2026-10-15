@@ -968,25 +968,29 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .doc.iron summary { color: #9a8f74; }
 .doc.iron .doc-id { color: var(--accent-2); }
 
-/* 封印档案（S4）：解锁过的真相上墙，封泥是碎的——开过就回不去 */
-.doc.seal { padding-right: 52px; }
-.doc.seal::before, .doc.seal::after {  /* 朱泥封检裂成两半 */
-  content: ''; position: absolute; top: 13px; width: 13px; height: 26px;
+/* 封印档案（S4）：解锁过的真相上墙，封泥是碎的——开过就回不去。
+   类名 seal-card 与 landing 封面大印 .seal 刻意错开（旧疾：撞车把整张卡
+   变成绝位旋转的 84px 方章）。朱泥两半钤在专属角落，长文永远压不到印。 */
+.doc.seal-card { padding-right: 64px; }
+.doc.seal-card::before, .doc.seal-card::after {  /* 朱泥封检裂成两半 */
+  content: ''; position: absolute; top: 14px; width: 13px; height: 26px;
   box-shadow: inset 0 0 0 1px rgba(243, 233, 212, .22);
   transition: transform .3s ease;
 }
-.doc.seal::before {  /* 左半 */
-  right: 27px; background: linear-gradient(135deg, #c95940, #7e2413);
+.doc.seal-card::before {  /* 左半 */
+  right: 30px; background: linear-gradient(135deg, #c95940, #7e2413);
   clip-path: polygon(0 0, 100% 0, 74% 26%, 100% 52%, 72% 80%, 100% 100%, 0 100%);
   transform: rotate(-4deg);
 }
-.doc.seal::after {  /* 右半 */
-  right: 13px; background: linear-gradient(225deg, #c95940, #7e2413);
+.doc.seal-card::after {  /* 右半 */
+  right: 15px; background: linear-gradient(225deg, #c95940, #7e2413);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 28% 80%, 0 52%, 26% 26%);
   transform: rotate(4deg);
 }
-.doc.seal:hover::before { transform: rotate(-7deg) translateX(-1px); }
-.doc.seal:hover::after { transform: rotate(7deg) translateX(1px); }.doc.iron::after {
+.doc.seal-card:hover::before { transform: rotate(-7deg) translateX(-1px); }
+.doc.seal-card:hover::after { transform: rotate(7deg) translateX(1px); }
+.doc.iron { padding-right: 64px; }  /* 鐵證章的印位（重构：题名不再压印） */
+.doc.iron::after {
   content: '鐵證'; position: absolute; top: 10px; right: 10px;
   font-family: var(--font-seal); font-size: 11px; letter-spacing: .14em;
   background: var(--accent); color: #f3e9d4; border: none; border-radius: 2px;
@@ -998,6 +1002,61 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .memoir-card { border-left: 3px solid var(--accent); }
 .memoir-card .mem-meta { color: var(--ink-3); font-size: 12px; margin: 5px 0 0; font-family: var(--font-kai); }
 .memoir-card .mem-text { margin-top: 8px; }
+
+/* ——— 档案馆重构：线索分层 / 结局九格 / 别传墙 ——— */
+.wall-sub { margin: 26px 0 0; font-size: 13px; letter-spacing: .3em; color: var(--ink-2); font-family: var(--font-carved); }
+.wall-group { margin-top: 18px; }
+.wall-g-head {
+  display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px;
+  font-size: 12px; letter-spacing: .22em; color: var(--accent); font-family: var(--font-carved);
+  border-bottom: 1px dashed var(--rule); padding-bottom: 6px;
+}
+.wall-g-count { margin-left: auto; color: var(--ink-3); font-family: var(--font-mono); letter-spacing: .1em; }
+/* 结局九格：走到的亮正史一行，没走到的只亮轮廓 */
+.end-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-top: 18px; }
+.end-card {
+  position: relative; padding: 16px 18px 14px;
+  background: var(--paper-hi); border: 1px solid var(--rule);
+  box-shadow: 2px 3px 0 var(--shadow);
+  transition: transform .25s;
+  animation: fadeUp .5s ease both;
+}
+.end-card:hover { transform: translateY(-2px); }
+.end-card .end-no {
+  display: inline-block; font-size: 10.5px; letter-spacing: .2em;
+  color: var(--ink-3); font-family: var(--font-mono); margin-bottom: 6px;
+}
+.end-card .end-title { display: block; font-size: 17px; letter-spacing: .18em; font-family: var(--font-carved); color: var(--ink); }
+.end-card .end-canon { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-2); font-family: var(--font-kai); line-height: 1.7; }
+.end-card.seen { border-left: 3px solid var(--accent); }
+.end-card.seen .end-no { color: var(--accent); }
+.end-card.locked { opacity: .62; border-style: dashed; box-shadow: none; }
+.end-card.locked .end-title { color: var(--ink-2); }
+.end-card.locked .end-hint { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); line-height: 1.7; }
+/* 别传墙：开着的门给故事，锁着的给门槛 */
+.side-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 18px; }
+.side-card {
+  position: relative; padding: 15px 18px 13px;
+  background: var(--paper-hi); border: 1px solid var(--rule);
+  box-shadow: 2px 3px 0 var(--shadow); animation: fadeUp .5s ease both;
+}
+.side-card .side-days {
+  position: absolute; top: 10px; right: 10px;
+  font-size: 10.5px; letter-spacing: .12em; color: var(--ink-3); font-family: var(--font-mono);
+  border: 1px solid var(--rule); padding: 1px 7px 2px; border-radius: 2px;
+}
+.side-card .side-title { display: block; font-size: 15.5px; letter-spacing: .14em; font-family: var(--font-carved); color: var(--ink); margin: 2px 46px 6px 0; }
+.side-card .side-blurb { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.7; }
+.side-card .side-gate { margin: 8px 0 0; font-size: 11.5px; color: var(--accent); letter-spacing: .04em; }
+.side-card.locked { opacity: .6; border-style: dashed; box-shadow: none; }
+.side-card.locked .side-gate { color: var(--ink-3); }
+/* 补笔卡（兜底推进）：虚线裁口的残页——一本翻不动的书也要有路走 */
+.rescue-card {
+  border: 1.5px dashed var(--rule-strong);
+  background:
+    var(--grain) padding-box,
+    linear-gradient(var(--paper-hi), var(--paper-hi)) padding-box;
+}
 .memoir-card .mem-text p { margin: 0 0 9px; line-height: 1.95; text-align: justify; color: var(--ink-2); }
 .doc summary::before { content: '▸ '; color: var(--accent); }
 .doc details[open] summary::before { content: '▾ '; }
