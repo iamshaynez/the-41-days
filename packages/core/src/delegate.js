@@ -255,6 +255,22 @@ export function planDay(state, pack) {
       if (est.raw > 0) est.raw -= 1; else if (est.meat > 0) est.meat -= 1; else est.veg -= 2;
     }
   }
+  // —— 求生本能（角色的，不是玩家的咒语）：断粮时自己去刨野菜——
+  //    不依赖关键词、选项或玩家下令；苦活的代价（心情）记在这个家头上。
+  //    有粮不挖（两蔬一锅的最低效口粮是地板，不是产业）
+  {
+    const foodNow = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
+    const mouths2 = aliveChars(s).length;
+    if (foodNow / Math.max(1, mouths2) < 1) {
+      let g2 = 0;
+      while (g2++ < Math.min(2, mouths2)) {
+        const digger = free((c) => c.ap >= 1);
+        if (!digger) break;
+        intents.push(delegated({ type: 'act', actor: digger.id, action: 'forage' }));
+        use(digger.id);
+      }
+    }
+  }
   // —— 搜家：还有没翻过的角落就翻 ——
   {
     const idler = free();

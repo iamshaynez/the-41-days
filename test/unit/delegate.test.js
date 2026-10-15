@@ -233,6 +233,22 @@ describe('晨报问题（dawnProblems）与情境建议（suggests）', () => {
     assert.ok((r.state.inventory.firewood || 0) >= 1, '真劈出柴');
   });
 
+  test('求生本能（玩家不施法）：断粮时托管日自动刨野菜——不依赖关键词与选项，代价照记', () => {
+    const s = newRun();
+    for (const k of ['meal', 'canned', 'raw', 'meat', 'veg']) s.inventory[k] = 0;
+    const plan = planDay(s, pack);
+    assert.ok(plan.some((i) => i.action === 'forage' && i.delegated), '管家自动安排刨野菜（角色自己努力活下去）');
+    // E2E：托管一整天，家里真的有了口粮，心情真的掉了——玩家承担后果
+    const r = resolveInput(structuredClone(s), pack, [{ type: 'auto_day' }]);
+    assert.ok((r.state.inventory.veg || 0) >= 1, '蔬米入账');
+    const moods = r.state.chars.map((c) => c.moodPts);
+    assert.ok(moods.some((m) => m < 0) || r.facts.some((f) => f.k === 'forage'), '苦活的代价落在人身上');
+    // 有粮时不多挖（不是农场）
+    const s2 = newRun();
+    s2.inventory.raw = 6;
+    assert.ok(!planDay(s2, pack).some((i) => i.action === 'forage'), '有粮不挖——保底不是产业');
+  });
+
   test('道德换资源·搜身：放倒的人可搜出携带物（道德账照记），活人搜不得', () => {
     let s = toNight('market');
     if (s.phase !== 'night' || !s.night) return; // 防御：夜访没建成
