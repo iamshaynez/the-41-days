@@ -4,43 +4,121 @@
     {
       "id": "clerk",
       "motif": "收册的吏",
-      "active": { "card": "ask_m2_visit" },
+      "active": {
+        "card": "ask_m2_visit"
+      },
       "stateLine": "收册的那个吏，如今在城门口核对进出。",
       "touches": [
-        { "from": 9, "to": 9, "via": "morning", "line": "坊间说，收册的那个吏，升了。" },
-        { "from": 14, "to": 15, "via": "franko", "line": "鲁舟压低声音：收册的那个吏，如今守着城门——他记性好，认得每户报过的数。" },
-        { "from": 28, "to": 29, "via": "morning", "line": "过境的队伍里有个病着的人，用木牍垫着头——看不清脸。" }
+        {
+          "from": 9,
+          "to": 9,
+          "via": "morning",
+          "line": "坊间说，收册的那个吏，升了。"
+        },
+        {
+          "from": 14,
+          "to": 15,
+          "via": "franko",
+          "line": "鲁舟压低声音：收册的那个吏，如今守着城门——他记性好，认得每户报过的数。"
+        },
+        {
+          "from": 28,
+          "to": 29,
+          "via": "morning",
+          "line": "过境的队伍里有个病着的人，用木牍垫着头——看不清脸。"
+        }
       ],
-      "token": { "day": 3, "item": "clerk_tablet" }
+      "token": {
+        "day": 3,
+        "item": "clerk_tablet"
+      }
     },
     {
       "id": "paper",
       "motif": "他买的不是纸",
-      "active": { "day": 8 },
+      "active": {
+        "day": 8,
+        "chance": 60
+      },
       "stateLine": "鲁舟身后那箱纸，又厚了一层。",
       "touches": [
-        { "from": 8, "to": 9, "via": "franko", "line": "他身后那箱纸又厚了一层，烧焦的一角从缝里露出来。他把那角纸送了你：「留个念想。」" },
-        { "from": 18, "to": 19, "via": "morning", "line": "渡口的灰烬里全是字——烧的是纸，成捆的纸。" },
-        { "from": 25, "to": 26, "via": "franko", "line": "这一趟他没还价。纸，多少都要。" }
+        {
+          "from": 8,
+          "to": 9,
+          "via": "franko",
+          "lines": [
+            "他身后那箱纸又厚了一层，烧焦的一角从缝里露出来。他把那角纸送了你：「留个念想。」",
+            "他脚边的空篓子比往日多了一倍——全是装纸用的。他拍拍箱子：「轻，值钱。」"
+          ]
+        },
+        {
+          "from": 18,
+          "to": 19,
+          "via": "morning",
+          "lines": [
+            "渡口的灰烬里全是字——烧的是纸，成捆的纸。",
+            "有人看见夜里过江的船吃水很浅——纸压舱，比粮轻。"
+          ]
+        },
+        {
+          "from": 25,
+          "to": 26,
+          "via": "franko",
+          "lines": [
+            "这一趟他没还价。纸，多少都要。",
+            "他数纸像别人数钱——一张一张，怕折了角。"
+          ]
+        }
       ],
-      "token": { "day": 8, "item": "scorched_paper" },
-      "turn": { "from": 32, "to": 34, "card": "x_paper_burn" }
+      "token": {
+        "day": 8,
+        "item": "scorched_paper"
+      },
+      "turn": {
+        "from": 32,
+        "to": 34,
+        "card": "x_paper_burn"
+      }
     },
     {
       "id": "mercy",
       "motif": "那碗粥",
-      "active": { "flag": "mercy_meal" },
+      "active": {
+        "flag": "mercy_meal"
+      },
       "hidden": true,
-      "turn": { "from": 26, "to": 29, "card": "c_debt_of_mercy" }
+      "turn": {
+        "from": 26,
+        "to": 29,
+        "card": "c_debt_of_mercy"
+      }
     },
     {
       "id": "siege",
       "motif": "你救散的人",
-      "active": { "dissolve": "threshold" },
+      "active": {
+        "dissolve": "threshold"
+      },
       "hidden": true,
-      "turn": { "from": 40, "to": 40, "card": "x_final_siege" }
+      "turn": {
+        "from": 40,
+        "to": 40,
+        "card": "x_final_siege"
+      }
     }
   ],
-  "shadowChain": { "from": 20, "to": 26, "card": "x_shadow_reveal" },
-  "contract": "这座城把有些话写在墙缝里——留意那些重复出现的话。"
+  "shadowChain": {
+    "from": 20,
+    "to": 26,
+    "card": "x_shadow_reveal"
+  },
+  "contract": "这座城把有些话写在墙缝里——留意那些重复出现的话。",
+  "rosterThreads": {
+    "enabled": true,
+    "frankoTemplate": "鲁舟收摊时提了一句：{name}那件事——{knotShort}。这城里，谁心里都压着一件事。",
+    "touchWindow": [
+      13,
+      22
+    ]
+  }
 }

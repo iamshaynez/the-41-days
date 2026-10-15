@@ -54,11 +54,19 @@ describe('收册的吏：贯穿人物的线', () => {
 });
 
 describe('纸的用途：种—触—翻—收', () => {
-  test('D8 烧焦纸角入包；D32-34 翻转卡落晨', () => {
-    const { state } = dawn(510, (s) => { s.day = 8; });
-    assert.ok((state.inventory.scorched_paper || 0) >= 1, '纸角 token');
-    const { state: s2 } = dawn(511, (s) => { s.day = 33; s.firedOnce['ask_m2_visit'] = true; });
-    assert.ok(s2.activeEvent?.cardId === 'x_paper_burn', `D33 应落翻转卡（实际 ${s2.activeEvent?.cardId}）`);
+  test('D8 烧焦纸角入包；D32-34 翻转卡落晨（纸线 60% 开——扫种子找开线局）', () => {
+    let tok = null;
+    for (let seed = 1; seed <= 30; seed++) {
+      const { state } = dawn(seed, (s) => { s.day = 8; });
+      if ((state.inventory.scorched_paper || 0) >= 1) { tok = seed; break; }
+    }
+    assert.ok(tok, '30 个种子里纸线应至少开一次（token 入包）');
+    let turned = null;
+    for (let seed = 1; seed <= 30; seed++) {
+      const { state } = dawn(seed, (s) => { s.day = 33; s.firedOnce['ask_m2_visit'] = true; });
+      if (state.activeEvent?.cardId === 'x_paper_burn') { turned = seed; break; }
+    }
+    assert.ok(turned, '30 个种子里 D33 翻转卡应至少落一次');
   });
   test('留在墙里 → 终局卷有尾句', () => {
     const { state } = newRun({ seed: 512 });
