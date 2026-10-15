@@ -14,7 +14,7 @@ import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect, humanFacts, narrationLint, buildFeedback } from './narrate.js';
 import { rejectText } from '../core/src/rejects.js';
-import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView, charCare } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView, charCare, relationsOf } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
@@ -365,7 +365,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       // 崩溃链的进度条（一周目实测：滑坡全程不可见，玩家无从干预）——安抚累计 4 可逆转
       mind: c.breakdown ? `崩溃·安抚${c.soothed || 0}/4` : null,
       // 他最近惦记什么（D·戏剧弧）：心结一句 + 最近一笔私账——人格卡与因果账的显形面
-      care: charCare(state, pack, c.id)
+      care: charCare(state, pack, c.id),
+      // 同册旧识（群像批次）：谁与谁进门就认识、交情到哪一步
+      relations: relationsOf(state, pack, c.id)
     }));
     view.packVersion = pack.manifest.semver;
     // 开卷契约（小说层）：告诉玩家这座城有话藏在重复里——值得留意

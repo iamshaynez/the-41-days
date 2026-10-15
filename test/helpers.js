@@ -5,8 +5,8 @@ export const PACK = loadPack();
 
 export function newRun({ seed = 100, roster = ['anton', 'marta', 'bron'], difficulty = 'documentary', prologue = false, preludeMode = 'full', sidestory = null } = {}) {
   const state = createRun(PACK, { seed, roster: sidestory ? null : roster, difficulty, prologue, preludeMode, sidestory });
-  const { events } = beginRun(state, PACK, { prologue });
-  return { state, events };
+  const { events, facts } = beginRun(state, PACK, { prologue });
+  return { state, events, facts };
 }
 
 export function step(state, intents) {

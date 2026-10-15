@@ -9,6 +9,7 @@
       "persona": {
         "epithet": "用秩序对抗崩塌",
         "knot": "女儿在公安，等他去找", "knotCard": "i_anton_ledger",
+        "gesture": { "sig": "睡前把明天的柴数一遍", "lines": ["文简把明天的柴又数了一遍——十二根，和昨晚一样。", "睡前文简在柴堆前站了一会儿，嘴唇动了动。数完了。"] },
         "taboo": "绝不烧字纸",
         "sensitive": { "burn_book": 3, "deny_food": 1.5 },
         "protests": [
@@ -55,6 +56,7 @@
       "persona": {
         "epithet": "用忙碌压住记忆",
         "knot": "建安十三年疫营那场分诊，和那个名字", "knotCard": "i_marta_name",
+        "gesture": { "sig": "半夜总要把每个人的被子掖一遍", "lines": ["辛夷半夜起来，把三条被子的角都掖了一遍，回去装作没起过。", "有人半夜醒了，看见辛夷站在床边——她摆摆手，掖完最后一个被角。"] },
         "taboo": "绝不放弃任何伤员",
         "sensitive": { "refuse_help": 2, "kill_civ": 1.5, "witness_death": 1.3 },
         "protests": [
@@ -101,6 +103,7 @@
       "persona": {
         "epithet": "用肩膀抵债",
         "knot": "那次大火，第七个和第一个之间", "knotCard": "i_bron_locks",
+        "gesture": { "sig": "数东西数到七就停", "lines": ["石大清点东西，数到七，停了。第八件他用手按住，没数出声。", "石大掰着指头数到七，像被什么咬了一口，把手收了回来。"] },
         "taboo": "绝不谈那次大火",
         "sensitive": { "volunteer": 1.5, "witness_death": 1.3, "guard_night": 1.3 },
         "protests": [],
@@ -146,6 +149,7 @@
       "persona": {
         "epithet": "用追问赎罪",
         "knot": "降卒进城前，他誊过的那版榜", "knotCard": "i_katya_tape",
+        "gesture": { "sig": "抄完的字要念出声才收笔", "lines": ["白简抄完一张纸，低声念了一遍——念给自己听的。", "白简收笔前照例念了一遍全文。有人问他念什么，他说：核对。"] },
         "taboo": "从不说「据说」",
         "sensitive": { "trade_evidence": 2, "refuse_help": 0.8, "listen_radio": 1.5 },
         "protests": [
@@ -193,6 +197,7 @@
       "persona": {
         "epithet": "用玩笑包裹恐惧",
         "knot": "逃难那一夜，他跑得最快的一次", "knotCard": "i_pavel_night",
+        "gesture": { "sig": "鞋带永远系成活扣", "lines": ["阿走蹲在门边系鞋带——活扣，一扯就开。他系得很快，没看手。", "阿走的鞋带又是活扣。有人问他为什么，他说：方便。"] },
         "taboo": "绝不独自睡觉",
         "sensitive": { "volunteer": 1.5, "witness_death": 1.3 },
         "protests": [],
@@ -237,6 +242,7 @@
       "persona": {
         "epithet": "用一口热饭对抗非人化",
         "knot": "大仓的掺法，和他留下的徒弟", "knotCard": "i_emil_grain",
+        "gesture": { "sig": "量米多抓一小撮再放回去", "lines": ["老甑量米，多抓了一小撮——又放回去了。手很稳。", "轮到老甑掌勺，他先多抓一撮米，再放回去。没人问，他也不解释。"] },
         "taboo": "绝不做喂不饱人的饭",
         "sensitive": { "deny_food": 2, "feed": 1.5 },
         "protests": [
@@ -283,6 +289,7 @@
       "persona": {
         "epithet": "用倾听代替存在",
         "knot": "三短一长的箭声，和这栋房子", "knotCard": "i_zofia_hum",
+        "gesture": { "sig": "动东西之前先轻敲三下", "lines": ["素徽修窗棂之前，用指节在木头上敲了三下。像在问它答不答应。", "素徽拿起锤子前照例敲了三下门框。这是她的规矩。"] },
         "taboo": "不在更鼓里练琴",
         "sensitive": { "play_music": 1.5, "kill_civ": 1.5, "witness_death": 1.3 },
         "protests": [],
@@ -328,6 +335,7 @@
       "persona": {
         "epithet": "用手说话",
         "knot": "被「征发」的门版，和那个寒夜", "knotCard": "i_grigory_door",
+        "gesture": { "sig": "下钉之前量三遍", "lines": ["大柯下钉前把尺寸量了三遍。第三遍和第一遍一样，他还是量了。", "大柯的木线弹了三次。有人嫌慢，他说：门不能错一寸。"] },
         "taboo": "木头绝不装在抢来的门上",
         "sensitive": { "steal_civ": 1.5, "burn_book": 1.3 },
         "protests": [
@@ -375,6 +383,7 @@
       "persona": {
         "epithet": "全队的镜子",
         "knot": "津戍、水窦，和姐姐", "knotCard": "i_yura_smoke",
+        "gesture": { "sig": "睡前把水囊排成一条直线", "lines": ["阿禾睡前把三只水囊排成一条线，囊口朝一个方向。", "阿禾把水囊排齐。排完了看一会儿，才去睡。"] },
         "taboo": "从不说谎——除了「我不怕」",
         "sensitive": { "kill_civ": 2, "refuse_help": 1.5, "witness_death": 1.5 },
         "protests": [],
@@ -420,6 +429,7 @@
       "persona": {
         "epithet": "用精确赎罪",
         "knot": "412 枚检署，和第 413 枚", "knotCard": "i_vera_stamps",
+        "gesture": { "sig": "见官印的手势会顿一下", "lines": ["薄姑接过盖了印的纸，指尖在印上顿了一下——很短，但顿了。", "薄姑看官榜的时候，目光在落印处停了一停。第几枚了，只有她知道。"] },
         "taboo": "绝不在没读完的券书上落印",
         "sensitive": { "trade_evidence": 2, "steal_civ": 1.5, "deny_food": 1.2 },
         "protests": [
@@ -467,6 +477,7 @@
       "persona": {
         "epithet": "用玩世不恭执行纪律",
         "knot": "那船药，和降卒营的冬天", "knotCard": "i_danilo_med",
+        "gesture": { "sig": "清点药箱每帖翻看背面", "lines": ["江鳅清点药箱，每一帖都翻过来看背面。翻得很慢。", "江鳅把药一帖一帖翻过来看。有人问他看什么，他说：批号。"] },
         "taboo": "不碰平民的随身物",
         "sensitive": { "steal_civ": 1.5, "help": 0.5 },
         "protests": [
@@ -515,6 +526,7 @@
       "persona": {
         "epithet": "用手代替嘴",
         "knot": "建安十三年那夜，北津台，和那一棍", "knotCard": "i_alexey_leg",
+        "gesture": { "sig": "生火的柴摆成一样长", "lines": ["逄灶生火，把柴一根一根掰成一样长。火起来得慢，但稳。", "逄灶把柴摆成一样长再点火。短的那根，他留下了。"] },
         "taboo": "修好的台必须能举火",
         "sensitive": { "listen_radio": 1.5, "trade_evidence": 1.5 },
         "protests": [],
@@ -552,5 +564,21 @@
         ]
       }
     }
+  ],
+  "relations": [
+    { "a": "anton", "b": "marta", "label": "誊账之谊", "opener": "当年她替他誊过半本账，字比他自己的齐整。", "arc": 2 },
+    { "a": "anton", "b": "katya", "label": "师生", "opener": "榜文上的字，一半是他教的。", "arc": 2 },
+    { "a": "marta", "b": "emil", "label": "疫营故人", "opener": "建安十三年那个疫营，两人都在，都没提过。", "arc": 1 },
+    { "a": "bron", "b": "grigory", "label": "火场之命", "opener": "那场火里，他俩互相拖过对方一次。", "arc": 3 },
+    { "a": "zofia", "b": "katya", "label": "弦笔之交", "opener": "一个修琴，一个抄谱，认识十年了。", "arc": 2 },
+    { "a": "zofia", "b": "alexey", "label": "台上的旧约", "opener": "北津台的鼓谱，两人都还记得几拍。", "arc": 2 },
+    { "a": "yura", "b": "danilo", "label": "水路老伙", "opener": "津戍与水窦，一条水道走了三年。", "arc": 2 },
+    { "a": "emil", "b": "danilo", "label": "粮与药", "opener": "大仓的粮和那船药，账都经过这两双手。", "arc": 1 },
+    { "a": "vera", "b": "grigory", "label": "同见过征发的人", "opener": "她的检署和他的门版，盖的是同一个印。", "arc": 1 },
+    { "a": "vera", "b": "katya", "label": "公牍之交", "opener": "一个誊榜，一个验署，公文上打过多年交道。", "arc": 1 },
+    { "a": "pavel", "b": "yura", "label": "同路人", "opener": "逃难路上同行过一程，谁也没提那夜谁跑得快。", "arc": 1 },
+    { "a": "pavel", "b": "marta", "label": "一碗水", "opener": "路口那碗水，他记到今天。", "arc": 2 },
+    { "a": "alexey", "b": "grigory", "label": "同一夜", "opener": "同一夜，不同的门，同一根棍子。", "arc": 1 },
+    { "a": "bron", "b": "vera", "label": "第七个之后", "opener": "那场火的名单，是她数的；第七个之后，是他。", "arc": 2 }
   ]
 }
