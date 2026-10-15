@@ -1530,6 +1530,16 @@ body.motion-off { scroll-behavior: auto; }
 .finale-line.flip-keep { color: var(--ink-3, #8a8a8a); padding-left: 1.2em; border-left: 2px solid var(--ink-4, #3a3a3a); }
 .finale-act.futures { border-top: 1px dashed var(--brass, #6a5327); }
 .future-line { font-family: var(--font-kai); font-size: 14px; line-height: 2; color: var(--ink-2, #aaa); margin: 4px auto; max-width: 36em; }
+
+/* 0.31.0 落幕 · 正史压卷：题名之后、收束行之前——足够密度的史实先压住注意力 */
+.finale-annals { margin: 6px auto 22px; max-width: 36em; text-align: left; }
+.finale-annals .kicker { display: block; text-align: center; letter-spacing: .3em; font-size: 12px; color: var(--brass, #8a6d3b); margin-bottom: 16px; }
+.annal-entry { font-family: var(--font-kai); font-size: 14.5px; line-height: 1.95; color: var(--ink-2, #bbb); margin: 0 0 14px; padding-left: 1em; border-left: 2px solid var(--ink-4, #3a3a3a); }
+.annal-entry i { font-style: normal; font-size: 12.5px; color: var(--brass, #8a6d3b); margin-right: .9em; letter-spacing: .08em; }
+.annal-entry em { display: block; font-style: normal; font-size: 11.5px; color: var(--ink-3, #888); opacity: .85; margin-top: 3px; padding-left: .2em; }
+.annal-entry.forked { border-left-color: var(--accent-2, #d8b36a); }
+.annal-entry.forked em { color: var(--accent-2, #d8b36a); opacity: 1; }
+.annal-entry.forked em::after { content: ''; }
 .future-line.blank { color: var(--ink-4, #555); font-style: italic; }
 
 /* ════════════════════════════════════════════════════════════════
