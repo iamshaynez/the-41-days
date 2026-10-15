@@ -3,9 +3,9 @@
 import { aliveChars, charById, moodLevel, difficultyCfg, combatModOf } from './state.js';
 import { recordCausal, pairStage } from './causality.js';
 
-export const DAY_ACTIONS = ['eat', 'cook', 'craft', 'build', 'treat', 'talk', 'guard', 'sleep', 'rest', 'listen_radio', 'search_home', 'open_room', 'chop', 'repair', 'read', 'play_piano', 'comfort_soup'];
+export const DAY_ACTIONS = ['eat', 'cook', 'craft', 'build', 'treat', 'talk', 'guard', 'sleep', 'rest', 'listen_radio', 'search_home', 'open_room', 'chop', 'repair', 'read', 'play_piano', 'comfort_soup', 'forage'];
 
-export const AP_COST = { eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2, rest: 0, listen_radio: 1, search_home: 1, open_room: 1, chop: 1, repair: 1, read: 1, play_piano: 1, comfort_soup: 1 };
+export const AP_COST = { forage: 1, eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2, rest: 0, listen_radio: 1, search_home: 1, open_room: 1, chop: 1, repair: 1, read: 1, play_piano: 1, comfort_soup: 1 };
 
 export function applyDayAction(ctx, intent) {
   const s = ctx.s, pack = ctx.pack;
@@ -40,6 +40,16 @@ export function applyDayAction(ctx, intent) {
       ctx.emit('GUARD_SET', { char: c.id }); ctx.fact('guard', { char: c.id });
       return { ok: true };
     case 'sleep': ctx.setFatigue(c, c.fatigue - 1, '打了个盹'); ctx.spendAp(c, 2); ctx.fact('nap', { char: c.id }); return { ok: true };
+    case 'forage': {
+      // 保底活路（设计北极星：想活总有办法——饿不死人，但体面地活着难）：
+      // 无条件可挖，产最低效口粮（两蔬一锅），代价是心情——冬天冻土更苦
+      const winter = !!s.winterActive;
+      ctx.addItem('veg', 1, '刨野菜');
+      ctx.mood(c, winter ? -2 : -1, '刨野菜', {});
+      ctx.spendAp(c, 1);
+      ctx.fact('forage', { char: c.id, winter });
+      return { ok: true };
+    }
     case 'rest': return actRest(ctx, c);
     case 'listen_radio': return actRadio(ctx, c);
     case 'search_home': return actSearchHome(ctx, c, intent.target);
