@@ -188,6 +188,34 @@ export function planDay(state, pack) {
   for (const c of aliveChars(s)) {
     if ((c.wound >= 2 || c.sick >= 2 || c.fatigue >= 2) && !c.bedRest) intents.push(delegated({ type: 'act', actor: c.id, action: 'rest' }));
   }
+  // —— 燃料与工具的常识规划（玩家的职责是道德与取舍，不是背链路——管家替这个家记着）：
+  //    柴见底之前补：有斧劈家具；没斧而铁砧在手且料齐就先造斧；入冬在即连
+  //    铁砧都没有、料又齐，就把它排进今天的建造序——斧→劈柴这条活路不能死在设施上
+  {
+    const estFuelAll = (s.inventory.firewood || 0) + (s.inventory.book || 0) + (s.inventory.wood || 0) + (s.facilities.stoveFireLeft || 0);
+    const winterSoon = s.winterActive || s.day >= (s.winterStart || 12) - 4;
+    const fuelStress = estFuelAll <= 6 || (winterSoon && (s.inventory.firewood || 0) < 4);
+    if (fuelStress) {
+      const axeIncoming = (s.inventory.axe || 0) > 0 || intents.some((i) => i.action === 'craft' && i.target === 'make_axe');
+      if (!axeIncoming && s.facilities.metal && has(s, 'wood', 2) && has(s, 'comp', 3)) {
+        const smith = free((c) => c.ap >= 2);
+        if (smith) { intents.push(delegated({ type: 'act', actor: smith.id, action: 'craft', target: 'make_axe' })); use(smith.id); }
+      }
+      if (!(s.inventory.axe > 0) && !s.facilities.metal && winterSoon
+        && has(s, 'wood', 6) && has(s, 'parts', 10) && has(s, 'comp', 5)) {
+        const smith0 = free((c) => c.ap >= 3);
+        if (smith0) { intents.push(delegated({ type: 'act', actor: smith0.id, action: 'build', target: 'metal' })); use(smith0.id); }
+      }
+      let guard = 0;
+      while (((s.inventory.axe || 0) > 0 || intents.some((i) => i.action === 'craft' && i.target === 'make_axe'))
+        && (s.homeFurniture || 0) > 0 && estFuelAll + guard * 3 <= 8 && guard++ < 2) {
+        const chopper = free();
+        if (!chopper) break;
+        intents.push(delegated({ type: 'act', actor: chopper.id, action: 'chop' }));
+        use(chopper.id);
+      }
+    }
+  }
   // —— 建造序：炉灶 → 门 → 冬前取暖 → 捕鼠笼 → 床 → 升级（参照 sim 均衡策略）——
   //    材料账预检：目标选出来先核 cost（一周目实测：没木板还天天提议捕鼠笼，
   //    35 天"安排了→做不到"的墙纸式噪音）；材料不足就跳过，建材缺口交给交易建议补
@@ -268,9 +296,12 @@ export function dawnProblems(state, pack) {
     const fuelTotal = (s.inventory.firewood || 0) + (s.inventory.wood || 0);
     if (fuelTotal <= 2) {
       const canChop = (s.inventory.axe || 0) > 0 && (s.homeFurniture || 0) > 0;
+      const canForge = (s.inventory.axe || 0) <= 0 && s.facilities.metal && has(s, 'wood', 2) && has(s, 'comp', 3);
       chronic('fuel_low', 1, canChop
-        ? `柴将尽（柴+板材只剩 ${fuelTotal}）——白天可劈旧家具，板材顶柴烧饭、柴取暖`
-        : `柴将尽（柴+板材只剩 ${fuelTotal}）——没斧头劈不了：铁砧打造（2 板材 3 铁件），或夜里翻军辎营辎重箱`);
+        ? `柴将尽（柴+板材只剩 ${fuelTotal}）——白天家里劈旧家具补上，不必你操心`
+        : canForge
+          ? `柴将尽（柴+板材只剩 ${fuelTotal}）——家里今天先打把斧头，随后劈补`
+          : `柴将尽（柴+板材只剩 ${fuelTotal}）——没斧头也造不出（缺铁砧或缺料），今晚得往有柴的地方派人：这是你的取舍`);
     }
   }
   for (const c of aliveChars(s)) {
@@ -424,6 +455,33 @@ const LOC_BLURB = {
 };
 /** 黄昏排序与一句话（城市扩展）：老排序保底，新地点按内容包 blurb/threat 追加——
  *  池里浮出哪个城，方案卡就认得哪个城 */
+/** 地点产出剖析（EV 份额：食物/柴）——按需派工的口径，纯函数按包缓存 */
+const LOC_PROFILE = new WeakMap();
+const FOOD_ITEMS = new Set(['meal', 'canned', 'raw', 'meat', 'veg']);
+function locProfiles(pack) {
+  let m = LOC_PROFILE.get(pack);
+  if (m) return m;
+  m = {};
+  for (const l of Object.values(pack.locMap || {})) {
+    let ev = 0, food = 0, fuel = 0;
+    for (const r of (l.rooms || [])) for (const c of (r.containers || [])) {
+      const loot = c.loot || [];
+      const W = loot.reduce((a, e) => a + (e.w || 0), 0);
+      if (!W) continue;
+      for (const e of loot) {
+        const cnt = e.count || [1, 1];
+        const v = ((e.w || 0) / W) * ((cnt[0] + cnt[1]) / 2);
+        ev += v;
+        if (FOOD_ITEMS.has(e.item)) food += v;
+        if (e.item === 'firewood') fuel += v;
+      }
+    }
+    m[l.id] = { food: ev ? food / ev : 0, fuel: ev ? fuel / ev : 0 };
+  }
+  LOC_PROFILE.set(pack, m);
+  return m;
+}
+
 /** 地点还没翻过的容器数（没去过＝全新鲜）——排序与方案提示共用 */
 function freshContainersOf(s, pack, locId) {
   const loc = pack.locMap[locId]; const st = s.locState?.[locId];
@@ -433,7 +491,7 @@ function freshContainersOf(s, pack, locId) {
   return conts.filter((c) => st.searched[c.id] === undefined).length;
 }
 
-function rankedLocs(s, known, pack) {
+function rankedLocs(s, known, pack, needs = null) {
   // 排序看得见状态（实测：固定排序把两个红方案都排在搜空的地点上，玩家没有出路）：
   // ①没翻过的容器多的优先（真有货）；②全空的按最久未访排（回补只在重访时掷骰——
   // 最久没走的回补期望最高，派去碰运气好过硬跑）；③再按威胁（安全）与惯例序。
@@ -447,6 +505,13 @@ function rankedLocs(s, known, pack) {
     const fa = freshOf(a) > 0 ? 0 : 1, fb = freshOf(b) > 0 ? 0 : 1;
     if (fa !== fb) return fa - fb; // 有货的排在搜空的前面
     if (fa === 1) return (oldestOf(a) - oldestOf(b)) || ((pack.locMap[a]?.threat || 0) - (pack.locMap[b]?.threat || 0)); // 全空：最久未访优先
+    // 有货的桶里按需排（管家常识：家里缺什么就往产什么的地方去）
+    if (needs) {
+      const prof = locProfiles(pack);
+      const score = (l) => (needs.foodNeed ? prof[l]?.food || 0 : 0) + (needs.fuelNeed ? prof[l]?.fuel || 0 : 0);
+      const d = score(b) - score(a);
+      if (d !== 0) return d;
+    }
     return ((pack.locMap[a]?.threat || 0) - (pack.locMap[b]?.threat || 0)) || (rankPos(a) - rankPos(b)) || (a < b ? -1 : 1);
   });
 }
@@ -550,7 +615,16 @@ export function planDusk(state, pack) {
 
   const plans = [];
   if (scav && known.length) {
-    const ranked = rankedLocs(s, known, pack);
+    // 按需派工（管家常识）：家里缺什么，方案往产什么的地方排——玩家说「找吃的」
+    // 时红方案也答得对；缺口的判定与晨报同一口径
+    const mouths0 = alive.length;
+    const foodDays0 = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0) / Math.max(1, mouths0);
+    const winterSoon0 = s.winterActive || s.day >= (s.winterStart || 12) - 4;
+    const needs = {
+      foodNeed: foodDays0 < 4,
+      fuelNeed: winterSoon0 && (s.inventory.firewood || 0) < 6
+    };
+    const ranked = rankedLocs(s, known, pack, needs);
     if (dirLoc) { // 念头点名的地方排第一（不在常规排序里也照排——念头优先于habit）
       const i = ranked.indexOf(dirLoc);
       if (i >= 0) ranked.splice(i, 1);

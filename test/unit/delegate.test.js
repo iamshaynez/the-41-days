@@ -202,6 +202,47 @@ describe('晨报问题（dawnProblems）与情境建议（suggests）', () => {
     for (const x of sg.filter((y) => y.label !== '我能做什么？')) assert.equal(x.intents.at(-1).type, 'auto_day', `${x.label} 应收卷`);
   });
 
+  test('管家常识·燃料保障：柴见底时有斧有家具，托管日自动劈——玩家不学链路', () => {
+    let s = newRun();
+    s.inventory.firewood = 0; s.inventory.wood = 0; s.inventory.book = 0;
+    s.inventory.axe = 1; s.homeFurniture = 3;
+    const plan = planDay(s, pack);
+    assert.ok(plan.some((i) => i.type === 'act' && i.action === 'chop' && i.delegated), '管家自动安排劈柴');
+    // 托管收卷一整天，柴真的多起来（E2E：auto_day 走完）
+    const r = resolveInput(structuredClone(s), pack, [{ type: 'auto_day' }]);
+    assert.ok((r.state.inventory.firewood || 0) >= 1, `劈出真柴（得 ${r.state.inventory.firewood}）`);
+  });
+
+  test('管家常识·工具前置：柴见底、没斧、铁砧在手且料齐——先造斧再劈（同日链式）', () => {
+    const s = newRun();
+    s.inventory.firewood = 0; s.inventory.wood = 2; s.inventory.book = 0; s.inventory.comp = 3;
+    s.inventory.axe = 0; s.homeFurniture = 3; s.facilities.metal = 1;
+    const plan = planDay(s, pack);
+    assert.ok(plan.some((i) => i.type === 'act' && i.action === 'craft' && i.target === 'make_axe'), '管家先造斧');
+  });
+
+  test('管家常识·设施前置：入冬在即、缺斧缺铁砧、料齐——建造序里升起铁砧', () => {
+    const s = newRun();
+    s.day = Math.max(1, (s.winterStart || 10) - 3); s.winterActive = false;
+    s.inventory.firewood = 0; s.inventory.wood = 8; s.inventory.parts = 12; s.inventory.comp = 6;
+    s.inventory.axe = 0; s.homeFurniture = 3;
+    s.facilities.stove = 1; s.facilities.metal = 0; // 别让炉灶抢建造位
+    const plan = planDay(s, pack);
+    assert.ok(plan.some((i) => i.type === 'act' && i.action === 'build' && i.target === 'metal'), '冬前缺斧链时管家建铁砧');
+  });
+
+  test('管家常识·按需派工：粮荒时黄昏首选富粮地（医棚零粮让位给宅区）', () => {
+    let s = newRun();
+    s = resolveInput(s, pack, [{ type: 'advance' }]).state;
+    // 粮荒：全家只剩 1 份口粮
+    for (const k of ['meal', 'canned', 'raw', 'meat', 'veg']) s.inventory[k] = 0;
+    s.inventory.raw = 1;
+    // 医棚（threat 0、零粮）与宅区（threat 1、富粮）都没翻过——旧排序医棚在前
+    const top = planDusk(s, pack).plans.find((p) => p.intent.scavenger && p.intent.location);
+    assert.notEqual(top.intent.location, 'hospital', '粮荒时不该首选零粮的医棚');
+    assert.ok(['market', 'villas', 'church'].includes(top.intent.location), `首选富粮地（实际 ${top.intent.location}）`);
+  });
+
   test('工具链教学（实测：砍柴火→没有斧头，链路断裂）：拒绝带路径、劈柴出名实相符的柴', () => {
     // 没斧头：拒绝要说清斧头从哪来（打造/军辎营），不是一句「没有斧头」把人挡死
     let s = newRun();
