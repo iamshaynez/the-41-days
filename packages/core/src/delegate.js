@@ -311,7 +311,7 @@ export function dawnProblems(state, pack) {
   // 誓的状态行（念头演化）：未践的誓占一行「未践·第N天」——债在晨报上挂着
   for (const d of Object.values(s.directions || {})) {
     if (d.kind !== 'vow' || !d.alive) continue;
-    out.push({ sev: 0, key: 'vow_' + d.id, text: `未践·第${s.day - d.day}天——「${(d.text || '').slice(0, 14)}」` });
+    out.push({ sev: 0, key: 'vow_' + d.id, text: `未践·第${s.day - d.day}天——「${(d.text || '').slice(0, 14)}」（黄昏选带「践誓」的方案即兑现）` });
   }
   return out.sort((a, b) => b.sev - a.sev);
 }

@@ -265,7 +265,12 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'vow_broken': lines.push(`誓多了记不住——最早那句「${f.text.slice(0, 12)}」，只得先欠着。`); break;
       case 'vow_orphaned': lines.push(`立誓的人不在了——「${f.text.slice(0, 14)}」这话没了主，就散在这里。`); break;
       case 'hist_seed': lines.push(`这话落进了城里人的耳朵里——传着传着，早晚有人会拿它来问你。`); break;
-      case 'direction_watered': lines.push(`这事又提了一遍——${f.subject ? name(f.subject) : '这个家'}记着呢。`); break;
+      case 'direction_watered':
+        // 誓的浇水要指路（实测：玩家反复点「契约/约定」类选项，不知道兑现入口在哪）
+        lines.push(f.kind === 'vow'
+          ? `这句誓又提了一遍——记着：黄昏派工选带「践誓」的方案，人就真去了。`
+          : `这事又提了一遍——${f.subject ? name(f.subject) : '这个家'}记着呢。`);
+        break;
       case 'direction_faded': lines.push(`「${f.text}」——后来没人再提，它就淡了。`); break;
       case 'hist_seed_faded': lines.push(`「${f.text.slice(0, 16)}」这话在城里飘了些日子，没人接，散了。`); break;
       case 'hist_seed_done': lines.push(`「${f.text.slice(0, 16)}」——这话早就有人接过去了，算是有了着落。`); break;
