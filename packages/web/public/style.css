@@ -1030,9 +1030,6 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .end-card .end-canon { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-2); font-family: var(--font-kai); line-height: 1.7; }
 .end-card.seen { border-left: 3px solid var(--accent); }
 .end-card.seen .end-no { color: var(--accent); }
-.end-card.locked { opacity: .62; border-style: dashed; box-shadow: none; }
-.end-card.locked .end-title { color: var(--ink-2); }
-.end-card.locked .end-hint { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); line-height: 1.7; }
 /* 别传墙：开着的门给故事，锁着的给门槛 */
 .side-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 18px; }
 .side-card {
@@ -1048,8 +1045,6 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .side-card .side-title { display: block; font-size: 15.5px; letter-spacing: .14em; font-family: var(--font-carved); color: var(--ink); margin: 2px 46px 6px 0; }
 .side-card .side-blurb { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.7; }
 .side-card .side-gate { margin: 8px 0 0; font-size: 11.5px; color: var(--accent); letter-spacing: .04em; }
-.side-card.locked { opacity: .6; border-style: dashed; box-shadow: none; }
-.side-card.locked .side-gate { color: var(--ink-3); }
 /* 补笔卡（兜底推进）：虚线裁口的残页——一本翻不动的书也要有路走 */
 .rescue-card {
   border: 1.5px dashed var(--rule-strong);
@@ -1058,24 +1053,34 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
     linear-gradient(var(--paper-hi), var(--paper-hi)) padding-box;
 }
 
-/* ——— 展卷（rite）：档案馆的全文阅读——卷轴升起，行随幕落 ——— */
+/* ——— 展卷（rite）：档案馆的全文阅读——卷轴升起，行随幕落 ———
+   框即底：木色铺满整卷，纸面由 .rite-scroll 内缩 2px 铺出——八角切角的
+   斜边上框线完整（旧疾：矩形 border 被 clip-path 切掉四角，外 box-shadow
+   更是被 clip 整个吃掉，卷底边框时有时无）。外影走 drop-shadow（跟切角）。 */
 .rite {
   position: fixed; z-index: 72; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: min(780px, calc(100vw - 30px)); max-height: 88dvh; overflow-y: auto;
-  background:
-    var(--grain),
-    linear-gradient(180deg, var(--paper-hi), var(--paper));
+  width: min(780px, calc(100vw - 30px)); max-height: 88dvh; padding: 2px;
+  background: var(--wood);
   color: var(--ink);
-  border: 2px solid var(--wood);
-  box-shadow: inset 0 0 0 1px var(--gold-hi), 0 18px 60px rgba(0, 0, 0, .6);
   clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  filter: drop-shadow(0 16px 44px rgba(0, 0, 0, .62));
   animation: riteIn .65s cubic-bezier(.22, .75, .25, 1) both;
 }
 @keyframes riteIn {
   from { opacity: 0; transform: translate(-50%, -45%) scale(.96); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
-.rite::-webkit-scrollbar { width: 8px; }
+/* 纸面在流内自然撑高（木框=2px 内边距，短卷矮、长卷高到顶）——
+   绝不让滚动层绝位：在流内容为空会把整卷塌成 2px 细缝（实测教训） */
+.rite-scroll {
+  position: relative; max-height: calc(88dvh - 4px); overflow-y: auto; overscroll-behavior: contain;
+  background:
+    var(--grain),
+    linear-gradient(180deg, var(--paper-hi), var(--paper));
+  box-shadow: inset 0 0 0 1px var(--gold-hi); /* 金线长在纸面上，滚动不丢 */
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+}
+.rite-scroll::-webkit-scrollbar { width: 8px; }
 .rite .rite-body { padding: 40px 46px 46px; }
 .rite .rite-x { position: absolute; top: 14px; right: 14px; z-index: 2; }
 /* 逐行显影：.rr 由 JS 按序加 animation-delay（首拍让卷轴先落定） */
@@ -1113,6 +1118,12 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .rite .dr-text p { font-family: var(--font-kai); font-size: 15px; line-height: 2.15; color: var(--ink-2); margin: 0 0 14px; }
 .rite .dr-text.silk p { color: #3a3222; }
 .rite .dr-head.silk .dr-title { color: #241d12; }
+/* 绢本要有绢：浅色整幅打底（与墙面卡同料）——否则深字落在黛色卷面上，看不清（实测） */
+.rite--doc .dr-head.silk, .rite--doc .dr-text.silk {
+  background: #e2d0a2; background-image: var(--grain);
+  margin-left: -18px; margin-right: -18px; padding: 18px 18px;
+}
+.rite--doc .dr-head.silk .doc-id { color: #8e3325; }
 .rite--doc .dr-head.iron, .rite--doc .dr-text.iron {
   background: #141210; margin-left: -18px; margin-right: -18px; padding: 18px 18px;
 }
@@ -1120,7 +1131,8 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 @media (max-width: 640px) {
   .rite .rite-body { padding: 30px 20px 34px; }
   .rite .er-title { font-size: 27px; }
-  .rite--doc .dr-head.iron, .rite--doc .dr-text.iron { margin-left: -10px; margin-right: -10px; padding: 14px 10px; }
+  .rite--doc .dr-head.iron, .rite--doc .dr-text.iron,
+  .rite--doc .dr-head.silk, .rite--doc .dr-text.silk { margin-left: -10px; margin-right: -10px; padding: 14px 10px; }
 }
 
 /* 可展卷的卡：手型 + 悬停起势 + 右下「展卷」小字 */
@@ -1142,7 +1154,6 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
   font-family: var(--font-seal); font-size: 34px; line-height: 1;
   color: var(--ink-3); opacity: .55; transform: rotate(-3deg);
   border: 1.5px solid var(--ink-3); border-radius: 4px; padding: 10px 12px;
-  opacity: .5;
 }
 .memoir-card .mem-text p { margin: 0 0 9px; line-height: 1.95; text-align: justify; color: var(--ink-2); }
 .doc summary::before { content: '▸ '; color: var(--accent); }
