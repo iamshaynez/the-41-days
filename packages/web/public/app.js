@@ -549,6 +549,7 @@ function gazetteBlock(e) {
   const g = el('div', 'gazette' + (e.track ? ' tr-' + e.track : ''));
   g.innerHTML = `<span class="gz-kicker">露布 · 第${e.day}日</span><b class="gz-title">${esc(e.title)}</b>` +
     (e.text ? `<p class="gz-text">${rich(e.text)}</p>` : '') +
+    (e.cite ? `<p class="gz-cite">${esc(e.cite.text)}<span class="gz-src">——${esc(e.cite.src)}</span></p>` : '') +
     (e.echo ? `<p class="gz-echo">这一家 · ${rich(e.echo)}</p>` : '');
   penNotes(g, e);
   markNouns(g);
@@ -2425,10 +2426,16 @@ function renderChronicle(ch) {
   if (!ch) { panel.hidden = true; return; }
   panel.hidden = false;
   const box = $('chronicle-box');
-  const sig = ch.entries.map((e) => `${e.day}${e.ending ? '!' : ''}${(e.text || '').length}:${(e.pens || []).length}:${(e.mirrors || []).length}`).join('|');
+  const sig = ch.entries.map((e) => `${e.day}${e.ending ? '!' : ''}${(e.text || '').length}:${(e.pens || []).length}:${(e.mirrors || []).length}${e.cite ? 'c' : ''}`).join('|');
   quietSwap(box, sig);
   box.innerHTML = '';
   $('map-act').textContent = ch.currentAct ? `${ch.currentAct.title}` : '';
+  // 幕回目定位（0.33.0）：玩家活在演义第几回的页边——史卷卷首挂一行
+  if (ch.currentAct?.romance) {
+    const r = el('p', 'chron-romance');
+    r.textContent = ch.currentAct.romance;
+    box.appendChild(r);
+  }
   if (!ch.entries.length) {
     box.appendChild(el('p', 'wing-note', '史卷未开——破晓即有一笔。'));
     return;
@@ -2444,6 +2451,7 @@ function renderChronicle(ch) {
       p.innerHTML = rich(e.text);
       d.appendChild(p);
     }
+    if (e.cite) d.appendChild(el('p', 'chron-cite', `${esc(e.cite.text)}<span>——${esc(e.cite.src)}</span>`));
     for (const pn of e.pens || []) {
       const p = el('p', 'chron-pen');
       p.innerHTML = `闲笔 · ${rich(pn.line)}`;
