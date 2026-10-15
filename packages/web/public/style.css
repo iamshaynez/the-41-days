@@ -588,6 +588,34 @@ body[data-fontsize='l'] #narration { font-size: 18.5px; }
 .ask.settled { opacity: .55; }
 .ask.settled .ask-opts, .ask.settled .ask-hint, .ask.settled .fork-text { display: none; }
 
+/* 断线重连卡（断简）：线断了，这一页停在半空——重新接上的入口嵌在正文里。
+   虚线裁口 + 朱砂淡晕：一张等着补字的残页，不是系统弹窗 */
+.reconnect-card {
+  margin: 30px 0; padding: 18px 26px 16px;
+  border: 1.5px dashed var(--accent-2);
+  background:
+    var(--grain) padding-box,
+    linear-gradient(180deg, var(--accent-wash), transparent 72%) padding-box,
+    linear-gradient(var(--paper-hi), var(--paper-hi)) padding-box;
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+  animation: fadeUp .55s ease both;
+}
+.reconnect-card .rc-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+.reconnect-card .rc-head b { font-size: 15px; letter-spacing: .24em; color: var(--ink); }
+.reconnect-card .rc-line { font-size: .86em; color: var(--ink-2); margin: 0 0 12px; line-height: 1.8; }
+.reconnect-card .rc-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.reconnect-card .rc-status { font-size: .78em; color: var(--ink-3); letter-spacing: .04em; }
+.rc-retry {
+  font: inherit; font-size: .88em; letter-spacing: .14em;
+  color: #f3e9d4; background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  border: none; padding: 7px 20px; cursor: pointer;
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 2px 8px rgba(0, 0, 0, .4);
+}
+.rc-retry:hover:not(:disabled) { filter: brightness(1.1); }
+.rc-retry:active:not(:disabled) { transform: translateY(1px); }
+.rc-retry:disabled { opacity: .55; cursor: default; }
+
 /* 选项：正文里的岔路——方寸朱文章 + 虚线行间；点选如钤印，压下即定 */
 .opt {
   display: flex; align-items: baseline; gap: 12px; width: 100%; text-align: left;

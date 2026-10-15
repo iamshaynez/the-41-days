@@ -5,6 +5,7 @@ import { injectIcons, svgUse } from './icons.js';
 import { splitSentences, SentenceBuffer } from './typist.js';
 import { sfx } from './sfx.js';
 import { ambience } from './ambience.js';
+import { reconnectDelayMs, createTurnWatch, SSE_STALL_MS } from './reconnect.js';
 injectIcons();
 
 const $ = (id) => document.getElementById(id);
@@ -119,7 +120,7 @@ function backToSetup() {
   $('game').hidden = true; $('setup').hidden = false;
   clearBook();
   syncChrome();
-loadResume();
+loadResume().catch(() => { /* 够不着服务器：卷首照常 */ });
 }
 
 /** 清空书页：新局/续局前，把上一局的字与未决的问句都收走 */
@@ -177,9 +178,16 @@ async function loadResume() {
   }
 }
 async function resumeRun(id) {
-  const r = await (await fetch(`/api/runs/${id}`)).json();
-  if (!r.id) return;
-  state.runId = id;
+  try {
+    const r = await (await fetch(`/api/runs/${id}`)).json();
+    if (!r.id) return false;
+    applyResume(r);
+    return true;
+  } catch { return false; /* 网络断：调用方决定是否挂断线卡 */ }
+}
+/** 书页原地重铺（续局与断线重连同一条路）：前文落过库，翻回去就能接上 */
+function applyResume(r) {
+  state.runId = r.id;
   clearBook();
   state.s = r.state; rebuildNounRe(); // 先立名词索引，前文里的名字就能翻
   replayHistory(r.history || [], r.state);
@@ -236,7 +244,7 @@ function recapFromState(s) {
   $('narration').appendChild(box);
   state.pendingDropcap = false;
 }
-loadResume();
+loadResume().catch(() => { /* 服务器暂时够不着：卷首照常，重试在菜单与断线卡里 */ });
 
 /* ════════════════════════════════════════════════════════════════
    句级浮现引擎（Typist）——「一句一句写下来」的小说节奏。
@@ -330,7 +338,8 @@ async function sendIntents(intents, label) {
 }
 async function send(payload, displayText) {
   if (state.busy || !state.runId) return;
-  // 草稿账：自由输入被追问（clarify）时原句回填输入行——别让玩家重打一遍
+  // 草稿账：自由输入被追问（clarify）时原句回填输入行——别让玩家重打一遍；
+  // 轮次善终（done）后清账，lastDraft 只在「在途/断线」时存在——断线重连也拿它回填
   state.lastDraft = typeof payload.input === 'string' && payload.input.trim() ? payload.input : null;
   state.busy = true;
   setCardsEnabled(false);
@@ -338,31 +347,141 @@ async function send(payload, displayText) {
   typist.flush(); // 新落笔前，把上一段一口气写完
   const line = el('p', 'player-line fresh', esc(displayText));
   $('narration').appendChild(line); closePara(); revealFlow();
+  const turn = createTurnWatch(); // 善终判定：见到 done 才算这轮走完
+  let triage = null; // 非 200 的分诊结果；null = 走的是 SSE 流
+  const ctl = new AbortController();
+  let stallTimer = null;
+  const armStall = () => { // 看门狗：服务端每 15s 拍一记心跳（注释行也算字节），
+    // 漏 4 拍（60s）= 线吊死——掐掉 fetch 走重连，不许 busy 永远为真把页面卡死
+    clearTimeout(stallTimer);
+    stallTimer = setTimeout(() => ctl.abort(new Error('stall')), SSE_STALL_MS);
+  };
+  armStall();
   try {
     const res = await fetch(`/api/runs/${state.runId}/input`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
+      signal: ctl.signal,
       // display：书页上玩家那一笔的样子——落库的前文与玩家所见一致
       body: JSON.stringify({ ...payload, display: String(displayText || '').slice(0, 500) })
     });
-    const reader = res.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      let idx;
-      while ((idx = buf.indexOf('\n\n')) >= 0) {
-        const block = buf.slice(0, idx); buf = buf.slice(idx + 2);
-        handleSse(block);
+    if (!res.ok) triage = await reportInputHttpError(res);
+    else {
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        armStall(); // 任何字节（含心跳注释）都算活着
+        buf += dec.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) >= 0) {
+          const block = buf.slice(0, idx); buf = buf.slice(idx + 2);
+          handleSse(block, turn);
+        }
       }
     }
   } catch (e) {
-    narrateRaw('（连接中断——刷新页面可从断点恢复）', { cls: 'sys' });
+    /* 网络断 / 看门狗掐线：非善终，走页内重连 */
+  } finally {
+    clearTimeout(stallTimer);
+    typist.endTurn();
+    state.busy = false;
+    setCardsEnabled(true);
   }
-  typist.endTurn();
-  state.busy = false;
-  setCardsEnabled(true);
+  // 非善终（断网/被代理掐线/服务器中途出错/局已终）→ 页内重连对账
+  if (state.runId && (triage === 'recover' || (triage === null && !turn.complete))) startRecovery();
+}
+
+/** 输入端点非 200 的分诊：错误码翻成玩家语言与处置。
+ *  旧行为是把 JSON 错误体当 SSE 哑吞——点了没反应、页面像卡死，这是断线三病之一。 */
+async function reportInputHttpError(res) {
+  let err = {};
+  try { err = await res.json(); } catch { /* 非 JSON 体 */ }
+  if (res.status === 401) {
+    narrateRaw('（登录过了期——回扉页重新进来，这一局在「没写完的局」里等你。）', { cls: 'sys' });
+    setTimeout(() => location.replace('/'), 1500);
+    return 'auth';
+  }
+  if (res.status === 429) { narrateRaw('（说话太快了，喘口气。）', { cls: 'sys' }); return 'ignore'; }
+  if (res.status === 400 && /ended/.test(String(err.error || ''))) return 'recover'; // 局已终而书页不知道：重铺即见落幕
+  narrateRaw('（出错：' + esc(err.error || res.status) + '）', { cls: 'sys' });
+  return 'recover';
+}
+
+/* ═══ 断线重连（页内恢复）：线断了不刷新页面，书页原地接回来 ═══
+   触发：输入流非善终（断网/被代理掐线/服务器中途出错/局已终）或看门狗判线吊死。
+   恢复 = GET /api/runs/:id 重铺书页（清卷 → 前文重放 → 最新状态入座）——
+   服务器权威、落库先行，重连拿到的就是断点之后的真相；断线时没发出去的那句话
+   回填输入行。自动退避重试（1s→30s 封顶）+ 卡上「重新接上」随时手动试。 */
+const rc = { on: false, attempt: 0, timer: null, card: null };
+function startRecovery() {
+  if (!state.runId) return;
+  setCardsEnabled(false); // 旧状态的卡别再点——服务器可能已经翻页，点了就是对不上账的输入
+  if (state.lastDraft) state.restoreDraft = state.lastDraft; // 断线的那句话，接回来后回填输入行
+  if (rc.on) return; // 已在重连循环里：卡还在，退避会再试
+  rc.on = true;
+  rc.attempt = 0;
+  narrateRaw('（连接断了——不用刷新，正在把书页接回来。）', { cls: 'sys' });
+  buildRecoveryCard();
+  scheduleReconnect();
+}
+function buildRecoveryCard() {
+  closePara();
+  const card = el('div', 'reconnect-card');
+  card.innerHTML = `<div class="rc-head"><span class="kicker">断简</span><b>这一页停在半空</b></div>
+    <p class="rc-line">线断了。每一笔都落在纸上——从服务器把最新的一页接回来，接着写。</p>
+    <div class="rc-row"><button class="rc-retry" type="button">重新接上</button><span class="rc-status"></span></div>`;
+  card.querySelector('.rc-retry').addEventListener('click', () => {
+    if (rc.card?.dataset?.busy) return;
+    clearTimeout(rc.timer);
+    attemptReconnect();
+  });
+  $('narration').appendChild(card);
+  revealFlow();
+  rc.card = card;
+}
+function setRcStatus(text, busy = false) {
+  if (!rc.card) return;
+  rc.card.querySelector('.rc-status').textContent = text || '';
+  rc.card.querySelector('.rc-retry').disabled = busy;
+  if (busy) rc.card.dataset.busy = '1'; else delete rc.card.dataset.busy;
+}
+function scheduleReconnect() {
+  const wait = reconnectDelayMs(rc.attempt++);
+  setRcStatus(`第 ${rc.attempt} 次接回（约 ${Math.round(wait / 1000)} 秒后自动再试）`);
+  rc.timer = setTimeout(attemptReconnect, wait);
+}
+async function attemptReconnect() {
+  if (!rc.on || !state.runId) return;
+  clearTimeout(rc.timer);
+  setRcStatus('正在接回……', true);
+  try {
+    const res = await fetch(`/api/runs/${state.runId}`);
+    if (res.status === 401) { // 会话过了期：重连接不回来——回扉页重新进来
+      setRcStatus('登录过了期，接不回来了。');
+      endRecovery(true);
+      setTimeout(() => location.replace('/'), 1500);
+      return;
+    }
+    if (!res.ok) throw new Error(String(res.status));
+    const r = await res.json();
+    if (!r.id) throw new Error('no run');
+    endRecovery();
+    applyResume(r); // 书页原地接回：断点之后的字一次补齐
+    narrateRaw('（接回来了——书页从最新一页续上。）', { cls: 'sys' });
+    restoreDraft();
+  } catch {
+    setRcStatus('', false);
+    scheduleReconnect(); // 还没接上：退避后再试（「重新接上」仍可随时手动按）
+  }
+}
+function endRecovery(keepCard = false) {
+  rc.on = false;
+  rc.attempt = 0;
+  clearTimeout(rc.timer);
+  rc.timer = null;
+  if (rc.card && !keepCard) { rc.card.remove(); rc.card = null; }
 }
 /** 内核拒绝原因 → 玩家语言（错误码不亮给玩家） */
 const REJECT_TXT = {
@@ -375,10 +494,11 @@ const REJECT_TXT = {
   DONE_TODAY: '今天已经做过了', NEED_TRAIT: '他不会这个', NEED_REPAIR: '得先修好它', NO_LOC: '不知道这个地方', MAX: '已经修到顶了', NOT_NIGHT: '现在不是夜里', NIGHT_DONE: '这一夜已经过去了'
 };
 
-function handleSse(block) {
+function handleSse(block, turn) {
   const ev = block.match(/^event: (.+)$/m)?.[1];
   const dataRaw = block.match(/^data: (.+)$/m)?.[1];
   const data = dataRaw ? JSON.parse(dataRaw) : {};
+  if (ev && turn) turn.saw(ev); // 善终记账：见到 done 才算这轮走完
   if (ev === 'narration-delta') {
     // 节拍对齐（直读/概述日）：直读正文随发 beats——一拍一段，段随拍走；LLM 散文则整段入纸
     if (Array.isArray(data.beats) && data.beats.length) streamBeats(data.beats);
@@ -412,6 +532,7 @@ function restoreDraft() {
     if (data.say) narrateRaw(data.say, { cls: 'clarify' });
     if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' });
     restoreDraft(); // 追问轮不发 state-patch（state 挂在 done 里）——回填挂这里才追得上
+    state.lastDraft = null; // 善终清账：草稿只在「在途/断线」时留作回填
   }
   if (ev === 'error') narrateRaw('（出错：' + esc(data.error) + '）', { cls: 'sys' });
 }
@@ -1612,8 +1733,9 @@ async function openMenu() {
   const sheet = $('menu');
   const s = state.s;
   const inGame = state.view === 'play' && !$('game').hidden && state.runId;
-  // 对局列表现取（另一台设备上的进度也算数）
-  const r = await (await fetch('/api/runs')).json().catch(() => ({}));
+  // 对局列表现取（另一台设备上的进度也算数；够不着服务器时菜单照常开）
+  let r = {};
+  try { r = await (await fetch('/api/runs')).json(); } catch { /* 离线：少一节而已 */ }
   const runs = (r.runs || []).filter((x) => x.status === 'active');
 
   let html = `<div class="sheet-head"><span class="kicker">选单 · 扉页</span>
@@ -1625,7 +1747,10 @@ async function openMenu() {
   if (inGame && s) {
     html += `<p class="m-line">第 <b>${s.day}</b> 日 · ${PHASE_NAME[s.phase] || s.phase} · ${WEATHER_NAME[s.weather] || ''}${s.over ? ' · 已写完' : ' · 进行中'}</p>
       <p class="hint">每一笔都落在纸上——不用存，也不会丢。合上眼、刷新、换一台机器，日子都在。</p>
-      ${s.over ? '' : '<button class="ghost" id="m-abandon" type="button">封存这一局</button>'}`;
+      <div class="m-row">
+        <button class="ghost" id="m-resync" type="button">重新接上（页内刷新）</button>
+        ${s.over ? '' : '<button class="ghost" id="m-abandon" type="button">封存这一局</button>'}
+      </div>`;
   } else {
     html += `<p class="hint">手边还没有翻开的书。从下面另起一局，或在卷首语里住进去。</p>`;
   }
@@ -1700,6 +1825,12 @@ async function openMenu() {
   sheet.innerHTML = html;
 
   sheet.querySelector('.sheet-x').addEventListener('click', closeSheets);
+  sheet.querySelector('#m-resync')?.addEventListener('click', () => {
+    if (state.busy) return; // 一轮正在落墨：别在半途重铺
+    closeSheets();
+    endRecovery(); // 若断线卡还挂着，先收掉——重铺本身就会重建书页
+    resumeRun(state.runId).then((ok) => { if (!ok) startRecovery(); }); // 接不上：挂断线卡走自动重试
+  });
   sheet.querySelector('#m-abandon')?.addEventListener('click', (e) => {
     const b = e.currentTarget;
     if (b.dataset.armed) { abandonRun(); return; }
