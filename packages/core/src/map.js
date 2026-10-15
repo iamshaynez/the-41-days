@@ -1,7 +1,7 @@
 // 舆图视图（叙事双轴-v0.1 §3）：四态地点（未闻不显/风闻灰/已知淡/今夜亮）＋走向＋道路＋留痕层。
 // 纯视图：server 现算，不入账；留痕触发全部来自既有旗标/文档/主线索/地点，不新造状态。
 import { charById } from './state.js';
-import { heardMet } from './unlock.js';
+import { heardMet, echoHeard } from './unlock.js';
 
 function traceOk(state, t) {
   const s = state, w = t.when || {};
@@ -42,8 +42,10 @@ export function mapView(state, pack) {
       return { id: p.id, name: p.name, x: p.x, y: p.y, kind: p.kind, state: tonight ? 'tonight' : 'known', who: tonight ? who : null, mark: loc?.mark || null };
     }
     const loc = pack.locMap[p.id];
-    if (loc && heardMet(s, pack, loc)) {
-      return { id: p.id, name: p.name, x: p.x, y: p.y, kind: p.kind, state: 'heard', mark: loc.mark || null, hint: loc.hint || null };
+    const echoOnly = loc && !heardMet(s, pack, loc) && echoHeard(s, pack, loc); // 池回声：旧梦牵引
+    if (loc && (heardMet(s, pack, loc) || echoOnly)) {
+      return { id: p.id, name: p.name, x: p.x, y: p.y, kind: p.kind, state: 'heard', mark: loc.mark || null,
+        hint: echoOnly && !loc.heardWhen ? (loc.echoHint || loc.hint || null) : (loc.hint || null) };
     }
     return { id: p.id, state: 'unknown' };
   });

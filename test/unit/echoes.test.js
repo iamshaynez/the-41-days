@@ -9,6 +9,8 @@ import { applyMigrations } from '../../packages/server/migrate.js';
 import { collectEchoes, archiveOutcome, closureStatus, composeMemoirBook } from '../../packages/server/echoes.js';
 import { loadPack } from '../../packages/core/index.js';
 
+const PACK = loadPack();
+
 let db, dir;
 const UID = 1;
 
@@ -119,5 +121,35 @@ describe('合上兰台与回忆录成册（长线体验-v0.2 §3.6 / EX-01）', 
     assert.match(book, /测试者/);
     assert.ok(book.indexOf('第一章') < book.indexOf('第二章'), '按时间排序');
     assert.ok(!book.includes('#014'), '文档不混进回忆录');
+  });
+});
+
+describe('池回声（城市扩展后续）：上一世没走完的路', () => {
+  test('局终入档 missedLocs，新局装配带出——隔局轮换成城', () => {
+    // 第一局：南池开渔村（去了）、北池开故郢（没去）→ 错过：dockyard、baling、jiying
+    const s1 = endedState({});
+    s1.locPool = { south: 'fishing', ruins: 'jiying' };
+    s1.locState = { fishing: { searched: {}, npcState: {}, scriptsFired: {}, firstVisit: false } };
+    archiveOutcome(db, UID, 'run_pool_a', s1, PACK);
+    let echoes = collectEchoes(db, UID);
+    assert.deepEqual(echoes.missedLocs, ['dockyard', 'baling', 'jiying'],
+      '落选在前（dockyard/baling），失约在后（jiying）');
+    // 第二局（偏置后）南池军市、北池古冢，两处都去 → 新的落选者是渔村与故郢
+    const s2 = endedState({});
+    s2.locPool = { south: 'dockyard', ruins: 'baling' };
+    s2.locState = {
+      dockyard: { searched: {}, npcState: {}, scriptsFired: {}, firstVisit: false },
+      baling: { searched: {}, npcState: {}, scriptsFired: {}, firstVisit: false }
+    };
+    archiveOutcome(db, UID, 'run_pool_b', s2, PACK);
+    echoes = collectEchoes(db, UID);
+    assert.deepEqual(echoes.missedLocs, ['fishing', 'jiying'],
+      '这一世的落选者接棒——池在隔局轮换，两世走完四地');
+  });
+
+  test('无 pack 的旧调用（兼容）：不写池账；最新一局没有池账，牵引翻篇', () => {
+    archiveOutcome(db, UID, 'run_pool_c', endedState({})); // 旧调用：无 pack → 不带池账
+    const e = collectEchoes(db, UID);
+    assert.ok(!e?.missedLocs, '最新一局没有池账（旧版档）→ 不回挖更早的牵引');
   });
 });
