@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "semver": "0.34.0",
+  "semver": "0.35.0",
   "name": "第 41 天 · 江陵",
   "coreVersion": ">=0.1.0",
   "files": [
@@ -36,7 +36,7 @@
     "bandage": 1,
     "crowbar": 1,
     "book": 2,
-    "firewood": 2
+    "firewood": 4
   },
   "startKnowledgeLocations": [
     "market",
@@ -107,10 +107,10 @@
   },
   "nightSlots": 10,
   "night": {
-    "lootRolls": 1,
+    "lootRolls": 2,
     "lootHitChance": 0.62,
-    "refillMinDays": 3,
-    "refillChance": 0.45
+    "refillMinDays": 2,
+    "refillChance": 0.55
   },
   "raid": {
     "baseProb": 0.22,
