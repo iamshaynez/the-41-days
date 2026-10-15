@@ -95,7 +95,7 @@ async function startRun(_difficulty, sidestory, { quick = false } = {}) {
   const wall = el('div', 'wall-names');
   wall.appendChild(el('span', 'wall-kicker', '门后'));
   living.forEach((c, i) => {
-    const n = el('span', 'wall-name', esc(c.name));
+    const n = el('span', 'wall-name', `${esc(c.name)}<i class="wall-role">${esc(c.role || '')}</i>`);
     n.style.animationDelay = wantRM() ? '0s' : `${0.4 + i * 0.55}s`;
     wall.appendChild(n);
   });
@@ -773,6 +773,7 @@ function fillCharPop(id) {
       <b>${esc(c.name)}</b><span class="cp-role">${esc(c.role)} · 心情${esc(c.mood)}</span></div>
     <p class="cp-words">${esc(words.join('，') || '身上没伤，肚里有食。')}</p>
     ${c.care?.knot ? `<p class="cp-care"><span class="cp-k">心里压着</span>${esc(c.care.knot)}${c.care.last ? `<span class="cp-k">最近记着</span>${esc(c.care.last)}` : ''}</p>` : ''}
+    ${(c.relations || []).length ? `<p class="cp-rel">${c.relations.map((r) => `<span class="cp-rel-row"><b>${esc(r.name)}</b>·${esc(r.label)}（${esc(r.arcWord)}）</span>`).join('')}</p>` : ''}
     ${gaugeRows(c)}`;
   pop.dataset.sev = charSev(c);
 }

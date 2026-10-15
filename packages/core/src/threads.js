@@ -70,7 +70,28 @@ export function tickThreads(ctx) {
     });
     if (target) fireCard(sc.card, target.id);
   }
+  gestureTick(ctx);
   tickActs(ctx);
+}
+
+/** 人物梗（群像·记忆钩子）：招牌小动作按种子日程轻触——重复即记忆。
+ *  每 5 天轮到一人（r = pickOf(hash(seed|gr|char))），day % 5 === r 且 D3 后；
+ *  一日至多一梗、一人一局至多 2 次；句按种子+日选（同梗不同周目不同句）。 */
+function gestureTick(ctx) {
+  const s = ctx.s;
+  if (s.sidestory || s.over || s.day < 4) return;
+  if (ctx.facts.some((f) => f.k === 'gesture')) return; // 一日一梗
+  for (const c of aliveChars(s)) {
+    const g = ctx.pack.charMap[c.id]?.persona?.gesture;
+    if (!g?.lines?.length) continue;
+    if ((s.firedOnce[`gr2_${c.id}`] || 0) >= 2) continue; // 一人一局至多两次
+    if ((s.day % 5) !== pickOf(hashStr(`${s.seed}|gr|${c.id}`), 5)) continue;
+    const line = g.lines[pickOf(hashStr(`${s.seed}|grl|${c.id}|${s.day}`), g.lines.length)];
+    s.firedOnce[`gr2_${c.id}`] = (s.firedOnce[`gr2_${c.id}`] || 0) + 1;
+    ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
+    ctx.fact('gesture', { char: c.id, sig: g.sig, line });
+    return;
+  }
 }
 
 /** 幕问与幕结（宏观抓手）：幕首一问立题，幕末三行收拢——这一幕你做了什么 / 城里 / 悬而未决。

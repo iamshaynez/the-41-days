@@ -1627,6 +1627,12 @@ body.motion-off .turn-ledger { animation: none; }
 #char-pop .cp-care .cp-k { display: block; font-family: var(--font-carved); font-size: 9.5px; letter-spacing: .3em; color: var(--ink-3); margin-top: 3px; }
 #char-pop .cp-care .cp-k:first-child { margin-top: 0; }
 
+/* 群像：墙上名字带职衔小字（记名钩子）；浮卡关系块 */
+.wall-name .wall-role { display: block; font-style: normal; font-size: 10px; letter-spacing: .3em; color: var(--ink-3); margin-top: 2px; opacity: .8; }
+#char-pop .cp-rel { margin: 4px 0 2px; }
+#char-pop .cp-rel-row { display: block; font-size: .86em; color: var(--ink-2); line-height: 1.8; }
+#char-pop .cp-rel-row b { color: var(--ink-1); font-weight: 400; }
+
 /* 线的状态行（回响节拍器）：暗金批注体——罕见+统一，从噪音里跳出来；扫读者一眼通电 */
 #narration .ask .care-line.thread-line { color: var(--brass); opacity: .82; font-family: var(--font-kai); letter-spacing: .03em; }
 

@@ -19,7 +19,9 @@ function readJson(dir, f) {
 export function loadPack(dir = DEFAULT_PACK_DIR) {
   const manifest = readJson(dir, 'manifest.json');
   const items = readJson(dir, 'items.json').items;
-  const characters = readJson(dir, 'characters.json').characters;
+  const charsFile = readJson(dir, 'characters.json');
+  const characters = charsFile.characters;
+  const relations = charsFile.relations || [];
   const locations = readJson(dir, 'locations.json').locations;
   const rj = readJson(dir, 'recipes.json');
   const ej = readJson(dir, 'events.json');
@@ -159,7 +161,7 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     events: ej, cards: allCards, cardMap, broadcasts: ej.broadcasts,
     docs: dj.docs, docMap, layerGates: dj.layerGates, canonAnnals: dj.canonAnnals || [], narrations, kpis,
     sidestories: side.stories || [], sideMap: Object.fromEntries((side.stories || []).map((s) => [s.id, s])),
-    ge, ensembleTemplates, quickstart, threads,
+    ge, ensembleTemplates, quickstart, threads, relations,
     seals: sj.seals || [], sealMap,
     prelude, map, mainline, historia
   };

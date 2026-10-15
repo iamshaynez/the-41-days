@@ -10,7 +10,7 @@ import { resolveRaid } from './raid.js';
 import { executeTrade } from './trade.js';
 import { chooseEventOption, optionAvailable, optionCostOk } from './events.js';
 import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents, assignNightBeds } from './vitals.js';
-import { tickAutonomous, tickDirections } from './causality.js';
+import { tickAutonomous, tickDirections, bumpPairArc } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
 import { planDay, planNightStep, tickDawnLedgers, tickDrama } from './delegate.js';
@@ -325,6 +325,22 @@ export function beginRun(state, pack, { prologue = false } = {}) {
   const events = [{ i: 0, day: 1, t: 'RUN_STARTED', d: { state: structuredClone(state) } }];
   const facts = [];
   const ctx = new Ctx(state, pack, events, facts);
+  // 群像（开局即有人）：记名钩子一人一行——名字·职衔·题名；开局关系网——
+  // 同册旧识信任弧预置（PAIR_ARC 入账可回放），开门一句 opener 进叙事轨
+  if (pack?.charMap) {
+    for (const c of state.chars.filter((x) => x.alive)) {
+      const def = pack.charMap[c.id];
+      if (def) ctx.fact('intro', { char: c.id, name: c.name, role: c.role, hook: def.persona?.epithet || def.desc?.slice(0, 20) || '' });
+    }
+    for (const rel of pack.relations || []) {
+      const a = state.chars.find((x) => x.id === rel.a && x.alive);
+      const b = state.chars.find((x) => x.id === rel.b && x.alive);
+      if (!a || !b) continue;
+      bumpPairArc(ctx, a.id, b.id, rel.arc);
+      bumpPairArc(ctx, b.id, a.id, rel.arc); // 信任弧是双向双账（堂屋同款键序）
+      ctx.fact('relation_open', { a: a.id, b: b.id, label: rel.label, opener: rel.opener });
+    }
+  }
   if (prologue && state.phase === 'prologue') {
     ctx.fact('prologue_start', {});
     firePreludeBeat(ctx, 0);

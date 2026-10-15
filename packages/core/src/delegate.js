@@ -349,6 +349,22 @@ export function tickDrama(ctx) {
   }
 }
 
+/** 浮卡的关系面（群像批次）：同册旧识双向点名 + 信任弧档词 */
+export function relationsOf(state, pack, id) {
+  const s = state;
+  const out = [];
+  for (const rel of pack.relations || []) {
+    if (rel.a !== id && rel.b !== id) continue;
+    const other = rel.a === id ? rel.b : rel.a;
+    if (!s.chars.some((c) => c.id === other && c.alive)) continue;
+    const arc = s.causality?.pairArcs?.[`${id}|${other}`] || s.causality?.pairArcs?.[`${other}|${id}`];
+    const pos = arc?.pos || 0, neg = arc?.neg || 0;
+    const arcWord = pos >= 3 ? '过命的交情' : pos >= 1 ? '信得过' : neg >= 1 ? '心里有根刺' : '旧识';
+    out.push({ id: other, name: pack.charMap?.[other]?.name || other, label: rel.label, arcWord });
+  }
+  return out;
+}
+
 /** 人物页的「他最近惦记什么」（D·戏剧弧）：心结一句 + 最近一笔私账——
  *  内核已有的人格卡与因果账，给玩家一个随时可查的显形面 */
 export function charCare(state, pack, id) {
