@@ -195,6 +195,9 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
         + (f.say ? `${f.say}` : '') + (f.news && !f.say ? `他捎来城里的一句话——都在说：「${f.news}。」` : '')); break;
       // —— 小说层（回响节拍器）：线的轻触与物化、幕问与幕结 ——
       case 'thread_touch': lines.push(f.line); break;
+      case 'intro': lines.push(`${f.name}，${f.role}——${f.hook}。`); break;
+      case 'relation_open': lines.push(`${f.opener}`); break;
+      case 'gesture': lines.push(f.line); break;
       case 'token_found': lines.push(`收起一件东西：${f.name}。${f.flavor ? `（${f.flavor}）` : ''}`); break;
       case 'act_question': lines.push(`——${{ A1: '第一', A2: '第二', A3: '第三', A4: '第四', A5: '第五' }[f.act] || ''}幕问：${f.q}`); break;
       case 'act_wrap': lines.push(`——${{ A1: '第一', A2: '第二', A3: '第三', A4: '第四', A5: '第五' }[f.act] || ''}幕 · 收——\n这一幕，你做了：${f.you}。\n城里：${f.city}。\n悬而未决：${f.open}。`); break;
