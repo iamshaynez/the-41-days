@@ -22,6 +22,12 @@ describe('裁判提示词 · 主语解析铁律', () => {
     const seg = referee.slice(Math.max(0, referee.indexOf('继承') - 200), referee.indexOf('继承') + 400);
     assert.match(seg, /clarify|追问/, '继承规则附近要落到 clarify 出口');
   });
+  test('托管措辞有契约（派人/让人不猜名）：act 缺 actor 归内核、dusk 自选人、白天出门活收卷', () => {
+    assert.match(referee, /托管措辞/, '托管契约存在');
+    assert.match(referee, /不写 actor 字段/, 'act 托管 = 不写 actor');
+    assert.match(referee, /绝不写"人""谁"这类不是角色 id 的词/, '泛指词禁令（「这个人不在」死胡同的源头）');
+    assert.match(referee, /夜里的活 → auto_day 收卷/, '白天说夜间任务的出路');
+  });
 });
 
 // —— 自由输入裁决策略（用户实测反馈：条件不绝对满足就追问+清空输入框，体验差）——
