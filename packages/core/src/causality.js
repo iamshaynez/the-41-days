@@ -274,6 +274,16 @@ export function tickDirections(ctx) {
       ctx.fact('hist_seed_faded', { id: d.id, subject: d.subject, text: d.text, seed: d.seed });
     }
   }
+  // 誓主亡故即散（闭环纪律）：立誓的人不在了，誓没了主——晨报不再挂「未践」，
+  // 账移到终局列传去收（buildEnding 读 directions 不看 alive，赖账照记）
+  for (const d of all) {
+    if (d.kind !== 'vow' || !d.alive || !d.subject) continue;
+    const c = s.chars.find((x) => x.id === d.subject);
+    if (!c || !c.alive) {
+      d.alive = false; dirty = true;
+      ctx.fact('vow_orphaned', { id: d.id, subject: d.subject, text: d.text });
+    }
+  }
   if (dirty) ctx.setFlag('directions', structuredClone(s.directions));
 }
 

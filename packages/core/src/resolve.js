@@ -213,14 +213,6 @@ function applyOne(ctx, intent) {
       const text = String(intent.text).trim().slice(0, 60);
       const subject = intent.subject && s.chars.some((c) => c.id === intent.subject && c.alive) ? intent.subject : null;
       const alive = Object.values(s.directions || {}).filter((d) => d.alive);
-      const same = alive.find((d) => d.subject === subject && d.text === text);
-      if (same) { // 再说一遍 = 浇水：誓记「说过几遍」，别的只延寿
-        same.lastDay = s.day;
-        if (same.kind === 'vow') same.watered = (same.watered || 0) + 1;
-        ctx.setFlag('directions', structuredClone(s.directions));
-        ctx.fact('direction_watered', { id: same.id, subject, text });
-        return { ok: true };
-      }
       const HIST_KEYS = [
         ['beacon', /北津台|烽火台|举火/], ['letters', /家书|寄信|写信/],
         ['maicheng', /麦城/], ['army', /军心|北边的兵|士气/]
@@ -228,9 +220,27 @@ function applyOne(ctx, intent) {
       // 识途之地优先成誓（seed 闭环）：史锚地点（北津台）一旦已识，话头落成
       // 誓——当晚黄昏方案即可兑现；落史种则兑现窗口只有窗口内的大事 ask 步
       // 那几天（极易错过），话头永不关闭。未识之地照旧走史种（城里的传闻）。
-      const histHit = HIST_KEYS.find(([, re]) => re.test(text));
+      let histHit = HIST_KEYS.find(([, re]) => re.test(text));
       const locHit = locOfText(s, ctx.pack, text);
+      // 过窗不种（闭环纪律）：明晨已无发芽机会（下一晨出了回应卡窗口）的史锚
+      // 话头落杂念——不种下就注定枯萎的空诺。种下的每一粒都必须有一晨能长卡。
+      if (histHit) {
+        const card = ctx.pack.cardMap['hs_' + histHit[0]];
+        const [, hi] = card?.when?.seedWindow || [];
+        if (!card || hi === undefined || s.day + 1 > hi) histHit = null;
+      }
       const kind = locHit ? 'vow' : histHit ? 'hist' : 'misc';
+      // 同题去重：同文本=浇水；同 seed 的史种换措辞再提=也浇水——不另种一粒
+      // （否则同一张回应卡能两晨连发，枯萎句还会对着已兑现的话头说「没人接」）
+      const same = alive.find((d) => d.subject === subject && d.text === text)
+        || (kind === 'hist' ? alive.find((d) => d.kind === 'hist' && d.seed === histHit[0]) : null);
+      if (same) { // 再说一遍 = 浇水：誓记「说过几遍」，别的只延寿
+        same.lastDay = s.day;
+        if (same.kind === 'vow') same.watered = (same.watered || 0) + 1;
+        ctx.setFlag('directions', structuredClone(s.directions));
+        ctx.fact('direction_watered', { id: same.id, subject, text });
+        return { ok: true };
+      }
       const id = 'd' + (s.day) + '_' + (Object.keys(s.directions || {}).length + 1);
       const entry = {
         id, text, subject, kind, day: s.day, lastDay: s.day, alive: true, watered: 0,
