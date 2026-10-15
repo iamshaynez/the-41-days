@@ -1428,11 +1428,25 @@ function renderEnding(s) {
   box.appendChild(curtain);
   const afterCurtain = linesStart + (codex.lines || []).length * 1.6 + 1.2; // 后续各幕的基准延时
 
+  /* ── 幕一·五 案语：史源前因后果（《三国志》/《三国演义》扣回本局）── */
+  const notes = codex.notes || [];
+  if (notes.length) {
+    const nt = el('div', 'finale-act notes reveal');
+    nt.style.animationDelay = `${afterCurtain + 0.1}s`;
+    nt.appendChild(el('span', 'kicker', '案语 · 前因后果'));
+    for (const n of notes) {
+      const p = el('p', 'note-entry');
+      p.innerHTML = `<span class="n-src">${esc(n.src)}</span><span class="n-text">${esc(n.text)}</span><em class="n-tie">案：${esc(n.tie)}</em>`;
+      nt.appendChild(p);
+    }
+    box.appendChild(nt);
+  }
+
   /* ── 幕二·五 后日谈：本局结局的开放未来（0.21.0：每局自己的城市肌理）── */
   const futures = codex.futures || [];
   if (futures.length) {
     const fu = el('div', 'finale-act futures reveal');
-    fu.style.animationDelay = `${afterCurtain + 0.4}s`;
+    fu.style.animationDelay = `${afterCurtain + (notes.length ? 1.2 : 0.4)}s`;
     fu.appendChild(el('span', 'kicker', '后日谈'));
     for (const l of futures) {
       const cls = l.startsWith('（') ? 'future-line blank' : 'future-line';

@@ -288,6 +288,8 @@ export function buildEnding(state, pack) {
     });
     story.codex = {
       annals,
+      // 案语（0.32.0 落幕史源纵深）：每结局 3~4 条《三国志》/《三国演义》前因后果
+      notes: pack.mainline?.endingNotes?.[s.war.endingType] || [],
       lines: pack.mainline?.endings?.[s.war.endingType] || [],
       futures: pack.mainline?.futures?.[s.war.endingType] || [],
       tracks
