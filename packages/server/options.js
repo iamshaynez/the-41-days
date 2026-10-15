@@ -158,12 +158,19 @@ export function nightMenu(state, pack) {
 }
 
 /** 卡面语境摘要（提示词 {{card}} 段）：给谋士看的当前卡状态（附 id 对照与可行域） */
+const HIST_THEME_NAMES = { beacon: '北津台', letters: '家书', maicheng: '麦城', army: '军心' };
+/** 已了结的史锚话头（回应卡本局已发过）——亮给谋士：别看历史重提，提了也是白提 */
+function closedThemesLine(state) {
+  const closed = Object.entries(HIST_THEME_NAMES).filter(([k]) => state.firedOnce?.['hs_' + k]).map(([, n]) => n);
+  return closed.length ? `已了结的话头（这一局已经有人接过去了，不再有后续——无论上文提过多少次，别再出相关选项）：${closed.join('、')}。` : '';
+}
 export function cardBrief(state, pack, card) {
   const ids = idTable(state, pack);
+  const closed = closedThemesLine(state);
   const menu = `\n\n【分工商簿——现在真正能做的事，按人一行行列；act 的 action/actor/target 从各人名下选，清单外的愿望用 direction】\n${actionMenu(state, pack)}`;
   if (card === 'dusk') {
     const known = (state.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]).map((l) => pack.locMap[l].name).join('、');
-    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${menu}\n\n${ids}`;
+    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
   }
   if (card === 'night') {
     const loc = pack.locMap[state.night?.locId];
@@ -173,5 +180,5 @@ export function cardBrief(state, pack, card) {
   }
   // day：今日卡
   const openVows = Object.values(state.directions || {}).filter((d) => d.kind === 'vow' && d.alive).map((d) => `「${d.text.slice(0, 14)}」`).join('、');
-  return `白天，今日怎么过。你出的是**今日方略**：2~4 个意图、覆盖至少两个人（act/direction/policy 可混编；direction 可立誓（点名地点的话会成为未践之誓，由黄昏方案兑现）或播史种（提到北津台/家书/麦城/军心的话日后长成停问卡））。白天没有「去某地」的机制——行程类选项（天黑前去某地／登某地／上某地）一律不出，点了也是空炮；想让人去哪，用 direction 立誓，黄昏派工会照着走。方略就是**分头安排**——下面这张分工商簿按人列了各自行得通的事，谁做饭、谁出力、谁陪谁说话，一人一行对着安排；力竭/带伤的人安排 sleep/rest 休整、让别人顶上，也是正经方略，别硬派活。不必覆盖每个人：剩下的生计管家会自动补完，方略执行完这一天就收卷入黄昏。全队休整的方略可以只有一两个意图。${openVows ? `未践的誓：${openVows}——黄昏的方案会兑现它们，白天不必再出与誓重复的行程。` : ''}${menu}\n\n${ids}`;
+  return `白天，今日怎么过。你出的是**今日方略**：2~4 个意图、覆盖至少两个人（act/direction/policy 可混编；direction 可立誓（点名地点的话会成为未践之誓，由黄昏方案兑现）或播史种（提到北津台/家书/麦城/军心的话日后长成停问卡））。白天没有「去某地」的机制——行程类选项（天黑前去某地／登某地／上某地）一律不出，点了也是空炮；想让人去哪，用 direction 立誓，黄昏派工会照着走。方略就是**分头安排**——下面这张分工商簿按人列了各自行得通的事，谁做饭、谁出力、谁陪谁说话，一人一行对着安排；力竭/带伤的人安排 sleep/rest 休整、让别人顶上，也是正经方略，别硬派活。不必覆盖每个人：剩下的生计管家会自动补完，方略执行完这一天就收卷入黄昏。全队休整的方略可以只有一两个意图。${openVows ? `未践的誓：${openVows}——黄昏的方案会兑现它们，白天不必再出与誓重复的行程。` : ''}${closed}${menu}\n\n${ids}`;
 }
