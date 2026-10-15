@@ -110,6 +110,18 @@ describe('黄昏卡不收非答案：守誓／改约类纯念头不留', () => {
     assert.match(brief, /"type":"dusk_assign"/, '黄昏卡提示词必须给出 dusk_assign 意图格式');
     assert.match(brief, /黄昏不收 direction/, '念头白天说的规矩要写明');
   });
+
+  test('已了结的话头亮给谋士：回应卡发过（卡级在册）→ 日/黄昏两卡都点名「别再出相关选项」', () => {
+    const s = duskState();
+    s.firedOnce = { ...s.firedOnce, hs_beacon: true };
+    for (const card of ['day', 'dusk']) {
+      const brief = cardBrief(s, PACK, card);
+      assert.match(brief, /已了结的话头/, `${card} 卡要有已了结清单`);
+      assert.match(brief, /北津台.*别再出相关选项|别再出相关选项.*北津台/, '点名主题与禁令（谋士看着历史重提的解药）');
+    }
+    const clean = duskState();
+    assert.ok(!/已了结的话头/.test(cardBrief(clean, PACK, 'day')), '没有已了结主题时不硬塞');
+  });
 });
 
 describe('内核行为锚定：岔路等的是答案，戏文不替玩家答', () => {

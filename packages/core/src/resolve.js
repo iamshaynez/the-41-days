@@ -248,6 +248,9 @@ function applyOne(ctx, intent) {
         const card = ctx.pack.cardMap['hs_' + histHit[0]];
         const [, hi] = card?.when?.seedWindow || [];
         if (!card || hi === undefined || s.day + 1 > hi) histHit = null;
+        // 重种闸门：这张回应卡本局已经发过、答过——话头已了结，
+        // 再提不落新种（落杂念静默散）。否则谋士重提+玩家再点=晨卡循环发。
+        else if (s.firedOnce?.['hs_' + histHit[0]]) histHit = null;
       }
       const kind = locHit ? 'vow' : histHit ? 'hist' : 'misc';
       // 同题去重：同文本=浇水；同 seed 的史种换措辞再提=也浇水——不另种一粒

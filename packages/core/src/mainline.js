@@ -33,7 +33,9 @@ export function mainlineAskTick(ctx) {
     if (d.kind !== 'hist' || !d.alive || s.firedOnce['hs_' + d.id]) continue;
     const card = ctx.pack.cardMap['hs_' + d.seed];
     const [lo, hi] = card?.when?.seedWindow || [];
-    if (card && lo !== undefined && s.day >= lo && s.day <= hi) {
+    // 卡级一局一次：同一张回应卡答过就是了结（重种也换不来第二张——
+    // 否则谋士看着历史重提、玩家再点，晨卡循环发，主题永不谢幕）
+    if (card && lo !== undefined && s.day >= lo && s.day <= hi && !s.firedOnce[card.id]) {
       seedPick = { card: card.id, seedOf: d.id };
       break; // 一晨至多一粒史种
     }
@@ -47,6 +49,7 @@ export function mainlineAskTick(ctx) {
   if (step) s.firedOnce['ask_' + step.id] = true;
   if (picked.seedOf) {
     s.firedOnce['hs_' + picked.seedOf] = true; // 史种落地双账
+    s.firedOnce[picked.card] = true; // 卡级一局一次的锚（重种闸门看它）
     // 发芽即收种：种子长成卡，使命就完成了——不留活种（否则窗口末的枯萎句
     // 会对着已兑现的话头说「没人接」）
     const seedDir = s.directions?.[picked.seedOf];
