@@ -3535,6 +3535,178 @@
           }
         }
       ]
+    },
+    {
+      "id": "hs_beacon",
+      "kind": "ask",
+      "weight": 0,
+      "when": {
+        "chance": 0,
+        "seedWindow": [
+          29,
+          36
+        ]
+      },
+      "title": "北津台的柴",
+      "text": "有人夜里绕到江边第三台底下，看见薪柴还干着——像有人一直在等它再响。\n这话不知从哪传开的。传到你耳朵里的时候，你想起自己说过同样的话。",
+      "options": [
+        {
+          "key": "carry",
+          "label": "背一捆柴上台阶——万一呢",
+          "cost": [
+            {
+              "item": "firewood",
+              "n": 2
+            }
+          ],
+          "effects": {
+            "dissolve": 1,
+            "knowledge": 1,
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "beacon_wood": true
+            },
+            "text": "柴码在台口，码得很正。没人来点。回去的路上谁都没说话——但那捆柴在，和不在，是不一样的。"
+          }
+        },
+        {
+          "key": "just_words",
+          "label": "话只是话，柴要留着过冬",
+          "effects": {
+            "text": "话留在了话里。台上的风把什么都吹得干干净净。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hs_letters",
+      "kind": "ask",
+      "weight": 0,
+      "when": {
+        "chance": 0,
+        "seedWindow": [
+          19,
+          26
+        ]
+      },
+      "title": "念信的人",
+      "text": "北边的营里添了个念信的差事——识字的卒子每晚把各家的信念给不识字的人听。\n有人来问：这个家还要不要接着寄？上头那句「都好」，营里有人会背了。",
+      "options": [
+        {
+          "key": "keep",
+          "label": "接着写，都好，勿念",
+          "cost": [
+            {
+              "item": "book",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "dissolve": 2,
+            "text": "信寄出去那天，念信的卒子在营门口多念了一遍——不是忘了，是想让更多人听见「都好」两个字。"
+          }
+        },
+        {
+          "key": "truth",
+          "label": "这回写真话：家里快撑不住了",
+          "cost": [
+            {
+              "item": "book",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "dissolve": 1,
+            "mood": {
+              "all": -1
+            },
+            "flags": {
+              "letters_truth": true
+            },
+            "text": "写真话比写「都好」难写得多。信寄出去，屋里安静了很久——说出口的穷，比藏着的穷重。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hs_maicheng",
+      "kind": "ask",
+      "weight": 0,
+      "when": {
+        "chance": 0,
+        "seedWindow": [
+          30,
+          36
+        ]
+      },
+      "title": "麦城的另一种说法",
+      "text": "市口有人在讲麦城：说的跟榜文不一样——说那位没走脱，说走的另有其人。\n讲的人被里正瞪了一眼，声音小下去。可这话你听过——从你自己嘴里。",
+      "options": [
+        {
+          "key": "listen",
+          "label": "凑过去听完，记在心里",
+          "effects": {
+            "knowledge": 2,
+            "flags": {
+              "maicheng_rumor": true
+            },
+            "text": "你把两个版本都记下了：榜文的，和嘴上的。哪天有人问起——你两张嘴都能对上。"
+          }
+        },
+        {
+          "key": "walk",
+          "label": "不沾这种话",
+          "effects": {
+            "text": "话从耳边过去，像风。活人的日子，不该押在死人的传闻上。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hs_army",
+      "kind": "ask",
+      "weight": 0,
+      "when": {
+        "chance": 0,
+        "seedWindow": [
+          24,
+          33
+        ]
+      },
+      "title": "北边的兵在想什么",
+      "text": "过境的散卒里有人喝多了，趴在巷口哭：说他们也不想围城，说他们也想回家。\n这话没人爱听。可你想起自己说过——北边的兵，也是人。",
+      "options": [
+        {
+          "key": "bread",
+          "label": "递块饼过去，不说话",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            },
+            {
+              "item": "meal",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "dissolve": 2,
+            "reputation": {
+              "neighbor": 1
+            },
+            "text": "他捧着饼看了很久才吃。吃完他朝北磕了个头——不是给你的，是给家里人的。这一磕，比十封家书沉。"
+          }
+        },
+        {
+          "key": "door",
+          "label": "关上门——同情心喂不饱自家人",
+          "effects": {
+            "text": "哭声在巷口响了半夜，天亮前没了。饼没递出去，这话你也再没提过。"
+          }
+        }
+      ]
     }
   ],
   "broadcasts": {

@@ -98,9 +98,9 @@ export function worldBrief(state, pack) {
     : '';
   const sealNote = (state.seals || []).length ? `【已显形真相 ${state.seals.length} 层】` : '';
   // 念头（v3 命运导演）：玩家种下的方向性意图——裁判/叙事者要认得它们，行文可呼应可推进
-  const dirs = Object.values(state.directions || {}).filter((d) => d.alive);
+  const dirs = Object.values(state.directions || {}).filter((d) => d.alive && d.kind === 'vow');
   const dirTxt = dirs.length
-    ? `【种下的念头】${dirs.map((d) => `${d.subject ? (charById(state, d.subject)?.name || d.subject) : '这个家'}:${d.text}`).join('；')}（说话时可呼应或推进，不必主动执行）`
+    ? `【未践的誓】${dirs.map((d) => `${d.subject ? (charById(state, d.subject)?.name || d.subject) : '这个家'}:${d.text}`).join('；')}（由黄昏方案兑现：点名地点的方案照此排。白天不要出「去某地」类选项——白天兑现不了）`
     : '';
   // 玩家立下的规矩（裁判要认："省着吃"之类的话语会沉淀成这里的策略）
   const pol = policyOf(state);
@@ -258,7 +258,11 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'night_choice': lines.push(`按方针，他选了：${f.label}。`); break;
       case 'night_ignore': lines.push(`没去惊动${f.npc}，各走各的。`); break;
       // —— v3 念头与话语 ——
-      case 'direction_set': lines.push(`这句话落进了${f.subject ? name(f.subject) : '这个家'}心里：「${f.text}」。`); break;
+      case 'direction_set': lines.push(`这话落在心里，像一粒没埋深的种子。`); break;
+      case 'vow_made': lines.push(`这话立成了誓——「${f.text.slice(0, 16)}」。今晚的方案会照着走。`); break;
+      case 'vow_fulfilled': lines.push(`那件事，办了——「${f.text.slice(0, 16)}」落了地。`); break;
+      case 'vow_broken': lines.push(`誓多了记不住——最早那句「${f.text.slice(0, 12)}」，只得先欠着。`); break;
+      case 'hist_seed': lines.push(`这话落进了城里人的耳朵里。`); break;
       case 'direction_watered': lines.push(`这事又提了一遍——${f.subject ? name(f.subject) : '这个家'}记着呢。`); break;
       case 'direction_faded': lines.push(`「${f.text}」——后来没人再提，它就淡了。`); break;
       case 'direction_echo': lines.push(`${f.char ? name(f.char) : '这个家'}还惦记着「${f.text}」这件事。`); break;

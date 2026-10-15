@@ -67,6 +67,15 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
   c.awakeTonight = true;
   ctx.emit('CHAR_FLAG', { char: c.id, key: 'awakeTonight', val: true });
   recordCausal(ctx, 'volunteer', { actor: c.id, target: location });
+  // 誓·到地即践（念头演化）：今晚去的就是立誓要去的——结账，晨报撤行，当事人 +1
+  for (const d of Object.values(s.directions || {})) {
+    if (d.kind !== 'vow' || !d.alive || d.target !== location) continue;
+    d.alive = false; d.fulfilledDay = s.day;
+    ctx.setFlag('directions', structuredClone(s.directions));
+    ctx.fact('vow_fulfilled', { id: d.id, subject: d.subject, text: d.text, day: s.day });
+    const vower = d.subject ? charById(s, d.subject) : null;
+    if (vower) ctx.mood(vower, 1, '誓约落地');
+  }
   s.phase = 'night';
   ctx.emit('NIGHT_STARTED', { loc: location, char: c.id, night: s.night });
   ctx.fact('night_arrive', { char: c.id, loc: loc.name, slots: s.night.slots });
