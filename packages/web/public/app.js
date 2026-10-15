@@ -555,7 +555,7 @@ function restoreDraft() {
   if (ev === 'done') {
     // 裁判代答的话（say）：世界/NPC 接住了玩家的话——得让玩家看见，不然话凭空消失
     if (data.say) narrateRaw(data.say, { cls: 'clarify' });
-    if (data.rejects?.length) narrateRaw('（有些事做不到：' + data.rejects.map((r) => REJECT_TXT[r.reason] || r.reason).join('、') + '）', { cls: 'sys' });
+    if (data.rejects?.length) narrateRaw('（没成：' + data.rejects.map((r) => `${r.desc ? r.desc + '——' : ''}${REJECT_TXT[r.reason] || r.reason}`).join('；') + '）', { cls: 'sys' });
     restoreDraft(); // 追问轮不发 state-patch（state 挂在 done 里）——回填挂这里才追得上
     state.lastDraft = null; // 善终清账：草稿只在「在途/断线」时留作回填
   }
