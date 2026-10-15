@@ -279,8 +279,16 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       if (card) {
         const names = state.chars.map((c) => c.name).join('、');
         // 选项带可用性与原因（ok:false → UI 禁用并显示 why；玩家不再点一个做不到的选项吃闭门羹）
+        // 暗面指认卡等戏剧卡用 {{name}}/{{knot}}/{{stain}} 占位——按 actorId 从人格卡现填
+        const actorDef = state.activeEvent?.actorId ? pack.charMap[state.activeEvent.actorId] : null;
+        const fill = (txt) => String(txt || '')
+          .replaceAll('{{names}}', names)
+          .replaceAll('{{wish_name}}', state.echoes?.wish?.charName || '前人')
+          .replaceAll('{{name}}', actorDef?.name || '')
+          .replaceAll('{{knot}}', actorDef?.persona?.knot ? `压在他心上的，是${actorDef.persona.knot}。` : '')
+          .replaceAll('{{stain}}', actorDef?.persona?.shadow?.stain || '');
         view.eventView = {
-          title: card.title, text: (card.text || '').replaceAll('{{names}}', names).replaceAll('{{wish_name}}', state.echoes?.wish?.charName || '前人'),
+          title: fill(card.title), text: fill(card.text),
           options: eventOptionsView(state, pack, card)
         };
       }
@@ -360,6 +368,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       care: charCare(state, pack, c.id)
     }));
     view.packVersion = pack.manifest.semver;
+    // 开卷契约（小说层）：告诉玩家这座城有话藏在重复里——值得留意
+    view.contract = pack.threads?.contract || null;
     // 季相（体验批次三·痕迹积累）：冬深几何，页缘的霜雪跟着长
     view.season = {
       winter: !!state.winterActive,

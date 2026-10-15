@@ -355,6 +355,26 @@
       "value": 8,
       "docOnly": true,
       "flavor": "文档。带字的纸。这年头纸比粮贵——读一遍再决定怎么用。"
+    },
+    {
+      "id": "clerk_tablet",
+      "name": "吏卒的木牍",
+      "cat": "值钱",
+      "value": 1,
+      "slots": 1,
+      "stack": 1,
+      "docOnly": true,
+      "flavor": "家访那日他落在桌上的木牍，边角磨得发亮。上头记着这个家报过的数——他记性好，认得每一户。"
+    },
+    {
+      "id": "scorched_paper",
+      "name": "烧焦的纸角",
+      "cat": "值钱",
+      "value": 1,
+      "slots": 1,
+      "stack": 1,
+      "docOnly": true,
+      "flavor": "鲁舟纸箱缝里掉出来的，一角焦黑。上有半个字——像「籍」，又像「籍」被划去。他买的不是纸。"
     }
   ]
 }
