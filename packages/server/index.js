@@ -14,6 +14,7 @@ import { assertSchemaCurrent, latestVersion } from './migrate.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect, humanFacts, narrationLint, buildFeedback } from './narrate.js';
 import { rejectText } from '../core/src/rejects.js';
+import { describeIntent } from './narrate.js';
 import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView, charCare, relationsOf } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
@@ -824,7 +825,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           });
         }
         if (text.trim()) ink.push({ day: result.state.day, role: 'narrator', text });
-        if (result.rejects?.length) ink.push({ day: result.state.day, role: 'sys', text: '（有些事做不到：' + result.rejects.map((r) => rejectText(r.reason)).join('、') + '）' });
+        if (result.rejects?.length) { result.rejects = result.rejects.map((r) => ({ ...r, desc: describeIntent(result.state, pack, r.intent) })); ink.push({ day: result.state.day, role: 'sys', text: '（没成：' + result.rejects.map((r) => `${r.desc || '这件事'}——${rejectText(r.reason)}`).join('；') + '）' }); }
         // 账卡随书页落库（role:ledger）：续局重铺时同一张卡再现——家底与人的每一笔变动都查得到出处
         if (fb.ledger && (fb.ledger.items.length || fb.ledger.chars.length)) {
           ink.push({ day: inputDay, role: 'ledger', text: JSON.stringify(fb.ledger) });

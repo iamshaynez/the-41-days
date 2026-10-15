@@ -332,6 +332,23 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
   return lines.filter(Boolean).join('\n') || null;
 }
 
+/** 意图的人话（拒绝反馈带主语——实测：选项、行为、结果对不上时玩家无从对账） */
+const ACT_NAME = { eat: '吃饭', cook: '做饭', craft: '制造', build: '建造', treat: '治疗', talk: '交谈', guard: '守门', sleep: '补觉', rest: '卧床', listen_radio: '听更鼓', search_home: '搜家', open_room: '开房', chop: '劈柴', repair: '修门', read: '读书', play_piano: '抚琴', comfort_soup: '宽心汤', forage: '刨野菜' };
+export function describeIntent(state, pack, it) {
+  if (!it || typeof it !== 'object') return '这件事';
+  const who = (id) => state.chars.find((c) => c.id === id)?.name || '有人';
+  const nm = (id) => pack.itemMap[id]?.name || pack.locMap[id]?.name || state.chars.find((c) => c.id === id)?.name || '';
+  switch (it.type) {
+    case 'act': return `${who(it.actor)}${ACT_NAME[it.action] || it.action}${it.target ? '·' + nm(it.target) : ''}${it.patient ? '（给' + who(it.patient) + '）' : ''}`;
+    case 'dusk_assign': return it.scavenger ? `${who(it.scavenger)}去${pack.locMap[it.location]?.name || '某处'}` : '今晚留守';
+    case 'night': return `夜里·${it.action || ''}${it.target ? '·' + nm(it.target) : ''}`;
+    case 'night_directive': return '整夜方针';
+    case 'trade_op': return '与鲁舟交易';
+    case 'event_choice': return '应卡';
+    default: return it.type || '这件事';
+  }
+}
+
 /** 人名解析（renderDirect/buildBeats 共用）：先查本局名册（含死者），再查内容包 */
 function mkName(state, pack) {
   return (id) => state.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || id;

@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { newRun, step, PACK } from '../helpers.js';
 import { planNightStep, planDusk } from '../../packages/core/src/delegate.js';
 import { validateOptions, cardBrief } from '../../packages/server/options.js';
+import { describeIntent } from '../../packages/server/narrate.js';
 
 /** 造一个停在岔路的微操夜（frontline 有警惕的巡逻兵，seed 93 与 night-flow 同源） */
 function nightAtFork() {
@@ -121,6 +122,53 @@ describe('黄昏卡不收非答案：守誓／改约类纯念头不留', () => {
     }
     const clean = duskState();
     assert.ok(!/已了结的话头/.test(cardBrief(clean, PACK, 'day')), '没有已了结主题时不硬塞');
+  });
+
+  test('选项对账·标签与意图一致（实测：选项、行为、结果对不上）：写着别处的地点/点错人的标签整条丢弃', () => {
+    const s = duskState();
+    s.knownLocs.push('hospital');
+    const out = validateOptions(PACK, s, {
+      options: [
+        { label: '去医棚翻药', intents: [{ type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: {} }] }, // 标签医棚、意图南市
+        { label: '让辛夷去南市', intents: [{ type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: {} }] }, // 点名辛夷、实际石大
+        { label: '石大去南市搬粮', intents: [{ type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: {} }] } // 对得上
+      ]
+    }, { card: 'dusk' });
+    assert.equal(out.length, 1, '只有对得上的留下');
+    assert.equal(out[0].label, '石大去南市搬粮');
+  });
+
+  test('选项对账·部分失败不静默：做不到的意图被滤后，黄昏整条丢弃、白天加注「已略去」', () => {
+    const s = duskState();
+    const out = validateOptions(PACK, s, {
+      options: [
+        { label: '去南市搬粮捎带治疗', intents: [
+          { type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: {} },
+          { type: 'act', actor: 'bron', action: 'treat', target: 'bandage' } // 黄昏不可行，会被滤
+        ] }
+      ]
+    }, { card: 'dusk' });
+    assert.equal(out.length, 0, '黄昏选项被修剪过就整条丢（标签承诺的是全套）');
+    const { state: ds } = newRun({ seed: 98 }); // 白天相位（今日卡的生成语境）
+    ds.facilities.stove = 1; // 有灶：做饭可行；治疗（没绷带没伤员）被滤
+    const day = validateOptions(PACK, ds, {
+      options: [{ label: '做饭并给伤员换药', intents: [
+        { type: 'act', actor: 'bron', action: 'cook' },
+        { type: 'act', actor: 'bron', action: 'treat', target: 'bandage' }
+      ] }]
+    }, { card: 'day' });
+    assert.equal(day.length, 1, '白天保留能做的部分');
+    assert.match(day[0].hint, /做不到的部分已略去/, '但要说清楚砍了什么');
+  });
+
+  test('拒绝反馈带主语（describeIntent）：哪件事没成说得清', () => {
+    const s = duskState();
+    const d1 = describeIntent(s, PACK, { type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: {} });
+    assert.match(d1, /石大.*南市/, '黄昏指派有人名有地名');
+    const d2 = describeIntent(s, PACK, { type: 'act', actor: 'marta', action: 'treat', target: 'bandage' });
+    assert.match(d2, /辛夷.*治/, '白昼动作有人名有动词');
+    const d3 = describeIntent(s, PACK, { type: 'dusk_assign', scavenger: null, location: null, gear: [], others: {} });
+    assert.match(d3, /留守/, '留守派派也叫留守');
   });
 
   test('饥荒警报进黄昏简报：只剩 N 顿时点明「出门的人必须去富粮的地方」', () => {

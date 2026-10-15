@@ -2,6 +2,7 @@
 // 形状（意图白名单）→ 可行性（feasibleIntent 只读检查）→ 禁词（正典防火墙），
 // 三关全过才许渲染。纯视图数据：不碰 state、不进事件流，点了才走输入管线。
 import { validateIntentShape, feasibleIntent, normalizeIntent, nightHomeView, locNeedProfile } from '../core/index.js';
+import { LOC_ALIAS } from '../core/src/parser.js';
 
 /** 防御性截断：在标点处收尾（不放残句——线上教训：「派一个人对折他，」） */
 const cutClean = (text, max) => {
@@ -26,14 +27,46 @@ export function validateOptions(pack, state, raw, { card } = {}) {
   if (!raw || !Array.isArray(raw.options)) return out;
   const banned = pack.ge?.bannedTerms || [];
   for (const o of raw.options) {
+    let hintCut = '';
     if (typeof o?.label !== 'string' || !o.label.trim() || o.label.length > 80) continue; // 长想法截断收尾，不丢弃
     if (banned.some((b) => o.label.includes(b))) continue;
     // 收卷意图（auto_day）是白天方略的专属结尾：模型自带的一律收走，
     // 只有今日卡由我们统一补在最后（黄昏/夜访是世界的提问，不越权收卷）
+    let dropped = 0;
     let intents = (Array.isArray(o.intents) ? o.intents : [])
       .filter((it) => it.type !== 'auto_day' && it.type !== 'scene')
       .map((it) => normalizeIntent(state, pack, it)) // 宽进：中文名翻成 id 再验
-      .filter((it) => validateIntentShape(it) && feasibleIntent(state, pack, it)); // 严出：验证照旧
+      .filter((it) => { const ok = validateIntentShape(it) && feasibleIntent(state, pack, it); if (!ok) dropped++; return ok; }); // 严出：验证照旧（记数——部分失败要透明）
+    // 选项对账（实测：选项、行为、结果对不上）：标签写的与意图做的必须一致——
+    // 标签点名了别处的地点、或点了名却让别人干，整条丢弃（点得动≠干得成≠说的是这事）
+    {
+      // 名字或别名（医棚/南市这类简称）都算点名——同一张别名表，内核直读与谋士共用
+      const aliases = Object.entries(LOC_ALIAS).filter(([nm]) => nm !== '家');
+      const mentioned = (label) => {
+        const ids = Object.values(pack.locMap || {}).filter((l) => label.includes(l.name)).map((l) => l.id);
+        for (const [nm, id] of aliases) if (label.includes(nm) && pack.locMap[id]) ids.push(id);
+        return [...new Set(ids)];
+      };
+      const mentionedLocs = mentioned(o.label);
+      const assign0 = intents.find((it) => it.type === 'dusk_assign');
+      if (assign0?.location && mentionedLocs.length && !mentionedLocs.includes(assign0.location)) continue;
+      const named = state.chars.find((c) => c.alive && o.label.includes(c.name));
+      if (named) {
+        const doers = intents.flatMap((it) => [it.actor, it.scavenger]).filter(Boolean);
+        if (doers.length && !doers.includes(named.id)) continue;
+      }
+    }
+    // 黄昏选项只该有夜类意图：混进来的白天动作（生成时看似可行、执行必拒）按修剪计
+    if (card === 'dusk') {
+      const keep = intents.filter((it) => ['dusk_assign', 'night', 'night_directive', 'auto_night', 'direction', 'policy'].includes(it.type));
+      dropped += intents.length - keep.length;
+      intents = keep;
+    }
+    // 部分失败不静默：意图被可行性滤掉过（标签承诺的是全套）——黄昏/夜整条丢，白天保留但要注明
+    if (dropped) {
+      if (card !== 'day') continue;
+      hintCut = '（做不到的部分已略去）';
+    }
     // 夜卡的选项必须真能应答夜间（方针/夜动作/续跑）——其余是「点得动、点不动夜」的陷阱：
     // 夜停在岔路上等的是答案，scene/direction 都清不掉 atFork，夜永不收尾（实测死循环）
     if (card === 'night' && !intents.some((it) => ['night_directive', 'night', 'auto_night'].includes(it.type))) continue;
@@ -68,7 +101,7 @@ export function validateOptions(pack, state, raw, { card } = {}) {
     }
     if (card === 'day') intents.push({ type: 'auto_day' });
     intents = intents.slice(0, 5);
-    const hint = typeof o.hint === 'string' ? cutClean(o.hint, 50) : '';
+    const hint = (typeof o.hint === 'string' ? cutClean(o.hint, 50) : '') + (hintCut || '');
     out.push({
       label: cutClean(o.label, 40),
       hint: card === 'day' ? (hint ? `${hint} · 安排完即入黄昏` : '安排完即入黄昏') : hint,
