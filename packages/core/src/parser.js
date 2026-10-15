@@ -1,6 +1,6 @@
 // 直读模式解析器（LLM 离线时的意图管线 + 测试桩同构）。
 // 语法见 README「直读语法」；所有产出与裁判 LLM 共用同一套意图 schema。
-import { aliveChars } from './state.js';
+import { aliveChars, moodLevel } from './state.js';
 
 const CHAR_ALIAS = {
   文简: 'anton', 塾师: 'anton', 辛夷: 'marta', 药婆: 'marta', 石大: 'bron', 火铺: 'bron',
@@ -44,6 +44,17 @@ function firstFree(state, pred = () => true) {
   return aliveChars(state).find((c) => c.ap > 0 && pred(c)) || null;
 }
 
+/** 泛指执行者：策略级输入里的「人/谁/有人」——不是角色名，绝不猜名，
+ *  归一化时清掉交给内核选可行动的解（实测伤：「派人出门找吃的」→ actor「人」→ NO_CHAR 死胡同） */
+const GENERIC_ACTOR = /^(人|谁|有人|个人|别人|某人|随便谁|随便|谁谁|派人|人们)$/;
+/** 内核最优人选（与 planDusk 同一准绳：走得动 > 心态能出门 > 背包 > 战斗）——纯函数，parser 不 import delegate（防环） */
+export function pickScavengerOf(state) {
+  return aliveChars(state)
+    .filter((c) => c.wound < 3 && c.sick < 3)
+    .sort((a, b) => (Number(['depressed', 'breakdown'].includes(moodLevel(a.moodPts).key)) - Number(['depressed', 'breakdown'].includes(moodLevel(b.moodPts).key)))
+      || (b.backpack - a.backpack) || ((b.combat || 0) - (a.combat || 0)))[0] || null;
+}
+
 /**
  * 把直读命令解析为意图数组。
  * @returns {{intents: Array, clarify?: string}}
@@ -83,6 +94,26 @@ export function parseDirect(state, pack, input) {
   }
   if (/照常|自己看着办|你们自己|看着办|自己安排|开始今天|开始这一天|让他们自己|张罗|按常理/.test(text) && state.phase === 'day') {
     return { intents: [{ type: 'auto_day' }] };
+  }
+  // 托管出门（策略级输入，闭环纪律的解析面）：出门是夜里的活——
+  // 白天说它 = 收卷今天交给管家，黄昏方案照派；黄昏说它（未点名）= 内核选人选路。
+  // 绝不把「人/谁」猜成角色名（实测伤：actor「人」→ NO_CHAR「这个人不在」死胡同）
+  if (/(派|让|叫|找|要)[^，。]*出(门|去)|出去/.test(text) && !findChar(state, text) && !/不出去|别出|不出门|不用出/.test(text)) {
+    if (state.phase === 'day') return { intents: [{ type: 'auto_day' }] };
+    if (state.phase === 'dusk') {
+      const loc = findLoc(text);
+      if (loc) { // 点了地方没点人：内核选人去那里
+        const scav = pickScavengerOf(state);
+        const others = {};
+        for (const c of aliveChars(state)) if (!scav || c.id !== scav.id) others[c.id] = /守/.test(text) && text.includes(c.name) ? 'guard' : 'sleep';
+        const gear = [];
+        const gm = text.match(/带(.+)$/);
+        if (gm) for (const [k, v] of Object.entries(ITEM_ALIAS)) if (gm[1].includes(k) && !gear.includes(v)) gear.push(v);
+        return { intents: [{ type: 'dusk_assign', scavenger: scav?.id || null, location: loc, gear, others }] };
+      }
+      // 没点地方：内核最优方案（dusk_auto 由 resolve 展开成 planDusk 首方案）
+      return { intents: [{ type: 'dusk_auto', rest: /休|睡/.test(text) && !/守/.test(text) }] };
+    }
   }
   // 长期策略（"以后省着吃"——说出口的话沉淀成规矩）
   if (/省着|省点|配给/.test(text)) return { intents: [{ type: 'policy', key: 'rationing', value: true }] };
@@ -316,6 +347,8 @@ export function normalizeIntent(state, pack, intent) {
   };
   const out = { ...intent };
   if (out.type === 'act') {
+    // 泛指执行者（人/谁/有人）：不是角色名——清掉交给内核选可行动的人，不猜名
+    if (out.actor && GENERIC_ACTOR.test(String(out.actor).trim())) delete out.actor;
     if (out.actor) out.actor = byName(out.actor);
     if (out.patient) out.patient = byName(out.patient);
     if (out.target) {
@@ -327,6 +360,8 @@ export function normalizeIntent(state, pack, intent) {
       else if (['open_room', 'search_home'].includes(out.action)) out.target = {cellar: 'cellar', woodshed: 'garage', attic: 'attic', bedroom: 'bedroom', backyard: 'yard'}[out.target] || out.target;
     }
   } else if (out.type === 'dusk_assign') {
+    // 泛指外出者（派人/让人）：内核最优人选顶上——不猜名，也不当留守（null 是留守的语义）
+    if (out.scavenger && GENERIC_ACTOR.test(String(out.scavenger).trim())) out.scavenger = pickScavengerOf(state)?.id || null;
     if (out.scavenger) out.scavenger = byName(out.scavenger);
     if (out.location) out.location = loc(out.location);
     if (Array.isArray(out.gear)) out.gear = out.gear.map(item);
