@@ -37,6 +37,9 @@ export function validateOptions(pack, state, raw, { card } = {}) {
     // 夜卡的选项必须真能应答夜间（方针/夜动作/续跑）——其余是「点得动、点不动夜」的陷阱：
     // 夜停在岔路上等的是答案，scene/direction 都清不掉 atFork，夜永不收尾（实测死循环）
     if (card === 'night' && !intents.some((it) => ['night_directive', 'night', 'auto_night'].includes(it.type))) continue;
+    // 黄昏同理（实测死循环：「守誓/改约」类纯 direction 选项三关全过、点得动，
+    // 但浇完水 phase 还在 dusk——夜不开始，黄昏卡原样回来，史官照选项回声演出登台戏文）
+    if (card === 'dusk' && !intents.some((it) => it.type === 'dusk_assign')) continue;
     if (!intents.length) {
       // 戏文轨只属于方略卡（day）：内核没有、但说得出口的事——不过滤，交给舞台导演当场接戏。
       // 提问卡（黄昏/夜访）不收非答案——点了卡原样回来，等于给玩家挖坑
@@ -160,7 +163,7 @@ export function cardBrief(state, pack, card) {
   const menu = `\n\n【分工商簿——现在真正能做的事，按人一行行列；act 的 action/actor/target 从各人名下选，清单外的愿望用 direction】\n${actionMenu(state, pack)}`;
   if (card === 'dusk') {
     const known = (state.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l]).map((l) => pack.locMap[l].name).join('、');
-    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。${menu}\n\n${ids}`;
+    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${menu}\n\n${ids}`;
   }
   if (card === 'night') {
     const loc = pack.locMap[state.night?.locId];
