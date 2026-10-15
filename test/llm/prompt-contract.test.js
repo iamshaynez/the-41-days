@@ -22,6 +22,11 @@ describe('裁判提示词 · 主语解析铁律', () => {
     const seg = referee.slice(Math.max(0, referee.indexOf('继承') - 200), referee.indexOf('继承') + 400);
     assert.match(seg, /clarify|追问/, '继承规则附近要落到 clarify 出口');
   });
+  test('求生自动原则：角色自己活，玩家管方向与底线（不把具体求生动作翻成意图）', () => {
+    assert.match(referee, /求生是角色的本能/, '原则存在');
+    assert.match(referee, /不必把「挖野菜」这类具体动作翻成意图/, '关键词咒语时代结束');
+  });
+
   test('托管措辞有契约（派人/让人不猜名）：act 缺 actor 归内核、dusk 自选人、白天出门活收卷', () => {
     assert.match(referee, /托管措辞/, '托管契约存在');
     assert.match(referee, /不写 actor 字段/, 'act 托管 = 不写 actor');
