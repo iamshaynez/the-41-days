@@ -135,6 +135,17 @@ describe('seed 闭环（实测：北津台话头白天点了没反应、晚上�
     assert.ok(ctx.facts.some((f) => f.k === 'hist_seed_faded'), '散时落一笔（有响应，不是无声蒸发）');
   });
 
+  test('旧档自愈：卡已发过而种未死（旧版「发芽不死种」的遗留形态）——首个破晓即收，不等窗口末', () => {
+    const { state } = newRun({ seed: 845 });
+    state.day = 33; // 仍在窗口内——但 hs_h1 已发过（firedOnce 在册）
+    state.directions = { h1: { id: 'h1', text: HIST, kind: 'hist', seed: 'beacon', day: 30, lastDay: 30, alive: true, watered: 0 } };
+    state.firedOnce = { hs_h1: true };
+    const ctx = new Ctx(state, PACK, [], []);
+    tickDirections(ctx);
+    assert.equal(state.directions.h1.alive, false, '承诺已兑现的种子即死（不再滞留到窗口末被反复重提）');
+    assert.ok(ctx.facts.some((f) => f.k === 'hist_seed_done'), '结账落一笔（对话历史里也留个收尾）');
+  });
+
   test('史种独立发芽：窗口内没有大事 ask 步的早晨，回应卡照常长出', () => {
     const { state } = newRun({ seed: 833 });
     state.day = 33; state.phase = 'day'; // 33 在 [29,36] 内，且不在 ask 步日（3,12,16,19,27,29,38）
