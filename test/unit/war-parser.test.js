@@ -77,6 +77,12 @@ describe('直读解析器（LLM 离线同构）', () => {
     assert.ok(p.clarify, '给出人话引导');
   });
 
+  test('挖野菜直达：白话保底活路（挖野菜/刨野菜/剥树皮 → forage）', () => {
+    const { state } = newRun({ roster: ['bron'] });
+    const p = parseDirect(state, PACK, '去城根挖野菜');
+    assert.deepEqual(p.intents, [{ type: 'act', actor: 'bron', action: 'forage' }]);
+  });
+
   test('饥荒用语直达（实测：输入「努力找吃的，好好休息」毫无作用）：白天收卷+休整，黄昏托管找食', () => {
     const { state } = newRun({ roster: ['bron', 'katya', 'marta'] });
     const p = parseDirect(state, PACK, '努力找吃的，好好休息');

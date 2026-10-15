@@ -229,6 +229,10 @@ export function parseDirect(state, pack, input) {
   // 白天动作
   if (state.phase === 'day') {
     const actor = findChar(state, text) || null;
+    if (/挖野菜|刨野菜|剥树皮|挖菜/.test(text)) {
+      const c = actor || firstFree(state);
+      return { intents: [{ type: 'act', actor: c?.id, action: 'forage' }] };
+    }
     if (/吃/.test(text)) {
       const item = findItem(text);
       return { intents: [{ type: 'act', actor: actor?.id || aliveChars(state)[0]?.id, action: 'eat', target: item }] };

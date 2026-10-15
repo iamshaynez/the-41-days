@@ -440,7 +440,25 @@
           "stance": "wary",
           "armed": true,
           "firstScript": "looter_with_knife",
-          "desc": "军衣不合身，饿得手都在抖。"
+          "desc": "军衣不合身，饿得手都在抖。",
+          "carry": [
+            {
+              "item": "canned",
+              "count": [
+                1,
+                2
+              ],
+              "w": 3
+            },
+            {
+              "item": "knife",
+              "count": [
+                1,
+                1
+              ],
+              "w": 1
+            }
+          ]
         }
       ],
       "docsPool": [
@@ -570,7 +588,25 @@
           "stance": "friendly",
           "armed": false,
           "firstScript": "priest_intro",
-          "desc": "他把最后半袋麸分给了比你们先来的人。"
+          "desc": "他把最后半袋麸分给了比你们先来的人。",
+          "carry": [
+            {
+              "item": "raw",
+              "count": [
+                1,
+                2
+              ],
+              "w": 2
+            },
+            {
+              "item": "book",
+              "count": [
+                1,
+                1
+              ],
+              "w": 1
+            }
+          ]
         }
       ],
       "docsPool": [
@@ -641,7 +677,25 @@
           "stance": "friendly",
           "armed": false,
           "firstScript": "tamara_intro",
-          "desc": "她的葛衣洗得发灰，眼睛却是这座城里最清醒的。"
+          "desc": "她的葛衣洗得发灰，眼睛却是这座城里最清醒的。",
+          "carry": [
+            {
+              "item": "herbmed",
+              "count": [
+                1,
+                1
+              ],
+              "w": 2
+            },
+            {
+              "item": "meds",
+              "count": [
+                1,
+                1
+              ],
+              "w": 1
+            }
+          ]
         }
       ],
       "docsPool": [
@@ -986,14 +1040,50 @@
           "name": "守渡军士",
           "stance": "hostile",
           "armed": true,
-          "desc": "箭先于问题出现。"
+          "desc": "箭先于问题出现。",
+          "carry": [
+            {
+              "item": "meat",
+              "count": [
+                1,
+                2
+              ],
+              "w": 2
+            },
+            {
+              "item": "bullet",
+              "count": [
+                2,
+                3
+              ],
+              "w": 2
+            }
+          ]
         },
         {
           "id": "bailing",
           "name": "箭楼上的白翎",
           "stance": "wary",
           "armed": true,
-          "desc": "箭楼的轮廓比人声先出来。他按一支你听不出的拍子放箭。"
+          "desc": "箭楼的轮廓比人声先出来。他按一支你听不出的拍子放箭。",
+          "carry": [
+            {
+              "item": "canned",
+              "count": [
+                1,
+                2
+              ],
+              "w": 2
+            },
+            {
+              "item": "knife",
+              "count": [
+                1,
+                1
+              ],
+              "w": 1
+            }
+          ]
         }
       ],
       "docsPool": [
@@ -1126,7 +1216,17 @@
           "stance": "neutral",
           "armed": false,
           "firstScript": "sewer_intro",
-          "desc": "他要吃的，他知道路。"
+          "desc": "他要吃的，他知道路。",
+          "carry": [
+            {
+              "item": "raw",
+              "count": [
+                1,
+                2
+              ],
+              "w": 2
+            }
+          ]
         }
       ],
       "docsPool": [],
@@ -1362,7 +1462,17 @@
           "stance": "neutral",
           "armed": false,
           "firstScript": "s_fishing_nets",
-          "desc": "手上的网眼比她的牙密。她看人先看手——是来抢的还是来换的。"
+          "desc": "手上的网眼比她的牙密。她看人先看手——是来抢的还是来换的。",
+          "carry": [
+            {
+              "item": "raw",
+              "count": [
+                2,
+                4
+              ],
+              "w": 3
+            }
+          ]
         }
       ],
       "docsPool": [],
@@ -1522,7 +1632,25 @@
           "stance": "wary",
           "armed": true,
           "firstScript": "s_dock_broker",
-          "desc": "军靴上套着草鞋。他的秤能称米，也能称你值几支箭。"
+          "desc": "军靴上套着草鞋。他的秤能称米，也能称你值几支箭。",
+          "carry": [
+            {
+              "item": "parts",
+              "count": [
+                2,
+                3
+              ],
+              "w": 2
+            },
+            {
+              "item": "comp",
+              "count": [
+                1,
+                1
+              ],
+              "w": 1
+            }
+          ]
         }
       ],
       "docsPool": [

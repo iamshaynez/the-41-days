@@ -199,6 +199,23 @@ export function applyNightAction(ctx, intent) {
     case 'search': {
       const r = room();
       const st = s.locState[n.locId];
+      // 搜身（道德换资源的主链）：放倒的人身上有他背着的东西——拿走要记账。
+      // 活人身上搜不得（那叫抢活人，另一回事——先放倒再说，账更重）
+      {
+        const npcHere = (loc.npcs || []).find((x) => x.id === intent.target);
+        if (npcHere) {
+          if (st.npcState[npcHere.id] !== 'down') return nightError(ctx, '他还没倒下——搜身是对倒下的人做的事');
+          spend(ctx, 1);
+          st.npcState[npcHere.id] = 'looted';
+          ctx.emit('NPC_STATE', { loc: n.locId, npc: npcHere.id, state: 'looted' });
+          ctx.addDeed(c.id, 'steal_civ', npcHere.id);
+          recordCausal(ctx, 'steal_civ', { actor: 'player', via: c.id, target: npcHere.id, witnesses: [c.id], note: npcHere.name });
+          ctx.mood(c, -2, '搜身', { ethics: 'stealCiv' });
+          ctx.fact('night_rob', { npc: npcHere.name });
+          lootNight(ctx, { id: npcHere.id, name: npcHere.name, loot: npcHere.carry || [] }, c);
+          return { ok: true };
+        }
+      }
       const cont = r.containers?.find((x) => x.id === intent.target) || r.containers?.find((x) => !st.searched[x.id]);
       if (!cont) return nightError(ctx, '没有可搜的容器了');
       if (cont.type === 'locked' && !st.searched[cont.id + ':open']) return nightError(ctx, '容器上着锁，先 open');
