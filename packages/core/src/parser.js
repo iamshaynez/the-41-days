@@ -96,6 +96,15 @@ export function parseDirect(state, pack, input) {
   if (/照常|自己看着办|你们自己|看着办|自己安排|开始今天|开始这一天|让他们自己|张罗|按常理/.test(text) && state.phase === 'day') {
     return { intents: [{ type: 'auto_day' }] };
   }
+  // 饥荒用语直达（实测：「努力找吃的，好好休息」解析成空——白话求生话不该掉进耳语）
+  if (state.phase === 'day' && /好好休息|都休息|都歇着|歇一天/.test(text)) {
+    const rests = aliveChars(state).filter((c) => c.ap >= 2 && !c.bedRest).map((c) => ({ type: 'act', actor: c.id, action: 'sleep' }));
+    return { intents: [...rests, { type: 'auto_day' }] };
+  }
+  if (/(努?力?|想办法?|去?)?(找|弄|搞|寻)[^，。]{0,6}(吃|食|粮|吃的)/.test(text) && !findChar(state, text)) {
+    if (state.phase === 'day') return { intents: [{ type: 'auto_day' }] }; // 收卷今晚按需派工（需求感知选富粮地）
+    if (state.phase === 'dusk') return { intents: [{ type: 'dusk_auto', rest: /休|睡/.test(text) && !/守/.test(text) }] };
+  }
   // 托管出门（策略级输入，闭环纪律的解析面）：出门是夜里的活——
   // 白天说它 = 收卷今天交给管家，黄昏方案照派；黄昏说它（未点名）= 内核选人选路。
   // 绝不把「人/谁」猜成角色名（实测伤：actor「人」→ NO_CHAR「这个人不在」死胡同）
