@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "semver": "0.35.0",
+  "semver": "0.35.1",
   "name": "第 41 天 · 江陵",
   "coreVersion": ">=0.1.0",
   "files": [
@@ -108,7 +108,7 @@
   "nightSlots": 10,
   "night": {
     "lootRolls": 2,
-    "lootHitChance": 0.62,
+    "lootHitChance": 0.66,
     "refillMinDays": 2,
     "refillChance": 0.55
   },

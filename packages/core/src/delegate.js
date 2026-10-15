@@ -414,12 +414,31 @@ const LOC_BLURB = {
 };
 /** 黄昏排序与一句话（城市扩展）：老排序保底，新地点按内容包 blurb/threat 追加——
  *  池里浮出哪个城，方案卡就认得哪个城 */
-function rankedLocs(known, pack) {
-  const head = LOC_RANK.filter((l) => known.includes(l));
-  const tail = known
-    .filter((l) => !head.includes(l))
-    .sort((a, b) => ((pack.locMap[a]?.threat || 0) - (pack.locMap[b]?.threat || 0)) || (a < b ? -1 : 1));
-  return [...head, ...tail];
+/** 地点还没翻过的容器数（没去过＝全新鲜）——排序与方案提示共用 */
+function freshContainersOf(s, pack, locId) {
+  const loc = pack.locMap[locId]; const st = s.locState?.[locId];
+  const conts = (loc?.rooms || []).flatMap((r) => r.containers || []);
+  if (!conts.length) return 0;
+  if (!st) return conts.length;
+  return conts.filter((c) => st.searched[c.id] === undefined).length;
+}
+
+function rankedLocs(s, known, pack) {
+  // 排序看得见状态（实测：固定排序把两个红方案都排在搜空的地点上，玩家没有出路）：
+  // ①没翻过的容器多的优先（真有货）；②全空的按最久未访排（回补只在重访时掷骰——
+  // 最久没走的回补期望最高，派去碰运气好过硬跑）；③再按威胁（安全）与惯例序。
+  const freshOf = (l) => freshContainersOf(s, pack, l);
+  const oldestOf = (l) => {
+    const days = Object.values(s.locState?.[l]?.searched || {});
+    return days.length ? Math.min(...days) : 9999;
+  };
+  const rankPos = (l) => { const i = LOC_RANK.indexOf(l); return i < 0 ? 99 : i; };
+  return [...known].sort((a, b) => {
+    const fa = freshOf(a) > 0 ? 0 : 1, fb = freshOf(b) > 0 ? 0 : 1;
+    if (fa !== fb) return fa - fb; // 有货的排在搜空的前面
+    if (fa === 1) return (oldestOf(a) - oldestOf(b)) || ((pack.locMap[a]?.threat || 0) - (pack.locMap[b]?.threat || 0)); // 全空：最久未访优先
+    return ((pack.locMap[a]?.threat || 0) - (pack.locMap[b]?.threat || 0)) || (rankPos(a) - rankPos(b)) || (a < b ? -1 : 1);
+  });
 }
 const blurbOf = (pack, locId) => pack.locMap[locId]?.blurb || LOC_BLURB[locId] || '';
 
@@ -515,12 +534,13 @@ export function planDusk(state, pack) {
     const scavChar = s.chars.find((c) => c.id === scavId);
     const mindWarn = scavChar && lowMind(scavChar) ? `；${scavName}情绪很低，今晚可能不肯出门` : '';
     const dirNote = dirLoc === locId && dirHit ? `践誓——「${dirHit.text.slice(0, 14)}」；` : '';
-    return { key, label: lines.join('，'), hint: `${dirNote}${blurbOf(pack, locId)}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
+    const dryNote = freshContainersOf(s, pack, locId) === 0 ? '搜空过——重访碰回补（城里又有动静的几率）；' : '';
+    return { key, label: lines.join('，'), hint: `${dirNote}${dryNote}${blurbOf(pack, locId)}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
   };
 
   const plans = [];
   if (scav && known.length) {
-    const ranked = rankedLocs(known, pack);
+    const ranked = rankedLocs(s, known, pack);
     if (dirLoc) { // 念头点名的地方排第一（不在常规排序里也照排——念头优先于habit）
       const i = ranked.indexOf(dirLoc);
       if (i >= 0) ranked.splice(i, 1);

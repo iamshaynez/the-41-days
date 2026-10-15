@@ -130,7 +130,8 @@ describe('黄昏卡不收非答案：守誓／改约类纯念头不留', () => {
     assert.ok(conts.length > 0, '前提：南市有容器');
     s.locState.market = { searched: Object.fromEntries(conts.map((c) => [c.id, s.day])), npcState: {} };
     const brief = cardBrief(s, PACK, 'dusk');
-    assert.match(brief, /南市（已搜空，等城里回补——别当正经去处反复派）/, '搜空地点带标注');
+    assert.match(brief, /南市（已搜空——重访才有回补/, '搜空地点带标注（指路重访，不是劝退——回补只在到达时掷骰）');
+    assert.match(brief, /夜里出门只能一个人/, '夜路单人规矩写明（「大家都出去」的期望管理）');
     const clean = duskState();
     assert.ok(!/已搜空/.test(cardBrief(clean, PACK, 'dusk')), '没搜过/没搜空的地点不标');
   });

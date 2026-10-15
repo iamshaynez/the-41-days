@@ -178,8 +178,8 @@ export function cardBrief(state, pack, card) {
       return conts.length > 0 && conts.every((c) => st.searched[c.id] !== undefined);
     };
     const known = (state.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l])
-      .map((l) => pack.locMap[l].name + (pickedDry(l) ? '（已搜空，等城里回补——别当正经去处反复派）' : '')).join('、');
-    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
+      .map((l) => pack.locMap[l].name + (pickedDry(l) ? '（已搜空——重访才有回补：隔两天再走一趟，城里可能又有了）' : '')).join('、');
+    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。夜里出门只能一个人（围城规矩：人多目标大）——「大家都出去」做不到，选一个最合适的，其余在家守或睡。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
   }
   if (card === 'night') {
     const loc = pack.locMap[state.night?.locId];
