@@ -79,6 +79,8 @@ export function createGeDirector({ pack, prompts, getProvider, log = () => {} })
           cache.delete(runId);
         }
       }
+      // 别传局不注入 C 层生成卡（CH-04 是 A 层手作场：樊城不说江陵话）
+      if (state.sidestory) { cache.delete(runId); return; }
       // 注入：白天（普通卡）；黄昏（at:'dusk' 的命运弧，与黄昏方案卡同屏）
       const watchedDay = state.closureClosed && (state.geLastDay || 0) > 0 && state.day - state.geLastDay < 2; // §3.6 守望档：合上兰台后隔天至多一张
       const atDusk = cached?.card?.at === 'dusk';

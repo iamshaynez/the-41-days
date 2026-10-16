@@ -1,6 +1,6 @@
 // 白天行动与事件结算（内核设计 §5 A 表、§8 事件卡效果白名单 GE-03 精神）。
 // 所有状态变更经 ctx 事件通道（fold 镜像可重放）。
-import { aliveChars, charById, moodLevel, difficultyCfg, combatModOf } from './state.js';
+import { aliveChars, charById, moodLevel, difficultyCfg, combatModOf, homeOf } from './state.js';
 import { recordCausal, pairStage } from './causality.js';
 
 export const DAY_ACTIONS = ['eat', 'cook', 'craft', 'build', 'treat', 'talk', 'guard', 'sleep', 'rest', 'listen_radio', 'search_home', 'open_room', 'chop', 'repair', 'read', 'play_piano', 'comfort_soup', 'forage'];
@@ -307,7 +307,7 @@ function actRadio(ctx, c) {
 }
 
 function actSearchHome(ctx, c, target) {
-  const s = ctx.s, home = ctx.pack.locMap.home;
+  const s = ctx.s, home = homeOf(ctx.pack, ctx.s);
   // 时间胶囊（EC-02）：后院里"无名者的埋藏"——上周目你埋的，这局能挖出来
   if (target === 'yard' && s.echoes?.capsules?.length) {
     const cap = s.echoes.capsules.find((x) => !s.capsuleFound?.[x.key]);
@@ -338,7 +338,7 @@ function actSearchHome(ctx, c, target) {
 }
 
 function actOpenRoom(ctx, c, roomId) {
-  const s = ctx.s, home = ctx.pack.locMap.home;
+  const s = ctx.s, home = homeOf(ctx.pack, ctx.s);
   const r = home.rooms.find((x) => x.id === roomId);
   if (!r || s.house.opened[r.id]) return { ok: false, reason: 'BAD_TARGET' };
   if (r.door === 'locked') {

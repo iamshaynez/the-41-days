@@ -36,8 +36,15 @@ function findItem(text) {
   for (const [k, v] of Object.entries(ITEM_ALIAS)) if (text.includes(k)) return v;
   return null;
 }
-function findLoc(text) {
+function findLoc(text, pack = null) {
   for (const [k, v] of Object.entries(LOC_ALIAS)) if (text.includes(k)) return v;
+  // 别传的场：地点名/别名动态认（LOC_ALIAS 只认江陵——樊城人说不出"南市"）
+  if (pack) {
+    for (const l of pack.locations || []) {
+      if (l.home) continue;
+      if (text.includes(l.name) || (l.aliases || []).some((a) => text.includes(a))) return l.id;
+    }
+  }
   return null;
 }
 function firstFree(state, pred = () => true) {
@@ -111,7 +118,7 @@ export function parseDirect(state, pack, input) {
   if (/(派|让|叫|找|要)[^，。]*出(门|去)|出去/.test(text) && !findChar(state, text) && !/不出去|别出|不出门|不用出/.test(text)) {
     if (state.phase === 'day') return { intents: [{ type: 'auto_day' }] };
     if (state.phase === 'dusk') {
-      const loc = findLoc(text);
+      const loc = findLoc(text, pack);
       if (loc) { // 点了地方没点人：内核选人去那里
         const scav = pickScavengerOf(state);
         const others = {};
@@ -144,7 +151,7 @@ export function parseDirect(state, pack, input) {
   // 黄昏指派：今晚A去B带C和D / 今晚谁都不出去 / 今晚B守夜
   if (/今晚|今夜/.test(text) && state.phase === 'dusk') {
     const scav = findChar(state, text.replace(/带.*$/, '').replace(/守夜.*$/, ''));
-    const loc = findLoc(text);
+    const loc = findLoc(text, pack);
     const others = {};
     for (const c of aliveChars(state)) {
       if (scav && c.id === scav.id) continue; // 外出的人不再被误标成守夜

@@ -119,16 +119,31 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     report: [], over: false, ending: null,
     morningSeed: 0
   };
-  // 别传局修饰（长线体验-v0.2 §3.4）：固定天数、定制开局、战争计时器改成别传长度
+  // 别传局修饰（长线体验-v0.2 §3.4）：固定天数、定制开局、战争计时器改成别传长度。
+  // 别传有自己的场：家底从零起（船上没有江陵的撬棍和简册）、只认自家地点、
+  // 自家的屋（homeOf）、自带设施；冬天只在内容说了才开；没有船牙——鲁舟自己的那趟船更不该有。
   if (sideDef) {
     st.sidestory = { id: sideDef.id, title: sideDef.title, intro: sideDef.intro };
     st.war.endDay = sideDef.days + 1; // 第 N+1 天破晓收束
     const su = sideDef.setup || {};
-    if (su.inventory) Object.assign(st.inventory, su.inventory);
-    if (su.knownLocs) st.knownLocs = [...new Set([...st.knownLocs, ...su.knownLocs])];
+    st.inventory = { ...(su.inventory || {}) };
+    st.knownLocs = [...new Set(su.knownLocs || [])];
+    if (su.facilities) Object.assign(st.facilities, su.facilities);
+    if (sideDef.home?.rooms) {
+      st.house = { opened: {}, searched: {}, hiddenFound: {} };
+      for (const r of sideDef.home.rooms) if (r.door !== 'locked') st.house.opened[r.id] = true;
+    }
     if (su.winter) { st.winterActive = true; st.winterStart = 1; st.winterEnd = sideDef.days + 1; }
+    else { st.winterStart = 9999; st.winterEnd = 9999; }
+    st.frankoNextDay = 9999;
   }
   return st;
+}
+
+/** 这一局的"家"：别传可带自家的屋（船舱/医棚/窝棚），否则是橘里九号 */
+export function homeOf(pack, state) {
+  const side = state?.sidestory ? pack.sideMap?.[state.sidestory.id] : null;
+  return side?.home?.rooms ? side.home : pack.locMap.home;
 }
 
 // —— 派生量 ——

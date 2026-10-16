@@ -1,7 +1,7 @@
 // 平衡模拟器（技术架构 §11）：无头、无 LLM；机器人策略直接对 core 下意图，KPI 门禁读内容包 kpis.json。
 // 'delegate' 策略不是机器人——它就是游戏内管家本人（planDay/planDusk/auto_night），
 // 用来证明"玩家全部委托"这条新玩法路径的平衡性与机器人均衡策略同带。
-import { createRun, beginRun, resolveInput, planDay, planDusk, planNightStep, tradeDeals } from '../core/index.js';
+import { createRun, beginRun, resolveInput, planDay, planDusk, planNightStep, tradeDeals, optionAvailable, optionCostOk, Rng } from '../core/index.js';
 import { operatorPolicy } from './bots.js';
 
 /**
@@ -19,11 +19,40 @@ export function runSim(pack, { runs = 300, seed = 41001, policies = ['balanced']
   return { runs: out, kpis: computeKpis(out, policies), gates: pack.kpis.gates, generatedAt: new Date().toISOString() };
 }
 
-function playOne(pack, seed, policyName, maxDays) {
-  const state = createRun(pack, { seed });
+/** 别传平衡模拟（CH-04/05）：同一套机器人跑短局，看生存与结局变体分布——
+ *  别传的 KPI 不是"活到交割"，是"每条结局分叉都走得到、没有一条是饿死专线"。 */
+export function runSideSim(pack, { story, runs = 80, seed = 51001, policy = 'balanced', randomChoices = false } = {}) {
+  const def = pack.sideMap[story];
+  if (!def) throw new Error(`没有这个别传：${story}`);
+  const out = [];
+  for (let i = 0; i < runs; i++) out.push(playOne(pack, seed + i * 7919, policy, def.days + 3, story, randomChoices));
+  const titles = {};
+  for (const r of out) titles[r.endingTitle] = (titles[r.endingTitle] || 0) + 1;
+  const n = out.length;
+  return {
+    story, title: def.title, runs: n, policy,
+    allAlive: out.filter((r) => r.alive === r.roster).length / n,
+    anyDeath: out.filter((r) => r.alive < r.roster).length / n,
+    wiped: out.filter((r) => r.alive === 0).length / n,
+    reachedEnd: out.filter((r) => r.ending === 'sidestory').length / n,
+    cardsPerRun: out.reduce((a, r) => a + r.sideCards, 0) / n,
+    endings: Object.fromEntries(Object.entries(titles).sort((a, b) => b[1] - a[1]))
+  };
+}
+
+function playOne(pack, seed, policyName, maxDays, sidestory = null, randomChoices = false) {
+  const state = createRun(pack, { seed, sidestory });
   const { events } = beginRun(state, pack);
   let s = state;
   const policy = operatorPolicy(policyName);
+  if (randomChoices) { // 别传分叉覆盖：可行选项里种子随机挑（独立 rng，不碰内核游标）
+    const rng = new Rng(seed ^ 0x5157);
+    policy.eventPick = (st, card) => {
+      const ro = { s: st, hasItem: (i, n = 1) => (st.inventory[i] || 0) >= n };
+      const ok = (card.options || []).filter((o) => optionAvailable(ro, o) && optionCostOk(ro, o));
+      return ok.length ? ok[rng.int(ok.length)].key : card.options?.[0]?.key;
+    };
+  }
   let steps = 0;
   while (!s.over && s.day < maxDays && steps++ < 500) {
     s = policyName === 'delegate' ? takeTurnDelegate(s, pack) : takeTurn(s, pack, policy, policyName);
@@ -34,6 +63,9 @@ function playOne(pack, seed, policyName, maxDays) {
   const deaths = s.chars.filter((c) => !c.alive).map((c) => c.name);
   return {
     seed, policy: policyName, days: s.day,
+    roster: s.chars.length,
+    endingTitle: s.ending?.storyline?.title?.split(' · ').slice(-1)[0] || s.ending?.type || 'wiped',
+    sideCards: Object.keys(s.firedOnce || {}).filter((id) => pack.cardMap[id]?.side).length,
     overviews: s.overviewDays || 0, // 概述日（长线体验 §4.4）：平淡日被一句话收卷的天数
     alive: s.chars.filter((c) => c.alive).length,
     ending: s.ending?.type || 'wiped',
@@ -48,7 +80,7 @@ function takeTurn(s, pack, policy, policyName) {
   // 事件处理：一律选第一个无需消耗的选项
   if (s.activeEvent) {
     const card = pack.cardMap[s.activeEvent.cardId];
-    const opt = card?.options?.find((o) => !o.cost && !o.requires)?.key ?? card?.options?.[0]?.key;
+    const opt = policy.eventPick ? policy.eventPick(s, card) : (card?.options?.find((o) => !o.cost && !o.requires)?.key ?? card?.options?.[0]?.key);
     if (opt) s = step([{ type: 'event_choice', option: opt }]);
   }
   const dayActs = policy.day(s, pack) || [];
@@ -63,7 +95,7 @@ function takeTurn(s, pack, policy, policyName) {
     while (s.phase === 'night' && s.night && !s.night.home && g++ < 14) {
       if (s.activeEvent) {
         const card = pack.cardMap[s.activeEvent.cardId];
-        const opt = card?.options?.find((o) => !o.cost && !o.requires)?.key ?? card?.options?.[0]?.key;
+        const opt = policy.eventPick ? policy.eventPick(s, card) : (card?.options?.find((o) => !o.cost && !o.requires)?.key ?? card?.options?.[0]?.key);
         if (opt) { s = step([{ type: 'event_choice', option: opt }]); continue; }
       }
       const before = s.night.slots;
