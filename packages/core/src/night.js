@@ -4,6 +4,7 @@ import { charById, combatModOf, moodLevel, aliveChars } from './state.js';
 import { findDoc, docAvailable } from './dayActions.js';
 import { recordCausal } from './causality.js';
 import { locInPool } from './unlock.js';
+import { stepGateOk } from './mainline.js';
 
 export function startNight(ctx, { scavenger, location, gear = [], others = {} }) {
   const s = ctx.s, pack = ctx.pack;
@@ -100,6 +101,7 @@ export function maybeFireLocScript(ctx, loc, c) {
     if (w.requiresChar && w.requiresChar !== c.id) continue;
     if (w.requiresChars && !w.requiresChars.every((id) => charById(s, id))) continue;
     if (w.requiresFlag && !s.eventFlags[w.requiresFlag]) continue;
+    if (!stepGateOk(s, ctx.pack, w)) continue; // 主线门控（史实共振）：夜访也能撞上锚步余波
     if (w.requiresDoc && !s.docsSeen.includes(w.requiresDoc)) continue;
     st.scriptsFired[card.id] = true;
     ctx.emit('SCRIPT_FIRED', { loc: loc.id, script: card.id });

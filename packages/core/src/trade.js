@@ -1,6 +1,7 @@
 // 交易（内核设计 §3.3 E 系）：鲁舟泊船生成、价格带、成交校验（LLM 只能在带内演出）。
 import { charById, difficultyCfg } from './state.js';
 import { recordCausal } from './causality.js';
+import { priceMulOf } from './mainline.js';
 
 const COMMON = ['parts', 'wood', 'water', 'raw', 'veg', 'firewood'];
 const MID = ['comp', 'canned', 'sugar', 'book', 'tobacco', 'herb', 'fuel'];
@@ -31,7 +32,7 @@ export function genFrankoStock(ctx) {
     // 食物摊刻意减薄（3）：船牙喂不活一个从不出门的家——守家经济的食物有上限
     // （F-03 修复后睡床治愈让守家近乎无敌，渡口成了唯一能掐住的活命线）
     const nMax = ['firewood', 'fuel'].includes(it) ? 6 : item.cat === '食物' ? 3 : 5;
-    stock.push({ item: it, n: ctx.rng.range(2, nMax), buy: Math.max(1, Math.round(item.value * mult * cfg.tradeMul)) });
+    stock.push({ item: it, n: ctx.rng.range(2, nMax), buy: Math.max(1, Math.round(item.value * mult * cfg.tradeMul * priceMulOf(s, it))) }); // 涟漪物价（史实共振）：锚步改市况
   }
   return stock;
 }
@@ -44,7 +45,7 @@ export function sellPrice(ctx, itemId) {
   let mult = 0.55 + (0.7 - 0.55) * ctx.rng._next();
   // E-09 文档异常价：固定 8
   if (item.docOnly) mult = 1;
-  let p = Math.round(item.value * mult * cfg.tradeMul);
+  let p = Math.round(item.value * mult * cfg.tradeMul * priceMulOf(s, itemId)); // 涟漪物价同压两端（史实共振）
   if (charById(s, 'katya')) p = Math.round(p * 1.15);
   else if (charById(s, 'vera')) p = Math.round(p * 1.10);
   else if (charById(s, 'yura')) p = Math.round(p * 0.9);

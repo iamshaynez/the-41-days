@@ -150,7 +150,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     try {
       const names = [...(pack.historia?.persons || []), ...(pack.historia?.places || [])].slice(0, 64).join('、');
       const out = await annalist({ provider: gw.providers.narrator || gw.providers.referee, prompts: promptsCache },
-        { anchor: step.anchor, surface: step.surface, undertow: step.undertow, pens, digest, prev, names });
+        { anchor: step.anchor, surface: step.surface, undertow: step.undertow, pens, digest, prev, names, cite: step.cite || null });
       const t = (out.text || '').trim();
       const plain = stripMarkers(t);
       if (plain.length < 12 || plain.length > 160) return null;
@@ -255,6 +255,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         topic: {
           stepId: step?.id || null, title: step?.title || null,
           anchor: step?.anchor || null, surface: step?.surface || null,
+          cite: step?.cite || null, // 史注（史实共振）：评史场喂《三国志》原文——三个人围着一句史书吵架
           low: scene.topic?.low || null, clash: scene.topic?.clash || null, exposed: scene.topic?.exposed || null,
           echo: (state.mainline || []).find((m) => m.stepId === scene.topic?.stepId)?.echo || null // ME-2：大事步上这个家的影子，堂屋可以拿来嚼
         },
@@ -929,6 +930,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
           // 史册格（GDD-v0.2 §12.1）：正史栏=通行叙事（公开水面），野史栏=你打出来的那几页
           annals: entries.filter((e) => e.kind === 'annal').map((e) => ({ id: e.key, ...e.data })),
           canonAnnals: pack.canonAnnals || [],
+          // 信史墙（史实共振）：跨局集齐的正史引文——读过的《三国志》都在
+          cites: entries.filter((e) => e.kind === 'cite').map((e) => ({ id: e.key, ...e.data })),
           // 回响区：胶囊、遗愿、商路的记性
           echoes: entries.filter((e) => ['echo', 'capsule', 'wish'].includes(e.kind)).map((e) => ({ kind: e.kind, id: e.key, ...e.data })),
           closure: closureStatus(entries, pack),

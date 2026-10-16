@@ -135,6 +135,8 @@ describe('还师与出江陵（GDD-v0.2 §12.3/§12.4）', () => {
     const { state } = newRun({ seed: 63, roster: ['alexey', 'marta', 'bron'] });
     const s = state;
     s.day = 50; s.war.endDay = 99;
+    // 心结保底前置（史实共振）：D15 起心事先于随机晨抽——D50 的真实局心结早已显形，夹具照此预烧
+    for (const c of PACK.characters) { const k = c.persona?.knotCard; if (k) s.firedOnce[k] = true; }
     s.knowledge = 12; s.docsSeen = ['#039', '#045', '#055'];
     s.facilities.radio = 0;
     drawMorningEvents(stubCtx(s, 't_lighthouse'));

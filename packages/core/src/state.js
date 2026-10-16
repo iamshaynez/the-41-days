@@ -75,6 +75,8 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     prelude: prologue ? { i: 0 } : null,
     // 大事轴日志（§4：fold 由 MAINLINE_STEP 镜像；mainlinePens 记闲笔已出之人）
     mainline: [], mainlinePens: [],
+    // 步后涟漪账（史实共振）：{ [stepId]: { day, until, priceMul?, raidAdd? } }——FLAG 镜像可回放
+    ripples: {},
     weather: 'clear', winterActive: false, winterStart, winterEnd,
     war: { endDay, telegraphed: false, ended: false, endingType: null },
     chars, inventory: inv,
