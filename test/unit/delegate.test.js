@@ -233,6 +233,20 @@ describe('晨报问题（dawnProblems）与情境建议（suggests）', () => {
     assert.ok((r.state.inventory.firewood || 0) >= 1, '真劈出柴');
   });
 
+  test('挖野菜不踩心情螺旋（实测：饿→挖→抑郁→拒绝出门→更饿）：心已沉底的人挖野菜不再掉心情', () => {
+    const s = newRun();
+    for (const k of ['meal', 'canned', 'raw', 'meat', 'veg']) s.inventory[k] = 0;
+    s.chars[0].moodPts = -6; // 已经很低了
+    const before = s.chars[0].moodPts;
+    const r = resolveInput(s, pack, [{ type: 'act', actor: s.chars[0].id, action: 'forage' }]);
+    assert.equal(r.state.chars[0].moodPts, before, '心已沉底：挖野菜是活命不是羞辱，不再往下踩');
+    const s2 = newRun();
+    for (const k of ['meal', 'canned', 'raw', 'meat', 'veg']) s2.inventory[k] = 0;
+    const before2 = s2.chars[0].moodPts; // resolveInput 原地改状态——先取基线
+    const r2 = resolveInput(s2, pack, [{ type: 'act', actor: s2.chars[0].id, action: 'forage' }]);
+    assert.ok(r2.state.chars[0].moodPts < before2, '心境尚可时照旧有代价（第一次苦是苦）');
+  });
+
   test('求生本能（玩家不施法）：断粮时托管日自动刨野菜——不依赖关键词与选项，代价照记', () => {
     const s = newRun();
     for (const k of ['meal', 'canned', 'raw', 'meat', 'veg']) s.inventory[k] = 0;
