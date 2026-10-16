@@ -257,6 +257,7 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'delegated_pick': lines.push(`没人点名——${name(f.char)}把这件事接了过去。`); break;
       case 'self_reliant': lines.push(`要用的${f.what || '家什'}家里没有——${f.how || '现做了一副'}，接着干。`); break;
       case 'dusk_swap': lines.push(`${name(f.from)}今晚不肯动身——话没说完，${name(f.to)}已经把行囊接了过去。`); break;
+      case 'phase_dialect': lines.push(f.to === 'overnight' ? '话音落进夜里——今晚先合眼，天亮再说。' : '话音落下的时辰不对，可日子认这笔账——眼下能做的，这就张罗。'); break;
       case 'forage': lines.push(f.winter ? '冻土里刨出半把菜根——指甲缝都是泥。能咽，就是咽得委屈。' : '城根的野菜连根刨了。苦，但今晚锅是热的。'); break;
       case 'night_rob': lines.push(`从${f.npc}身上搜出来的东西摆在地上——都是他活着时背着的东西。`); break;
       case 'night_directive_set': lines.push(`今夜的方针定了：${f.text}（${{ cautious: '谨慎', normal: '照常', bold: '放手' }[f.stance] || '照常'}）。接下来的一夜，他自己走。`); break;

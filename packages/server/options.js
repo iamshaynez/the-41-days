@@ -205,13 +205,23 @@ export function nightMenu(state, pack) {
 /** 卡面语境摘要（提示词 {{card}} 段）：给谋士看的当前卡状态（附 id 对照与可行域） */
 const HIST_THEME_NAMES = { beacon: '北津台', letters: '家书', maicheng: '麦城', army: '军心' };
 /** 已了结的史锚话头（回应卡本局已发过）——亮给谋士：别看历史重提，提了也是白提 */
-function closedThemesLine(state) {
-  const closed = Object.entries(HIST_THEME_NAMES).filter(([k]) => state.firedOnce?.['hs_' + k]).map(([, n]) => n);
-  return closed.length ? `已了结的话头（这一局已经有人接过去了，不再有后续——无论上文提过多少次，别再出相关选项）：${closed.join('、')}。` : '';
+function closedThemesLine(state, pack) {
+  const closed = [], planted = [];
+  for (const [k, n] of Object.entries(HIST_THEME_NAMES)) {
+    if (state.firedOnce?.['hs_' + k]) { closed.push(n); continue; }
+    // 过窗即了结（闭环纪律）：明晨已出回应卡窗口，提了也长不出来
+    const [, hi] = pack?.cardMap?.['hs_' + k]?.when?.seedWindow || [];
+    if (pack && hi !== undefined && state.day + 1 > hi) { closed.push(n); continue; }
+    if (Object.values(state.directions || {}).some((d) => d.kind === 'hist' && d.alive && d.seed === k)) planted.push(n);
+  }
+  const lines = [];
+  if (planted.length) lines.push(`已种下的话头（种子在土里等发芽的日子——不用再提，白天别出相关选项，再点只是重复）：${planted.join('、')}。`);
+  if (closed.length) lines.push(`已了结的话头（这一局已经有人接过去了，不再有后续——无论上文提过多少次，别再出相关选项）：${closed.join('、')}。`);
+  return lines.join('');
 }
 export function cardBrief(state, pack, card) {
   const ids = idTable(state, pack);
-  const closed = closedThemesLine(state);
+  const closed = closedThemesLine(state, pack);
   const menu = `\n\n【分工商簿——现在真正能做的事，按人一行行列；act 的 action/actor/target 从各人名下选，清单外的愿望用 direction】\n${actionMenu(state, pack)}`;
   if (card === 'dusk') {
     // 饥荒警报：断粮时谋士必须先为嘴——没有这行，选项一副不着急的样子（实测）

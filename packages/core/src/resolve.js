@@ -83,6 +83,34 @@ export function resolveInput(state, pack, intents) {
   const queue = [...intents];
   while (queue.length) {
     const intent = queue.shift();
+    // ── 宏观意图的相位方言（线上实测：LLM 裁判在黄昏把「出门找吃的」归成 auto_day，
+    //    同一句话直读路径返回 dusk_auto——同一句话不该因解析器不同被 BAD_PHASE 弹回）。
+    //    铁律：玩家话已出口，按当下相位翻译成当下能做的事，绝不以相位错弹回。
+    //    翻译只在「错相位的宏意图」上发生，译文类型在目标相位走既有处理——无环。
+    {
+      const ph = state.phase;
+      const visiting = ph === 'night' && state.night && !state.night.home;
+      const overnight = () => { ctx.fact('phase_dialect', { from: intent.type, to: 'overnight' }); };
+      if (intent.type === 'auto_day' && ph !== 'day') {
+        if (ph === 'dusk') { ctx.fact('phase_dialect', { from: 'auto_day', to: 'dusk_auto' }); queue.unshift({ type: 'dusk_auto', rest: false }); continue; }
+        if (visiting) { ctx.fact('phase_dialect', { from: 'auto_day', to: 'night_directive' }); queue.unshift({ type: 'night_directive', stance: 'normal', text: '活命要紧，照张罗的来' }); continue; }
+        if (ph === 'night') { overnight(); continue; } // 夜半居家：收夜到天亮，明早再说
+      }
+      if ((intent.type === 'dusk_auto' || intent.type === 'dusk_assign') && ph !== 'dusk') {
+        if (ph === 'day') { ctx.fact('phase_dialect', { from: intent.type, to: 'auto_day' }); queue.unshift({ type: 'auto_day' }); continue; } // 白天说今晚的事：管家收卷今天，黄昏按需求照派
+        if (visiting) { ctx.fact('phase_dialect', { from: intent.type, to: 'auto_night' }); queue.unshift({ type: 'auto_night' }); continue; }
+        if (ph === 'night') { overnight(); continue; }
+      }
+      if (intent.type === 'auto_night' && ph !== 'night') {
+        if (ph === 'day') { ctx.fact('phase_dialect', { from: 'auto_night', to: 'auto_day' }); queue.unshift({ type: 'auto_day' }); continue; }
+        if (ph === 'dusk') { ctx.fact('phase_dialect', { from: 'auto_night', to: 'dusk_auto' }); queue.unshift({ type: 'dusk_auto', rest: false }); continue; }
+      }
+      if (intent.type === 'night_directive' && (ph === 'day' || ph === 'dusk')) {
+        ctx.fact('phase_dialect', { from: 'night_directive', to: ph === 'day' ? 'auto_day' : 'dusk_auto' });
+        queue.unshift({ type: ph === 'day' ? 'auto_day' : 'dusk_auto', ...(ph === 'day' ? {} : { rest: false }) });
+        continue;
+      }
+    }
     if (intent.type === 'auto_day') {
       if (state.phase !== 'day') { rejects.push({ intent, reason: 'BAD_PHASE' }); continue; }
       ctx.fact('auto_day_start', {});
@@ -353,6 +381,7 @@ function applyOne(ctx, intent) {
       if (s.phase === 'prologue') { firePreludeBeat(ctx, (s.prelude?.i ?? 0) + 1); return { ok: true }; }
       if (s.phase === 'day') { toDusk(ctx); return { ok: true }; }
       if (s.phase === 'night' && !s.night?.home) { endNightReturn(ctx, 'advance'); return { ok: true }; }
+      if (s.phase === 'night' && s.night?.home) { toDawn(ctx); return { ok: true }; } // 夜半居家说「过」＝合眼到天亮（方言铁律：不弹回）
       return { ok: false, reason: 'BAD_PHASE' };
     }
     case 'skip_prelude': {
