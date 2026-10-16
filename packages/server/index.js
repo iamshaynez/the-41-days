@@ -417,6 +417,7 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     return b.n > RATE;
   }
 
+  const bootedAt = new Date(); // 进程启动时刻（/api/version 展示用）
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     const path = url.pathname;
@@ -914,6 +915,15 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
       }
 
       // —— 档案馆（跨局，按用户隔离） ——
+      // 版本与启动时间（公开只读）：版本对账的锚——玩家与开发者一眼看清跑的是哪版
+      if (path === '/api/version') {
+        return json(res, 200, {
+          version: pack.manifest?.semver || '0.0.0',
+          coreVersion: pack.manifest?.coreVersion || null,
+          startedAt: bootedAt,
+          uptimeSec: Math.floor((Date.now() - bootedAt.getTime()) / 1000)
+        });
+      }
       if (path === '/api/archive') {
         const s = auth(req);
         if (!s) return json(res, 401, { error: '请先登录。' });

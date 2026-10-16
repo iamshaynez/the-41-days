@@ -1821,7 +1821,8 @@ async function openMenu() {
 
   let html = `<div class="sheet-head"><span class="kicker">选单 · 扉页</span>
     <button class="sheet-x" type="button" aria-label="合上">${svgUse('close')}</button></div>
-    <h1 class="sheet-title">门后之书</h1>`;
+    <h1 class="sheet-title">门后之书</h1>
+    <p class="m-ver" id="m-version"></p>`;
 
   // 这一局
   html += `<section class="m-sec"><p class="m-kicker">这一局</p>`;
@@ -1985,6 +1986,15 @@ async function openMenu() {
     sheet.querySelectorAll('#m-ambience button').forEach((x) => x.classList.toggle('on', x.dataset.v === b.dataset.v));
   });
   sheet.querySelector('#m-back')?.addEventListener('click', () => { closeSheets(); switchView('play'); });
+  // 版本与启动时间（扉页脚注）：跑的是哪版、服务活了多久——一眼对账
+  {
+    const ver = $('m-version');
+    if (ver) fetch('/api/version').then((r) => r.json()).then((v) => {
+      const t = v.startedAt ? new Date(v.startedAt) : null;
+      const up = v.uptimeSec != null ? (v.uptimeSec > 86400 ? Math.floor(v.uptimeSec / 86400) + ' 天' : v.uptimeSec > 3600 ? Math.floor(v.uptimeSec / 3600) + ' 小时' : Math.floor(v.uptimeSec / 60) + ' 分钟') : '';
+      ver.textContent = `第 41 天 · 内容包 v${v.version}${t ? ` · 服务启动于 ${t.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })} ${t.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}` : ''}${up ? `（已运行 ${up}）` : ''}`;
+    }).catch(() => { ver.textContent = ''; });
+  }
   sheet.querySelector('#m-archive')?.addEventListener('click', () => { closeSheets(); switchView('archive'); });
   sheet.querySelector('#m-play')?.addEventListener('click', () => { closeSheets(); switchView('play'); });
   sheet.querySelector('#m-admin')?.addEventListener('click', () => { closeSheets(); switchView('admin'); });
