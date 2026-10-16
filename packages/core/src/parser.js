@@ -160,6 +160,14 @@ export function parseDirect(state, pack, input) {
     return { intents: [{ type: 'dusk_assign', scavenger: scav?.id || null, location: loc, gear, others }] };
   }
 
+  // 夜里的求生话有路由（实测：晚上了说出去找吃的，无声失败）：
+  // 夜访中——人还在外面，方向可以改（找吃的 → 改方针）；在家过夜——出不了门，但要说明白
+  if (state.phase === 'night' && /(出去|出门)?(找|弄|搞|寻)[^，。]{0,6}(吃|食|粮|吃的)/.test(text)) {
+    if (state.night && !state.night.home) {
+      return { intents: [{ type: 'night_directive', stance: 'normal', text: text.slice(0, 60) }] };
+    }
+    return { intents: [], clarify: '夜已经深了，出门是黄昏定下的事——今晚先熬过去，明天一早再说。' };
+  }
   // 夜间动作
   if (state.phase === 'night' && state.night && !state.night.home) {
     const loc = pack.locMap[state.night.locId];

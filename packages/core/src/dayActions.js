@@ -42,12 +42,15 @@ export function applyDayAction(ctx, intent) {
     case 'sleep': ctx.setFatigue(c, c.fatigue - 1, '打了个盹'); ctx.spendAp(c, 2); ctx.fact('nap', { char: c.id }); return { ok: true };
     case 'forage': {
       // 保底活路（设计北极星：想活总有办法——饿不死人，但体面地活着难）：
-      // 无条件可挖，产最低效口粮（两蔬一锅），代价是心情——冬天冻土更苦
+      // 无条件可挖，产最低效口粮（两蔬一锅）。心情代价只收「从体面跌落」那一次——
+      // 心已沉底的人挖野菜是活命不是羞辱，不再往下踩（实测螺旋：饿→挖→抑郁
+      // →50% 拒绝出门→更饿→更挖，把保底活路拧成死局）
       const winter = !!s.winterActive;
+      const sunk = (c.moodPts ?? 0) <= -3;
       ctx.addItem('veg', 1, '刨野菜');
-      ctx.mood(c, winter ? -2 : -1, '刨野菜', {});
+      if (!sunk) ctx.mood(c, winter ? -2 : -1, '刨野菜', {});
       ctx.spendAp(c, 1);
-      ctx.fact('forage', { char: c.id, winter });
+      ctx.fact('forage', { char: c.id, winter, sunk });
       return { ok: true };
     }
     case 'rest': return actRest(ctx, c);
