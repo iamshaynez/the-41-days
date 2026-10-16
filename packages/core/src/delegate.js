@@ -2,6 +2,7 @@
 // 三个规划器产出与裁判/直读解析器完全相同的意图对象，走同一条 resolve 管线——
 // 自动化不发明第二条状态通道。bots.js 是这些策略的对抗性参考，本文件是游戏内正式版。
 import { aliveChars, apMaxOf, policyOf, moodLevel } from './state.js';
+import { fireEventCard } from './events.js';
 import { DAY_ACTIONS, AP_COST } from './dayActions.js';
 import { LOC_ALIAS } from './parser.js';
 import { threadsStateLines } from './threads.js';
@@ -384,9 +385,7 @@ export function tickDrama(ctx) {
     if (!card) return false;
     s.firedOnce[id] = true;
     ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
-    s.activeEvent = { cardId: id };
-    ctx.emit('EVENT_FIRED', { cardId: id });
-    ctx.fact('event', { cardId: id, title: card.title });
+    fireEventCard(ctx, id);
     return true;
   };
   // —— E 危机弧：冬柴告急 / 断粮算术 / 疫病进门（一局各一次）——

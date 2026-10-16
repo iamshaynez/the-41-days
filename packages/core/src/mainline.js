@@ -1,4 +1,5 @@
 import { hashStr } from './rng.js';
+import { fireEventCard } from './events.js';
 const pickOf = (h, n) => ((h ^ (h >>> 16)) >>> 0) % n;
 
 // 大事轴主线日步（叙事双轴-v0.1 §4）：确定性选步（窗口步按种子择日、末日必落）、
@@ -59,9 +60,7 @@ export function mainlineAskTick(ctx) {
     }
   }
   ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
-  s.activeEvent = { cardId: picked.card };
-  ctx.emit('EVENT_FIRED', { cardId: picked.card });
-  ctx.fact('event', { cardId: picked.card, title: card.title });
+  fireEventCard(ctx, picked.card);
 }
 
 /** 破晓钩子：为 s.day 选步＋抽闲笔＋触发投影；一日至多一条 MAINLINE_STEP */
