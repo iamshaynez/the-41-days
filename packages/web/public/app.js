@@ -2721,7 +2721,7 @@ function renderMap(mv) {
 
 /* ═══ 舆图 · 大观：点图全屏展开——拖动平移、滚轮/双指缩放、点地名看注 ═══
    侧栏保持一览不抢书页；看细节进大观（桌面滚轮/手机双指，同一套手势）。 */
-const mbState = { el: null, view: null, k: 1, x: 0, y: 0, dragged: false };
+const mbState = { el: null, view: null, k: 1, x: 0, y: 0, dragged: false, multi: false };
 function ensureMapBig() {
   if (mbState.el) return mbState.el;
   const root = el('div', 'mapbig');
@@ -2752,18 +2752,24 @@ function ensureMapBig() {
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) closeMapBig(); });
   bindMapBigGestures(root.querySelector('.mb-stage'));
-  // 点地名出注（挂在 sheet 上一次性绑定；tap 与拖拽以位移阈值区分）
-  root.querySelector('.mb-sheet').addEventListener('click', (e) => {
-    const g = e.target.closest('g.place');
-    if (!g || mbState.dragged) return;
-    const note = root.querySelector('.mb-note');
-    const st = g.dataset.state === 'tonight' ? `今夜在此${g.dataset.who ? ' · ' + g.dataset.who : ''}`
-      : g.dataset.state === 'heard' ? `风闻的地方——${g.dataset.hint || '路子还没摸到'}`
-      : '已知的地方';
-    note.textContent = `${g.dataset.name} —— ${st}`;
-    note.hidden = false;
+  // 键盘出注（触屏/鼠标的出注在 bindMapBigGestures 的 pointerup 里自判 tap——
+  // setPointerCapture 之后手机浏览器会把 click 的 target 改写成 stage，挂 click 永远点不到地名）
+  root.querySelector('.mb-sheet').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const g = e.target.closest?.('g.place');
+    if (g) { e.preventDefault(); showMapBigNote(g); }
   });
   return root;
+}
+/** 点名出注：地名 + 三态信息（今夜/风闻及其史实提示/已知） */
+function showMapBigNote(g) {
+  const note = mbState.el?.querySelector('.mb-note');
+  if (!note) return;
+  const st = g.dataset.state === 'tonight' ? `今夜在此${g.dataset.who ? ' · ' + g.dataset.who : ''}`
+    : g.dataset.state === 'heard' ? `风闻的地方——${g.dataset.hint || '路子还没摸到'}`
+    : '已知的地方';
+  note.textContent = `${g.dataset.name} —— ${st}`;
+  note.hidden = false;
 }
 function openMapBig(mv) {
   const root = ensureMapBig();
@@ -2803,7 +2809,11 @@ function zoomMapBig(ratio) {
   if (!st) return;
   zoomMapBigAt(ratio, st.clientWidth / 2, st.clientHeight / 2);
 }
-/** 手势：单指拖 = 平移；双指捏 = 缩放（手机）；wheel = 桌面缩放 */
+/** 手势：单指拖 = 平移；双指捏 = 缩放（手机）；wheel = 桌面缩放。
+ *  tap 出注在 pointerup 自判（累计位移/时长阈值）：手指轻点带 1~2px 抖动不算拖拽；
+ *  命中用 elementFromPoint 走真实命中测试——capture 期间 click 的 target 会被改写，靠不住 */
+const MB_TAP_SLOP = 8;   // 累计位移阈值（px）：低于它算 tap，高于它算拖拽
+const MB_TAP_MS = 600;   // 按压时长阈值：长按不算 tap
 function bindMapBigGestures(stage) {
   const ptrs = new Map();
   let pinch0 = null;
@@ -2815,19 +2825,20 @@ function bindMapBigGestures(stage) {
   }, { passive: false });
   stage.addEventListener('pointerdown', (e) => {
     stage.setPointerCapture(e.pointerId);
-    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now() });
+    if (ptrs.size === 1) { mbState.dragged = false; mbState.multi = false; }
+    else mbState.multi = true;
     if (ptrs.size === 2) {
       const [a, b] = [...ptrs.values()];
       pinch0 = { d: Math.hypot(a.x - b.x, a.y - b.y), k: mbState.k, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, x: mbState.x, y: mbState.y };
     }
-    mbState.dragged = false;
   });
   stage.addEventListener('pointermove', (e) => {
-    if (!ptrs.has(e.pointerId)) return;
-    const prev = ptrs.get(e.pointerId);
-    const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
-    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (Math.abs(dx) + Math.abs(dy) > 1) mbState.dragged = true;
+    const p = ptrs.get(e.pointerId);
+    if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    if (Math.hypot(p.x - p.x0, p.y - p.y0) > MB_TAP_SLOP) mbState.dragged = true;
     if (ptrs.size === 1) { mbState.x += dx; mbState.y += dy; applyMapBigTransform(); }
     else if (ptrs.size === 2 && pinch0) {
       const [a, b] = [...ptrs.values()];
@@ -2840,9 +2851,17 @@ function bindMapBigGestures(stage) {
       zoomMapBigAt(k1 / pinch0.k, px, py);
     }
   });
-  const up = (e) => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch0 = null; };
+  const drop = (e) => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch0 = null; };
+  const up = (e) => {
+    const p = ptrs.get(e.pointerId);
+    drop(e);
+    if (!p || mbState.dragged || mbState.multi || performance.now() - p.t0 > MB_TAP_MS) return;
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    const g = hit?.closest?.('g.place');
+    if (g) showMapBigNote(g);
+  };
   stage.addEventListener('pointerup', up);
-  stage.addEventListener('pointercancel', up);
+  stage.addEventListener('pointercancel', drop);
 }
 // 侧栏一览点图即入大观（含手机抽屉里那张横滚大图）
 document.addEventListener('click', (e) => {
