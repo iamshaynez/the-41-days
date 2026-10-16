@@ -291,6 +291,16 @@ export function tickDirections(ctx) {
       ctx.fact('vow_orphaned', { id: d.id, subject: d.subject, text: d.text });
     }
   }
+  // 誓的自处（闭环纪律）：七天没人再提的话头自己凉——不是玩家去「改约」，
+  // 是世界替角色把没接住的话放下。条目保留（终局列传读全量，反复提过的照念），
+  // 再提不复活旧誓（重提会种新誓）。浇水（再提）会更新 lastDay，话头活着。
+  for (const d of all) {
+    if (d.kind !== 'vow' || !d.alive) continue;
+    if (s.day - (d.lastDay || d.day) >= 7) {
+      d.alive = false; dirty = true;
+      ctx.fact('vow_faded', { id: d.id, subject: d.subject, text: d.text });
+    }
+  }
   if (dirty) ctx.setFlag('directions', structuredClone(s.directions));
 }
 
