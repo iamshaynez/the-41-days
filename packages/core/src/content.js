@@ -55,29 +55,66 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
   const itemMap = Object.fromEntries(items.map((i) => [i.id, i]));
   const charMap = Object.fromEntries(characters.map((c) => [c.id, c]));
   for (const sc of side.sideChars || []) charMap[sc.id] = { ...sc, sideOnly: true };
-  const locMap = Object.fromEntries(locations.map((l) => [l.id, l]));
+  const errs = [];
+  // 别传专属地点（长线体验 §3.4"不换系统，换眼睛"的另一半——夜访的场也得换）：
+  // 并入 locations/locMap 并打 side 标记，主线索引时按 side 过滤，别传局只认自家场
+  const mainLocIds = new Set(locations.map((l) => l.id));
+  const sideLocs = [];
+  for (const st of side.stories || []) {
+    for (const l of st.locations || []) {
+      if (mainLocIds.has(l.id) || sideLocs.some((x) => x.id === l.id)) { errs.push(`别传地点 ${l.id} 与现有地点重名`); continue; }
+      sideLocs.push({ ...l, side: st.id });
+    }
+  }
+  const allLocs = [...locations, ...sideLocs];
+  const locMap = Object.fromEntries(allLocs.map((l) => [l.id, l]));
   const allCards = [...ej.cards, ...(side.cards || [])];
   const cardMap = Object.fromEntries(allCards.map((c) => [c.id, c]));
   const docMap = Object.fromEntries(dj.docs.map((d) => [d.id, d]));
   const sealMap = Object.fromEntries((sj.seals || []).map((x) => [x.id, x]));
 
   // —— 引用完整性校验（启动/种子化前必须通过）——
-  const errs = [];
   const needItem = (id, where) => { if (!itemMap[id]) errs.push(`未知物品 ${id} @ ${where}`); };
-  for (const l of locations) {
-    if (!l.rooms?.length) errs.push(`地点 ${l.id} 无房间`);
-    for (const r of l.rooms) {
+  const checkRooms = (l, where) => {
+    if (!l.rooms?.length) errs.push(`地点 ${where} 无房间`);
+    for (const r of l.rooms || []) {
       for (const c of r.containers || []) {
-        for (const e of c.loot || []) { if ((e.w || 0) > 0) needItem(e.item, `${l.id}.${c.id}`); }
-        for (const d of c.docs || []) if (!docMap[d]) errs.push(`未知文档 ${d} @ ${l.id}.${c.id}`);
+        for (const e of c.loot || []) { if ((e.w || 0) > 0) needItem(e.item, `${where}.${c.id}`); }
+        for (const d of c.docs || []) if (!docMap[d]) errs.push(`未知文档 ${d} @ ${where}.${c.id}`);
       }
     }
+  };
+  for (const l of locations) {
+    checkRooms(l, l.id);
     for (const d of l.docsPool || []) if (!docMap[d]) errs.push(`未知文档 ${d} @ ${l.id}.docsPool`);
     for (const n of l.npcs || []) {
       if (n.firstScript && !ej.cards.some((c) => c.for === n.firstScript)) {
         errs.push(`NPC ${n.id} 引用缺失脚本 ${n.firstScript}`);
       }
     }
+  }
+  // 别传地点/别传之家：只认物品，不准带兰台文档（别传不喂主线档案）
+  for (const l of sideLocs) {
+    checkRooms(l, l.id);
+    if ((l.docsPool || []).length || (l.rooms || []).some((r) => (r.containers || []).some((c) => (c.docs || []).length))) errs.push(`别传地点 ${l.id} 不得携带文档`);
+    for (const n of l.npcs || []) if (n.firstScript && !allCards.some((c) => c.for === n.firstScript)) errs.push(`别传 NPC ${n.id} 引用缺失脚本 ${n.firstScript}`);
+  }
+  for (const st of side.stories || []) {
+    if (st.home) checkRooms(st.home, `${st.id}.home`);
+    for (const id of st.roster || []) if (!charMap[id]) errs.push(`别传 ${st.id} 阵容引用未知角色 ${id}`);
+    for (const id of st.setup?.knownLocs || []) if (!locMap[id]) errs.push(`别传 ${st.id} 已知地点 ${id} 不存在`);
+    for (const k of Object.keys(st.setup?.inventory || {})) needItem(k, `别传 ${st.id} 家底`);
+    for (const k of Object.keys(st.setup?.facilities || {})) if (!rj.facilities.some((f) => f.id === k)) errs.push(`别传 ${st.id} 开局设施 ${k} 不存在`);
+    for (const v of st.ending?.variants || []) {
+      for (const id of [...(v.whenAlive || []), ...(v.whenDead || [])]) if (!charMap[id]) errs.push(`别传 ${st.id} 结局变体引用未知角色 ${id}`);
+      if (!v.title) errs.push(`别传 ${st.id} 结局变体缺 title（结局屏标题取自此）`);
+    }
+    if (!st.ending?.default?.text) errs.push(`别传 ${st.id} 缺默认结局`);
+  }
+  for (const c of side.cards || []) {
+    if (!c.side || !(side.stories || []).some((st) => st.id === c.side)) errs.push(`别传卡 ${c.id} 的 side 不指向任何别传`);
+    if (c.as && !charMap[c.as]) errs.push(`别传卡 ${c.id} 的演员 ${c.as} 不存在`);
+    if (c.when?.at && c.when.at !== 'dusk') errs.push(`别传卡 ${c.id} 的 when.at 只认 dusk`);
   }
   for (const d of dj.docs) if (!locMap[d.at]) errs.push(`文档 ${d.id} 指向未知地点 ${d.at}`);
   for (const x of sj.seals || []) {
@@ -148,7 +185,7 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     }
   }
   const MARKS = new Set(['treasure', 'danger', 'story', 'trade', 'food', 'med']);
-  for (const l of locations) {
+  for (const l of allLocs) {
     if (l.mark && !MARKS.has(l.mark)) errs.push(`地点 ${l.id} 的 mark ${l.mark} 不在图例`);
     if (l.pool && ![...(manifest.locationPools || [])].some((p) => p.group === l.pool && p.members.includes(l.id))) {
       errs.push(`地点 ${l.id} 自称属于池 ${l.pool}，池不认`);
@@ -167,10 +204,11 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
       if (!f.line) errs.push(`闲笔 ${f.id} 缺 line`);
     }
   }
-  for (const c of ej.cards) {
+  for (const c of allCards) {
     for (const o of c.options || []) {
       for (const cst of o.cost || []) needItem(cst.item, `事件 ${c.id}.${o.key}`);
       if (o.effects?.consumeChoice) for (const it of o.effects.consumeChoice) needItem(it, `事件 ${c.id}.${o.key}`);
+      for (const k of Object.keys(o.effects?.items || {})) needItem(k, `事件 ${c.id}.${o.key}.items`);
     }
     const w = c.when || {};
     if (w.requiresChar && !charMap[w.requiresChar]) errs.push(`事件 ${c.id} 引用未知角色 ${w.requiresChar}`);
@@ -184,7 +222,7 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
   if (errs.length) throw new Error('内容包校验失败：\n' + errs.join('\n'));
 
   return {
-    manifest, items, itemMap, characters, charMap, locations, locMap,
+    manifest, items, itemMap, characters, charMap, locations: allLocs, locMap,
     recipes: rj.recipes, facilities: rj.facilities,
     facilityMap: Object.fromEntries(rj.facilities.map((f) => [f.id, f])),
     doorReinforce: rj.doorReinforce,

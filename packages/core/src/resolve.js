@@ -9,7 +9,7 @@ import { startNight, applyNightAction, endNightReturn } from './night.js';
 import { resolveRaid } from './raid.js';
 import { executeTrade } from './trade.js';
 import { chooseEventOption, optionAvailable, optionCostOk, fireEventCard } from './events.js';
-import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents, assignNightBeds } from './vitals.js';
+import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents, drawDuskEvents, assignNightBeds } from './vitals.js';
 import { tickAutonomous, tickDirections, bumpPairArc } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
@@ -246,6 +246,7 @@ function applyOne(ctx, intent) {
       return applyDayAction(ctx, intent);
     case 'dusk_assign': {
       if (s.phase !== 'dusk') return { ok: false, reason: 'NOT_DUSK' };
+      if (s.sidestory && s.activeEvent && !s.activeEvent.duskFate) return { ok: false, reason: 'EVENT_PENDING' }; // 别传：眼前的卡先答再出门（主线沿用软拦，不改手感）
       if (s.activeEvent?.duskFate) {
         // 黄昏命运卡：人动身了，门口的问题也就过去了——命运不等人（路过也是一种回答）
         const fateCard = s.geCards?.[s.activeEvent.cardId] || ctx.pack.cardMap[s.activeEvent.cardId];
@@ -260,6 +261,7 @@ function applyOne(ctx, intent) {
       // 托管黄昏（策略级输入的兜底解）：「派人出门找吃的」——没点名没点地，
       // 内核出与黄昏卡同源的最优方案（planDusk 首个出门方案）；rest=话里交代了其余人休息
       if (s.phase !== 'dusk') return { ok: false, reason: 'NOT_DUSK' };
+      if (s.sidestory && s.activeEvent && !s.activeEvent.duskFate) return { ok: false, reason: 'EVENT_PENDING' };
       const { plans } = planDusk(s, ctx.pack);
       const plan = plans.find((p) => p.intent.scavenger && p.intent.location) || plans[0];
       if (!plan) return { ok: false, reason: 'NOT_DUSK' };
@@ -375,6 +377,8 @@ function applyOne(ctx, intent) {
       const r = chooseEventOption(ctx, intent.option);
       // 序章：一选一拍，选完进下一拍，拍完落地第 1 天
       if (r.ok && s.phase === 'prologue') firePreludeBeat(ctx, (s.prelude?.i ?? 0) + 1);
+      // 别传：晨卡拖到黄昏才答的，答完补发当日暮卡（暮拍不因拖延而丢）
+      if (r.ok && s.phase === 'dusk' && !s.activeEvent) drawDuskEvents(ctx);
       return r;
     }
     case 'advance': {
@@ -490,6 +494,7 @@ function toDusk(ctx, { force = false } = {}) {
   s.night = null;
   ctx.emit('PHASE', { to: 'dusk' });
   ctx.fact('phase_dusk', {});
+  drawDuskEvents(ctx); // 别传的暮拍（主线无黄昏时间轴卡，空转）
 }
 
 /** 破晓管线（PH-02）：袭击 → 日进(快照) → 六轴 tick → 战争 → 事件抽取 → 回白天 */

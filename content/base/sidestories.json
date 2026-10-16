@@ -1,5 +1,5 @@
 {
-  "$comment": "别传（长线体验-v0.2 §3.4 CH-04/05）：主线之外的短篇局。stories=局定义（解锁门/天数/阵容/开局修饰/结局变体），sideChars=旁传专属角色（不进随机池），cards=各局的日更手作卡（kind:timeline，每天一张，side 标记归属）。全部机制复用主线效果白名单。",
+  "$comment": "别传（长线体验-v0.2 §3.4 CH-04/05）：主线之外的短篇局。stories=局定义（解锁门/天数/阵容/开局修饰/专属场/结局变体），sideChars=旁传专属角色（不进随机池），cards=各局的日更手作卡（kind:timeline，晨卡为主轴、when.at='dusk' 为暮拍，knock/internal 进随机池）。全部机制复用主线效果白名单。结局变体按旗标/生死/全灭如实匹配（events.pickSideEnding），不许再出「弯了三次仍写没有弯过」。",
   "sideChars": [
     {
       "id": "luzhou",
@@ -28,6 +28,33 @@
       }
     },
     {
+      "id": "alu",
+      "name": "阿橹",
+      "role": "船工",
+      "backpack": 9,
+      "combat": 0,
+      "traits": {
+        "growth": true
+      },
+      "student": true,
+      "ethics": {
+        "stealCiv": 1.3,
+        "killCiv": 1.8,
+        "killEnemy": 1.3,
+        "help": 1.2
+      },
+      "desc": "十六岁，摇橹的手比说话的嘴快。他爹的船，是替人运不问来路的箱子时没的。",
+      "persona": {
+        "epithet": "船上的秤",
+        "knot": "爹的船是怎么没的",
+        "taboo": "不碰舱底的箱",
+        "voice": [
+          "水往哪边流，我就往哪边摇。",
+          "叔，这箱里是什么？"
+        ]
+      }
+    },
+    {
       "id": "duzhong",
       "name": "杜仲",
       "role": "医匠",
@@ -36,13 +63,13 @@
       "traits": {
         "healer": true
       },
+      "softHearted": true,
       "ethics": {
         "stealCiv": 1.2,
         "killCiv": 1.5,
         "killEnemy": 1.0,
         "help": 1.5
       },
-      "softHearted": true,
       "desc": "棚里挤满了榻。她两边都在救。",
       "persona": {
         "epithet": "先来后到，不问军籍",
@@ -51,6 +78,34 @@
         "voice": [
           "药不分制服。",
           "躺下。"
+        ]
+      }
+    },
+    {
+      "id": "xiaoman",
+      "name": "小满",
+      "role": "药童",
+      "backpack": 8,
+      "combat": -1,
+      "traits": {
+        "growth": true
+      },
+      "student": true,
+      "softHearted": true,
+      "ethics": {
+        "stealCiv": 1.5,
+        "killCiv": 2.0,
+        "killEnemy": 1.5,
+        "help": 1.5
+      },
+      "desc": "会背半本《汤液》，另外半本在先生脑子里。她也在看你怎么分。",
+      "persona": {
+        "epithet": "规矩的记账人",
+        "knot": "先生说过的每一句不问",
+        "taboo": "不替人决定先后",
+        "voice": [
+          "先生，左边先来的。",
+          "我记下了。"
         ]
       }
     },
@@ -67,7 +122,7 @@
         "killEnemy": 1.0,
         "help": 1.0
       },
-      "desc": "第三台的鼓手，节拍稳得像刻出来的。",
+      "desc": "第三台的鼓手，节拍稳得像刻出来的。「白翎」是这座台的名号，不是人名。",
       "persona": {
         "epithet": "节奏是呼吸",
         "knot": "妹妹的乐籍",
@@ -75,6 +130,30 @@
         "voice": [
           "鼓不乱，台就不乱。",
           "第四小节前，偷半口气。"
+        ]
+      }
+    },
+    {
+      "id": "chenliu",
+      "name": "陈六",
+      "role": "第三台射手",
+      "backpack": 10,
+      "combat": 1,
+      "traits": {},
+      "ethics": {
+        "stealCiv": 1.0,
+        "killCiv": 1.3,
+        "killEnemy": 0.7,
+        "help": 1.0
+      },
+      "desc": "三年没自己起过拍子。箭听鼓，鼓听素伯。",
+      "persona": {
+        "epithet": "跟拍子的人",
+        "knot": "第一次脱拍放出去的那支箭",
+        "taboo": "不在鼓前抢拍",
+        "voice": [
+          "你起拍，我放。",
+          "半口气我听得见。"
         ]
       }
     },
@@ -257,7 +336,7 @@
     {
       "id": "luzhou",
       "title": "鲁舟的一趟船",
-      "blurb": "五天水程：卖给谁、瞒什么、收不收那沓纸。",
+      "blurb": "五天水程：卖给谁、瞒什么、收不收那沓纸——还有船尾那孩子该知道多少。",
       "unlock": {
         "kind": "seal",
         "key": "seal_franko_net"
@@ -265,38 +344,181 @@
       "unlockHint": "在主线里识破鲁舟的身份后解锁",
       "days": 5,
       "roster": [
-        "luzhou"
+        "luzhou",
+        "alu"
       ],
+      "scene": {
+        "where": "建安二十四年冬，江陵外围的水路。一条货船，五天一个来回：津戍浮桥、一座空宅、芦苇荡，最后回江陵水域。",
+        "rules": "鲁舟是船牙——这局他是主角，不存在「船牙来摆摊」。「家」就是这条船：船舱睡人、舱底压货、船尾做饭。夜里出门＝泊住船、人上岸翻检。江上的威胁是水、守卒、券局的快船和跟船的影子。",
+        "opening": "舱底压着券局的货。缆绳解开了。"
+      },
+      "home": {
+        "name": "鲁舟的船",
+        "rooms": [
+          {
+            "id": "lz_cabin",
+            "name": "船舱",
+            "door": "open",
+            "containers": [
+              {
+                "id": "lz_cabin_slot",
+                "name": "舱底夹层",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "raw",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  },
+                  {
+                    "item": "water",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  },
+                  {
+                    "item": "parts",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "lz_stern",
+            "name": "船尾",
+            "door": "open",
+            "containers": [
+              {
+                "id": "lz_stern_net",
+                "name": "渔网下",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "veg",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  },
+                  {
+                    "item": "wood",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
       "setup": {
         "inventory": {
-          "raw": 8,
+          "raw": 6,
           "canned": 3,
+          "water": 5,
           "bandage": 2,
           "meds": 1,
           "jewel": 1,
           "brocade": 1,
-          "powder": 2
+          "powder": 2,
+          "firewood": 3,
+          "wood": 2,
+          "parts": 4,
+          "comp": 1
+        },
+        "facilities": {
+          "stove": 1,
+          "bed": 2
+        },
+        "knownLocs": [
+          "lz_ferry",
+          "lz_manor",
+          "lz_reeds"
+        ]
+      },
+      "intro": "你是鲁舟。舱底压着券局的货，船尾蹲着一个十六岁的船工——阿橹，他爹的船，是替人运不问来路的箱子时没的。五天，一个来回。每个渡口都是一道题：货给谁、话留几分、那沓纸碰不碰、这孩子该知道多少。活着回来，船还是你的。",
+      "fates": {
+        "fallen": "第{{day}}天，{{name}}没能回来。船到岸的时候，舱里的账没人对。",
+        "survived": "船还在，账还在心里。",
+        "alu": {
+          "alive": "阿橹学会了看水，也学会了什么时候不问。"
         }
       },
-      "intro": "你是鲁舟。舱底压着券局的货，船尾压着券局的眼线没有的东西——你自己的眼睛。五天，一个来回。五天里每个渡口都是一道题：货给谁、话留几分、那沓纸碰不碰。活着回来，船还是你的。",
       "ending": {
         "title": "回程",
         "variants": [
           {
+            "title": "空船",
+            "wiped": true,
+            "text": "船还在水上漂着，缆绳没人收。津戍的守卒看了两天，第三天上船把货清了。簿子上写：无主。",
+            "note": "批注：水上的人不上史册。水记得。"
+          },
+          {
+            "title": "一个人的船",
+            "whenDead": [
+              "alu"
+            ],
+            "text": "第六天早上，船靠了岸。你一个人收的缆。阿橹的橹还架在船尾，没人动——船上的规矩：人没了，橹不收。他爹的船没的时候，也是这样。",
+            "note": "批注：这一趟的账他记了两笔，一笔是货，一笔是人。"
+          },
+          {
+            "title": "手艺不错",
+            "whenFlags": [
+              "lz_fake_spotted"
+            ],
+            "text": "赝品被认出来了。券局没说什么——他们从不多说。只是下个月起，你的船期排到了双日的最末一个：货最差，价最低。你还在逢双日。只是双日里最后一个。",
+            "note": "批注：上家什么都没说，这比说什么都重。"
+          },
+          {
+            "title": "点头",
             "whenFlags": [
               "lz_took_docs"
             ],
-            "text": "券局的人点了头。你的船期从此更准了，准得像更鼓。",
+            "text": "券局的人点了头。你的船期从此更准了，准得像更鼓。地窖里那沓纸，开春变成了十一封家书，寄进围城军里——每一封都说「家里都好」。",
             "note": "批注：他的赝品里从此少了点什么。"
           },
           {
+            "title": "比真的好",
             "whenFlags": [
               "lz_fake"
             ],
-            "text": "上家掂了掂你仿的那一卷，笑了：『做得比真的好。』",
+            "text": "上家掂了掂你仿的那一卷，笑了：『做得比真的好。』真的那卷还在地窖里。你没再去过。",
             "note": "批注：他救下的纸，比他主人知道的多。"
           },
           {
+            "title": "空舱",
+            "whenFlags": [
+              "lz_refused_docs",
+              "lz_beaten"
+            ],
+            "text": "你把空舱开回了江陵，带着一身淤青。券局的人没再拦——打过了，账就平了。船期照常。只是每一趟，你都少卖了一样东西。",
+            "note": "批注：这也算一笔账。"
+          },
+          {
+            "title": "记住了",
+            "whenFlags": [
+              "lz_refused_docs",
+              "lz_stood_firm"
+            ],
+            "text": "你把空舱开回了江陵。券局的人在你的船头看了一眼，没上来。「记住了」三个字，你以后每个双日都会想一遍。逢双日，你还在——这两个逢双日之间，是你自己的。",
+            "note": "批注：少卖一样东西的账，他自己记。"
+          },
+          {
+            "title": "少一样",
             "whenFlags": [
               "lz_refused_docs"
             ],
@@ -304,16 +526,296 @@
             "note": "批注：这也算一笔账。"
           }
         ],
+        "tails": [
+          {
+            "whenFlags": [
+              "lz_told_alu"
+            ],
+            "text": "阿橹后来接了你的船。他从不碰舱底的箱——不是不敢，是知道里面是什么。"
+          },
+          {
+            "whenFlags": [
+              "lz_lied_alu"
+            ],
+            "text": "阿橹后来接了你的船。他从不问舱底的箱是什么——他知道问了你也会说是货。"
+          },
+          {
+            "whenFlags": [
+              "lz_letter"
+            ],
+            "text": "那封信送到了。卖柴的老婆子没说谢，给了阿橹一个烤芋头。"
+          },
+          {
+            "whenFlags": [
+              "lz_sold_route"
+            ],
+            "text": "下水去的那条船，后来没人再见过。你也没再想。"
+          }
+        ],
         "default": {
+          "title": "回程",
           "text": "船靠了岸。货卸了，钱收了，水还是那条水。",
           "note": "批注：逢双日，他在。"
         }
-      }
+      },
+      "locations": [
+        {
+          "id": "lz_ferry",
+          "name": "津戍浮桥",
+          "threat": 1,
+          "mark": "trade",
+          "aliases": [
+            "浮桥",
+            "津戍"
+          ],
+          "flavor": "守卒换班的空当，浮桥上什么都能过——人、货、话。",
+          "rooms": [
+            {
+              "id": "lz_f_bridge",
+              "name": "浮桥",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lz_f_pile",
+                  "name": "系缆桩下",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "parts",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "wood",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "lz_f_store",
+              "name": "货栈",
+              "door": "bars",
+              "containers": [
+                {
+                  "id": "lz_f_rice",
+                  "name": "官米垛",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "raw",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "canned",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "powder",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lz_manor",
+          "name": "空宅",
+          "threat": 2,
+          "mark": "story",
+          "aliases": [
+            "那家宅子",
+            "地窖宅"
+          ],
+          "flavor": "券局上家的产业之一。门没锁——没人敢进没人敢偷的宅子，不用锁。",
+          "rooms": [
+            {
+              "id": "lz_m_hall",
+              "name": "廊下",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lz_m_box",
+                  "name": "废箱",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "parts",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "book",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "wood",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "lz_m_cellar",
+              "name": "地窖",
+              "door": "locked",
+              "containers": [
+                {
+                  "id": "lz_m_slot",
+                  "name": "地窖暗格",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "jewel",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "brocade",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "book",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lz_reeds",
+          "name": "芦苇荡",
+          "threat": 1,
+          "mark": "food",
+          "aliases": [
+            "苇荡",
+            "芦苇"
+          ],
+          "flavor": "前朝沉船的浅滩。水鸟多，露水重，没人看得见你。",
+          "rooms": [
+            {
+              "id": "lz_r_wreck",
+              "name": "沉船",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lz_r_hull",
+                  "name": "船骸",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "parts",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "comp",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "water",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "lz_r_flat",
+              "name": "滩涂",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lz_r_trap",
+                  "name": "渔簖",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "veg",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "raw",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "duzhong",
       "title": "杜仲的医棚",
-      "blurb": "五天分诊：药只有一份，棚外两边都在等。",
+      "blurb": "五天分诊：药只有一份，棚外两边都在等，棚里还有一双眼睛在学。",
       "unlock": {
         "kind": "seal",
         "key": "seal_shelling_list"
@@ -321,42 +823,489 @@
       "unlockHint": "在主线里读到伤兵簿后解锁",
       "days": 5,
       "roster": [
-        "duzhong"
+        "duzhong",
+        "xiaoman"
       ],
+      "scene": {
+        "where": "建安二十四年冬，江陵城外降卒营边上的一间医棚：榻间、药庐、灶间。两边的人都被抬进来。",
+        "rules": "杜仲是医匠——这局她是主角，不是「医棚的药剂师摊位」。棚外是降卒营（魏卒）、羽军哨线和河滩，没有南市与橘里。夜里出门＝去营里、哨线、河滩找药与布。威胁是疫病、军吏的私嘱、两边的兵。药童小满在场，她在学的不只是方子。",
+        "opening": "药瓮见底了。棚外两边都在等。"
+      },
+      "home": {
+        "name": "杜仲的医棚",
+        "rooms": [
+          {
+            "id": "dz_ward",
+            "name": "榻间",
+            "door": "open",
+            "containers": [
+              {
+                "id": "dz_ward_chest",
+                "name": "榻下的箱",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "bandage",
+                    "count": [
+                      0,
+                      1
+                    ],
+                    "w": 1
+                  },
+                  {
+                    "item": "herb",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "dz_herbal",
+            "name": "药庐",
+            "door": "open",
+            "containers": [
+              {
+                "id": "dz_cabinet",
+                "name": "药柜抽屉",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "herb",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 3
+                  },
+                  {
+                    "item": "herbmed",
+                    "count": [
+                      0,
+                      1
+                    ],
+                    "w": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "dz_kitchen",
+            "name": "灶间",
+            "door": "open",
+            "containers": [
+              {
+                "id": "dz_jar",
+                "name": "米瓮",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "raw",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  },
+                  {
+                    "item": "water",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
       "setup": {
         "inventory": {
           "raw": 6,
           "canned": 2,
+          "veg": 2,
+          "water": 6,
           "meds": 1,
           "bandage": 1,
           "herbmed": 1,
-          "herb": 3
+          "herb": 4,
+          "firewood": 4,
+          "wood": 2,
+          "parts": 3
+        },
+        "facilities": {
+          "stove": 1,
+          "bed": 2,
+          "workbench": 1
+        },
+        "knownLocs": [
+          "dz_camp",
+          "dz_outpost",
+          "dz_bank"
+        ]
+      },
+      "intro": "你是杜仲。降卒营边上的医棚，榻上躺着两边的人。规矩是建安十三年立的：先来后到，不问军籍。药只有一份，排队的人有两边。药童小满会背半本《汤液》，另外半本在你脑子里——她也在看你怎么分。五天，每一份药都是一次分诊：分给别人，也分给自己。",
+      "fates": {
+        "fallen": "第{{day}}天，{{name}}的榻空出来，很快被下一个人躺满。",
+        "survived": "手到药就不抖了。这双手认路。",
+        "duzhong": {
+          "alive": "手还在抖。手到药就不抖了。"
+        },
+        "xiaoman": {
+          "alive": "她会背的那半本《汤液》，多了几方。"
         }
       },
-      "intro": "你是杜仲。降卒营边上的医棚，榻上躺着两边的人。规矩是建安十三年立的：先来后到，不问军籍。药只有一份，排队的人有两边。五天，每一份药都是一次分诊——分给别人，也分给自己。",
       "ending": {
         "title": "封棚",
         "variants": [
           {
-            "whenFlags": [
-              "dz_fair"
+            "title": "塌",
+            "wiped": true,
+            "text": "棚塌了，或者先塌的是人。第五天没有人开棚门。两边的伤兵在门外等到中午，自己把帘子掀了。规矩还贴在柜上：先来后到，不问军籍。",
+            "note": "批注：药不分制服，塌也不分。"
+          },
+          {
+            "title": "半本",
+            "whenDead": [
+              "xiaoman"
             ],
-            "text": "五天，棚里的规矩没有弯过。有人活着出去，两边都有。",
-            "note": "批注：药不分制服。"
+            "text": "第五天封棚。小满的榻空着。你把《汤液》的下半本放进了她的行李——再没有人背了。棚里的规矩还在，只是记账的人没了。",
+            "note": "批注：规矩的记账人走了，规矩就只是规矩。"
+          },
+          {
+            "title": "河上",
+            "whenFlags": [
+              "dz_dead_cloth"
+            ],
+            "text": "五天，规矩没有弯。布是从死人身上来的，煮了两遍才敢用。规矩管得了先后，管不了布的来处。夜里你把簿子翻过来，在背面写了两个字：河上。",
+            "note": "批注：她什么都知道。"
+          },
+          {
+            "title": "弯",
+            "whenFlagsGte": {
+              "flags": [
+                "dz_bent_1",
+                "dz_bent_2",
+                "dz_bent_3",
+                "dz_bent_3b",
+                "dz_bent_4"
+              ],
+              "gte": 3
+            },
+            "text": "规矩没能在你手里撑过这五天。你把那页簿子翻过来，背面写了四个字：先来后到。写完又划掉了。棚还立着，明天还有人来——你会先看军籍，再看伤。你恨这个顺序，但你会这么看。",
+            "note": "批注：划掉的字比写下的诚实。"
+          },
+          {
+            "title": "弯过",
+            "whenFlagsGte": {
+              "flags": [
+                "dz_bent_1",
+                "dz_bent_2",
+                "dz_bent_3",
+                "dz_bent_3b",
+                "dz_bent_4"
+              ],
+              "gte": 1
+            },
+            "text": "规矩弯过。一次，或者两次——你记得清是哪几次。你夜里把那页簿子翻过来，没有记。小满什么都知道，这就够了。",
+            "note": "批注：她什么都知道。"
+          },
+          {
+            "title": "分棚",
+            "whenFlags": [
+              "dz_called_help"
+            ],
+            "text": "五天，规矩没有弯过。棚却不再只是你的了：羽军的医佐住进了药庐，降卒营的三个人管着灶。开春的时候，这里有了一个新名字——「两营医所」。你的名字没在匾上。有人活着出去，两边都有。",
+            "note": "批注：规矩活下来了，名字没有。"
+          }
+        ],
+        "tails": [
+          {
+            "whenFlags": [
+              "dz_split_1"
+            ],
+            "text": "第一夜那两个掰了半剂的人，一个活了，一个没活。你从此不再掰药。"
           },
           {
             "whenFlags": [
-              "dz_bent"
+              "dz_took_open"
             ],
-            "text": "规矩弯了一次。就一次。她夜里把那页簿子翻过来，没有记。",
-            "note": "批注：她什么都知道。"
+            "text": "那个军吏再没来过。药柜里多出来的那一层，是他的钱买的——你没记他的名字，账记在「棚」下面。"
+          },
+          {
+            "whenFlags": [
+              "dz_child_saved"
+            ],
+            "text": "容儿后来每天来棚口放一块饴。小满攒了一袋，一块没吃。"
+          },
+          {
+            "whenFlags": [
+              "dz_taught_recipe"
+            ],
+            "text": "小满会背的那一方，后来在棚里传了三年。背错的地方也一起传下去了。"
+          },
+          {
+            "whenFlags": [
+              "dz_rested_5"
+            ],
+            "text": "门外那碗粥，你没问是哪边放的。两边都说不是自己。"
           }
         ],
         "default": {
-          "text": "棚子还立着。明天还有人来。",
-          "note": "批注：先来后到。"
+          "title": "封棚",
+          "text": "五天，棚里的规矩没有弯过。有人活着出去，两边都有。",
+          "note": "批注：药不分制服。"
         }
-      }
+      },
+      "locations": [
+        {
+          "id": "dz_camp",
+          "name": "降卒营",
+          "threat": 2,
+          "mark": "med",
+          "aliases": [
+            "降卒营的壕沟"
+          ],
+          "flavor": "江边降卒营的壕沟与帐群。魏卒。他们也在等药，等得比谁都安静。",
+          "rooms": [
+            {
+              "id": "dz_c_ditch",
+              "name": "壕沟",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "dz_c_bag",
+                  "name": "弃置的行囊",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "bandage",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "raw",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "parts",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "dz_c_tent",
+              "name": "药帐",
+              "door": "bars",
+              "containers": [
+                {
+                  "id": "dz_c_chest",
+                  "name": "军医的箱",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "herb",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "herbmed",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "bandage",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dz_outpost",
+          "name": "羽军哨线",
+          "threat": 2,
+          "mark": "danger",
+          "aliases": [
+            "哨线"
+          ],
+          "flavor": "围城军的哨线。柴市就在哨棚后面——他们缺布，不缺米。",
+          "rooms": [
+            {
+              "id": "dz_o_post",
+              "name": "哨棚",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "dz_o_wood",
+                  "name": "柴堆",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "firewood",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "canned",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "dz_o_kitchen",
+              "name": "伙房",
+              "door": "locked",
+              "containers": [
+                {
+                  "id": "dz_o_rice",
+                  "name": "米瓮",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "raw",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "veg",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "dz_bank",
+          "name": "河滩",
+          "threat": 1,
+          "mark": "story",
+          "aliases": [
+            "滩"
+          ],
+          "flavor": "水把人送回来，不问军籍。",
+          "rooms": [
+            {
+              "id": "dz_b_reed",
+              "name": "芦滩",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "dz_b_wood",
+                  "name": "漂木",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "wood",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "water",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "dz_b_shore",
+              "name": "浮岸",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "dz_b_belt",
+                  "name": "水送回来的",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "bandage",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "comp",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "book",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "subo",
@@ -369,26 +1318,186 @@
       "unlockHint": "在主线里走完白翎线后解锁",
       "days": 3,
       "roster": [
-        "subo"
+        "subo",
+        "chenliu"
       ],
+      "scene": {
+        "where": "建安二十四年冬，江防第三台——一座更楼、一面鼓、一壶箭。素伯是鼓手，陈六是射手。三夜。",
+        "rules": "「白翎」不是人名，是第三台信号位的名号——打鼓的、放箭的，都叫白翎。这局没有江陵城里的生活，只有更楼、江堤和渡口背滩。威胁是买更籍的人、军正、巡哨。素徽（妹妹）不出场，只在心里和鼓谱里。",
+        "opening": "更楼的灯没点。有人在灯下等。"
+      },
+      "home": {
+        "name": "第三台的更楼",
+        "rooms": [
+          {
+            "id": "sb_tower",
+            "name": "更楼",
+            "door": "open",
+            "containers": [
+              {
+                "id": "sb_drum_case",
+                "name": "鼓架下",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "book",
+                    "count": [
+                      0,
+                      1
+                    ],
+                    "w": 1
+                  },
+                  {
+                    "item": "parts",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "sb_bunk",
+            "name": "铺位",
+            "door": "open",
+            "containers": [
+              {
+                "id": "sb_bunk_bag",
+                "name": "铺下的袋",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "raw",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  },
+                  {
+                    "item": "firewood",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
       "setup": {
         "inventory": {
           "raw": 4,
-          "canned": 1
+          "canned": 1,
+          "water": 4,
+          "firewood": 3,
+          "parts": 2
+        },
+        "facilities": {
+          "stove": 1,
+          "bed": 2
+        },
+        "knownLocs": [
+          "sb_shore",
+          "sb_levee"
+        ]
+      },
+      "intro": "你是素伯，江防第三台的鼓手。征书上是你妹妹的名字——你替她来了。「白翎」不是人名，是这座台的名号：打鼓的、放箭的，都叫白翎。射手陈六跟你的拍子放了三年箭。三个月前，有人来买你知道的东西。三夜：守住台，守住调子，守住妹妹不知道你知道的事。她叫素徽——这个名字你谁也没告诉。",
+      "fates": {
+        "fallen": "第{{day}}夜，{{name}}没有回到更楼。鼓在架上凉了。",
+        "survived": "还打着拍子。",
+        "subo": {
+          "alive": "还打着拍子。第四小节前，还是偷那半口气。"
+        },
+        "chenliu": {
+          "alive": "他的箭还认那面鼓。"
         }
       },
-      "intro": "你是素伯，江边第三台的鼓手。征书上是你妹妹的名字——你替她来了。三个月前，有人来买你知道的东西。三夜：守住台，守住调子，守住妹妹不知道你知道的事。她叫素徽——这个名字你谁也没告诉。",
       "ending": {
         "title": "最后一更",
         "variants": [
           {
+            "title": "停",
+            "wiped": true,
+            "text": "第三台的鼓停了三天，才有人来换。换的人不会那半口气。江对面有人等了很久的那一声，没有再响。",
+            "note": "批注：鼓谱随他们下了葬——两个人的坟，一面鼓。"
+          },
+          {
+            "title": "脱拍",
+            "whenDead": [
+              "chenliu"
+            ],
+            "text": "陈六没有回到更楼。你一个人打完了最后一更——鼓响着，没有箭跟。第四小节前那半口气，你照样偷了。偷给谁听，你不知道。",
+            "note": "批注：鼓不乱，台就不乱。台上少了一个人，鼓也不乱。"
+          },
+          {
+            "title": "第二任",
             "whenFlags": [
-              "sb_sold"
+              "sb_frame_chen"
+            ],
+            "text": "陈六顶了。他的箭从此换了别人的拍子——不，是别人的箭换了没有拍子的鼓。第二年冬天，第三台换了第三任白翎。素徽等的那个换气，从此谁也给不了。你活着。你每天打鼓，每天在第四小节前偷半口气，没有人跟。",
+            "note": "批注：鼓还响，箭还准。只是没有人知道少了什么。"
+          },
+          {
+            "title": "阵殁",
+            "whenFlags": [
+              "sb_sold",
+              "sb_bear"
             ],
             "text": "你顶了全部的罪。「阵殁」两个字写得很好看。同一天，教坊的册子上，一个名字被划掉了。",
             "note": "批注：她至今不知道是谁办的。"
           },
           {
+            "title": "影子",
+            "whenFlags": [
+              "sb_sold",
+              "sb_tell"
+            ],
+            "text": "军正的笔停了很久。你说的那个名字，他查了一夜，没查到——灯下的人不在任何名册上。军法要一个名字，最后拿走了你的。「阵殁」写得很慢。教坊的册子上那个名字，也划掉了：事办到一半，有人替灯下的人办完了。",
+            "note": "批注：他供出的是一个影子。影子不偿命，偿命的是报影子的人。"
+          },
+          {
+            "title": "答应也是罪",
+            "whenFlags": [
+              "sb_stall",
+              "sb_bear"
+            ],
+            "text": "你说：答应了，没给。军正写「阵殁」的时候没有慢——答应和给，军法里是同一个字。教坊的册子上，妹妹的名字还在，等着被另一个人卖掉。",
+            "note": "批注：拖的三日，拖不过一个字。"
+          },
+          {
+            "title": "灰",
+            "whenFlags": [
+              "sb_caught"
+            ],
+            "text": "烧得不干净的纸条定了罪。「阵殁」两个字，军正写得很慢。你没卖——没人信。教坊的册子纹丝不动，妹妹的名字还在上面，等着被另一个人卖掉。",
+            "note": "批注：野史不收这一种。它发生过。"
+          },
+          {
+            "title": "三日",
+            "whenFlags": [
+              "sb_got_away"
+            ],
+            "text": "你拖的那三日救了你。灯下的人在渡石被截，招了你，没有证据。军正走了。你照旧打鼓。妹妹的乐籍还在册子上——你没卖，她就没出来。这是你每天在第四小节前想的事。",
+            "note": "批注：活着的人才有账。"
+          },
+          {
+            "title": "没了",
+            "whenFlags": [
+              "sb_refused",
+              "sb_score_lost"
+            ],
+            "text": "你没卖。谱没了。军正不认得那是什么，烧了。妹妹回家的路标，你从此只在心里敲。三个月后你死在一次真正的巡哨里，和别人没有任何不同。",
+            "note": "批注：野史不收这一种——但它发生过。"
+          },
+          {
+            "title": "真正的巡哨",
             "whenFlags": [
               "sb_refused"
             ],
@@ -396,11 +1505,203 @@
             "note": "批注：野史不收这一种——但它发生过。"
           }
         ],
+        "tails": [
+          {
+            "whenFlags": [
+              "sb_taught"
+            ],
+            "whenNotFlags": [
+              "sb_frame_chen"
+            ],
+            "text": "陈六接过了那半口气。后来第三台换了几任射手，第四小节前都慢那么一点——没人知道为什么，只知道该这样。江对面有人听见了。"
+          },
+          {
+            "whenFlags": [
+              "sb_told_chen"
+            ],
+            "text": "陈六知道了那个名字。他没对任何人说过——放箭的人嘴严。"
+          },
+          {
+            "whenFlags": [
+              "sb_score_open"
+            ],
+            "text": "那本谱后来一直在鼓架下。人人都会敲，没人敲对过那半口气。"
+          },
+          {
+            "whenFlags": [
+              "sb_gave"
+            ],
+            "text": "旧垒里那一份抄本，开春被水泡了。字糊了，换气记号还在。"
+          }
+        ],
         "default": {
+          "title": "最后一更",
           "text": "鼓声按拍子走完了最后一更。",
           "note": "批注：第四小节前，他偷了半口气。"
         }
-      }
+      },
+      "locations": [
+        {
+          "id": "sb_shore",
+          "name": "渡口背滩",
+          "threat": 1,
+          "mark": "food",
+          "aliases": [
+            "背滩"
+          ],
+          "flavor": "渡口背面的滩涂。夜里有人过水——桨裹着布，一点声音没有。",
+          "rooms": [
+            {
+              "id": "sb_s_reed",
+              "name": "芦滩",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "sb_s_creel",
+                  "name": "渔人的篓",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "raw",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "veg",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "water",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "sb_s_stone",
+              "name": "渡石",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "sb_s_gap",
+                  "name": "石缝",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "parts",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "comp",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sb_levee",
+          "name": "江堤",
+          "threat": 2,
+          "mark": "danger",
+          "aliases": [
+            "堤"
+          ],
+          "flavor": "堤上官道，巡哨走这条。柳林里有埋过的东西——不是兵器的，是家里的。",
+          "rooms": [
+            {
+              "id": "sb_l_gate",
+              "name": "堤口",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "sb_l_wood",
+                  "name": "哨棚柴堆",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "firewood",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "canned",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "sb_l_willow",
+              "name": "柳林",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "sb_l_jar",
+                  "name": "埋过的坛",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "moonshine",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "book",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "jewel",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "fancheng",
@@ -416,27 +1717,447 @@
         "fuyi2",
         "fuyi3"
       ],
-      "setup": {
-        "inventory": {
-          "raw": 5,
-          "canned": 1,
-          "firewood": 2
-        },
-        "winter": true,
-        "knownLocs": [
-          "market",
-          "church"
+      "scene": {
+        "where": "建安二十四年秋，樊城——曹仁的樊城，被汉水围住。你们是修城墙的役夫，住在城墙上的窝棚里。围城的是关羽的军队，你们头顶的洪水是他的杰作。",
+        "rules": "这是敌方的城：没有江陵、没有羽军的朋友、没有船牙。能去的只有城头、没水的半条街、军棚。满宠将军只在远处走过，不说话。威胁是水、饿、疫病、戍长的征发。役夫说话粗、短、实。",
+        "opening": "汉水漫上来了。城头在数板。"
+      },
+      "home": {
+        "name": "城墙上的窝棚",
+        "rooms": [
+          {
+            "id": "fc_shed",
+            "name": "窝棚",
+            "door": "open",
+            "containers": [
+              {
+                "id": "fc_shed_sacks",
+                "name": "麻袋",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "raw",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  },
+                  {
+                    "item": "firewood",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "fc_wallfoot",
+            "name": "垛口下",
+            "door": "open",
+            "containers": [
+              {
+                "id": "fc_wall_pile",
+                "name": "修墙的料堆",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "wood",
+                    "count": [
+                      2,
+                      3
+                    ],
+                    "w": 3
+                  },
+                  {
+                    "item": "parts",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  }
+                ]
+              }
+            ]
+          }
         ]
       },
-      "intro": "建安二十四年秋，樊城。汉水漫上来了，你们的将军在围城里，围城的军队在水里。你们是三个役夫——修城墙的人，现在城墙挡的是水。十天。水一板一板地涨，墙一板一板地数。修墙的人只有一个盼头：水退之前，人还在。",
+      "setup": {
+        "inventory": {
+          "raw": 10,
+          "canned": 4,
+          "veg": 4,
+          "water": 8,
+          "firewood": 6,
+          "wood": 6,
+          "parts": 6,
+          "bandage": 1
+        },
+        "facilities": {
+          "stove": 1,
+          "bed": 3
+        },
+        "knownLocs": [
+          "fc_wall",
+          "fc_street",
+          "fc_barracks"
+        ]
+      },
+      "intro": "建安二十四年秋，樊城。汉水漫上来了，你们的将军在围城里，围城的军队在水里。你们是三个役夫——老卒、小子和、哑婶——修城墙的人，现在城墙挡的是水。十天。水一板一板地涨，墙一板一板地数。修墙的人只有一个盼头：水退之前，人还在。",
+      "fates": {
+        "fallen": "第{{day}}天，{{name}}从板上下去了。城还在数。",
+        "survived": "还在板上。",
+        "fuyi1": {
+          "alive": "板还剩几块，人就还在。"
+        },
+        "fuyi2": {
+          "alive": "他学会了数板。"
+        },
+        "fuyi3": {
+          "alive": "灶没熄。"
+        }
+      },
       "ending": {
         "title": "数板",
-        "variants": [],
+        "variants": [
+          {
+            "title": "板不数人",
+            "wiped": true,
+            "text": "城没有没。人没了。史书写：「宠以计守樊。」不写板。垛口上那几道刻痕后来也没人认得——水退尽的时候，有人把它们当成了裂缝。",
+            "note": "批注：城不没者数板。数板的人，没人数。"
+          },
+          {
+            "title": "数到七",
+            "whenDead": [
+              "fuyi2"
+            ],
+            "text": "城没有没。第十天，水退了一寸。老卒数板数到第九块，停了很久——第十块是小和子数的，他数到七。哑婶把最后一个饼放在板上，没人吃。",
+            "note": "批注：城不没者数板。数板的人，板不数。"
+          },
+          {
+            "title": "灶",
+            "whenDead": [
+              "fuyi3"
+            ],
+            "text": "城没有没。第十天，水退了一寸。哑婶的灶熄了。最后几天的饼是小和子做的，一边做一边「额额」地叫——她教的那两个音。饼做得不圆。没人说。",
+            "note": "批注：用一口热饭对抗非人化的人，自己先没了饭。"
+          },
+          {
+            "title": "板是他数的",
+            "whenDead": [
+              "fuyi1"
+            ],
+            "text": "城没有没。第十天，水退了一寸。老卒没能数到第十天。板是小和子数的——从第八天起就是。他数得很慢，一块一块，像老卒教的那样。",
+            "note": "批注：数板的人换了，板没换。"
+          },
+          {
+            "title": "册子外",
+            "whenFlags": [
+              "fc_hidden"
+            ],
+            "text": "城没有没。第十天，水退了一寸。你们还在板上——册子上没有你们的名字。戍长发口粮的时候跳过了你们那棚，发赏的时候也跳过了。你们没运土，没领粮，没立功。你们活着。",
+            "note": "批注：史书只写城，不写板；册子只写报了名的，不写活着的。"
+          }
+        ],
+        "tails": [
+          {
+            "whenFlags": [
+              "fc_carved"
+            ],
+            "text": "垛口上多了十道刻痕，一道一天。后来水退尽了，刻痕留了下来——没有人知道是什么，除了你们。"
+          },
+          {
+            "whenFlags": [
+              "fc_rescued"
+            ],
+            "text": "筏子上救起来的人里有三个留在了樊城。开春他们编了第一批渔筏。"
+          },
+          {
+            "whenFlags": [
+              "fc_turned"
+            ],
+            "text": "那面筏子顺水漂下去了，往下水去。没有人再看它一眼，除了小和子——他看了三天。"
+          },
+          {
+            "whenFlags": [
+              "fc_reported"
+            ],
+            "text": "戍长带走的那四个人，后来没有人提起。小和子问过一次，老卒说：别问。"
+          },
+          {
+            "whenFlags": [
+              "fc_handed"
+            ],
+            "text": "小和子后来学会了数板。再后来学会了修墙。他修的墙，板数得很准。"
+          },
+          {
+            "whenFlags": [
+              "fc_hoarded"
+            ],
+            "text": "麻袋里那六个饼，吃到第四个的时候哑婶把剩下的两个推给了垛口上的戍卒。她没解释。她从不解释。"
+          },
+          {
+            "whenFlags": [
+              "fc_shared"
+            ],
+            "text": "那个得了三个饼的戍卒，水退之后来找过你们一次。手里什么都没拿，就是来看看人在不在。"
+          }
+        ],
         "default": {
+          "title": "数板",
           "text": "城没有没。第十天，水退了一寸。你们还在板上。",
           "note": "批注：城不没者数板——史书只写城，不写板。这里写板。"
         }
-      }
+      },
+      "locations": [
+        {
+          "id": "fc_wall",
+          "name": "城头",
+          "threat": 1,
+          "mark": "story",
+          "aliases": [
+            "垛口",
+            "城墙"
+          ],
+          "flavor": "你们修的墙。水一寸一寸啃它，你们一板一板数它。",
+          "rooms": [
+            {
+              "id": "fc_w_battlement",
+              "name": "垛口",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "fc_w_mat",
+                  "name": "修城的料",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "wood",
+                      "count": [
+                        2,
+                        4
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "parts",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "fc_w_shrine",
+              "name": "城隍庙檐下",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "fc_w_altar",
+                  "name": "供桌",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "canned",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "book",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "firewood",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fc_street",
+          "name": "没水的半条街",
+          "threat": 1,
+          "mark": "food",
+          "aliases": [
+            "半条街",
+            "街"
+          ],
+          "flavor": "下半截在水里，上半截还有人。水线一天降一指，铺面一天露一间。",
+          "rooms": [
+            {
+              "id": "fc_s_shop",
+              "name": "水线铺面",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "fc_s_rice",
+                  "name": "泡过的米缸",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "raw",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "veg",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "fc_s_attic",
+              "name": "阁楼",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "fc_s_bundle",
+                  "name": "留下的包袱",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "canned",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "bandage",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "brocade",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fc_barracks",
+          "name": "军棚",
+          "threat": 2,
+          "mark": "danger",
+          "aliases": [
+            "军棚"
+          ],
+          "flavor": "守军的棚子。沉马之后，军心跟水线一起晃。",
+          "rooms": [
+            {
+              "id": "fc_b_stove",
+              "name": "灶棚",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "fc_b_pot",
+                  "name": "军灶",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "raw",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "meat",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "fc_b_rack",
+              "name": "械架",
+              "door": "bars",
+              "containers": [
+                {
+                  "id": "fc_b_pile",
+                  "name": "器械堆",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "comp",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "powder",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "bandage",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "liaohua",
@@ -452,27 +2173,431 @@
         "liaohua",
         "laomu"
       ],
-      "setup": {
-        "inventory": {
-          "raw": 4,
-          "canned": 1,
-          "water": 4
-        },
-        "knownLocs": [
-          "frontline",
-          "post",
-          "villas"
+      "scene": {
+        "where": "建安二十四年末，从江陵往西走的路——官道、坟地、荒村、山道，昼伏夜行。廖化背着母亲。",
+        "rules": "这局没有房子：「家」是当夜的歇处（坟地、空宅、石陉）。夜里出门＝趁夜赶路或翻荒村找吃的。威胁是追兵的火、吴兵的哨卡、饿、母亲的身子。母亲说话少而准，廖化话更少。不出现江陵的地名人名。",
+        "opening": "你诈死，背起母亲，往西。"
+      },
+      "home": {
+        "name": "路上的歇处",
+        "rooms": [
+          {
+            "id": "lh_camp",
+            "name": "歇处",
+            "door": "open",
+            "containers": [
+              {
+                "id": "lh_pack",
+                "name": "行囊",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "water",
+                    "count": [
+                      1,
+                      2
+                    ],
+                    "w": 2
+                  },
+                  {
+                    "item": "raw",
+                    "count": [
+                      0,
+                      1
+                    ],
+                    "w": 1
+                  }
+                ]
+              }
+            ]
+          }
         ]
       },
-      "intro": "城开那天你成了该死的人。你诈死，背起母亲，往西走。昼伏夜行。正史只记你「卒归先主」四个字——这十天是四个字里面的。十天昼伏夜行。正史只记你「卒归先主」四个字——你要活着把母亲背进那四个字里。",
+      "setup": {
+        "inventory": {
+          "raw": 7,
+          "canned": 3,
+          "water": 8,
+          "bandage": 1,
+          "herb": 2,
+          "firewood": 3,
+          "parts": 2
+        },
+        "facilities": {
+          "stove": 1,
+          "bed": 2
+        },
+        "knownLocs": [
+          "lh_road",
+          "lh_village",
+          "lh_pass"
+        ]
+      },
+      "intro": "城开那天你成了该死的人。你诈死，背起母亲，往西走。昼伏夜行。正史只记你「卒归先主」四个字——这十天是四个字里面的。你要活着把母亲背进那四个字里。",
+      "fates": {
+        "fallen": "第{{day}}天，{{name}}留在了路上。往西的方向没有变。",
+        "survived": "到了。就是到了。",
+        "laomu": {
+          "alive": "走得慢，走得稳。"
+        },
+        "liaohua": {
+          "alive": "后来他在汉中见了故主。没人问这十天——他自己记得。"
+        }
+      },
       "ending": {
         "title": "西还",
-        "variants": [],
+        "variants": [
+          {
+            "title": "四个字",
+            "wiped": true,
+            "text": "官道上少了两行脚印。正史那四个字——「卒归先主」——换了别人写，或者没人写。",
+            "note": "批注：「卒归先主」的「卒」字里，没有装下所有人。"
+          },
+          {
+            "title": "差一天",
+            "whenDead": [
+              "laomu"
+            ],
+            "whenAlive": [
+              "liaohua"
+            ],
+            "text": "第十天，山道转过去，是汉中的方向。你把母亲背进了那四个字里——背进去的只有她的名字。你在山口把她葬了，坟头朝东，朝着来的方向。她自己说的：走得慢，走得稳，不急。你一个人往西走。走得很快。",
+            "note": "批注：化诈死，携母西行——史书没写母亲到没到。这里写：差一天。"
+          },
+          {
+            "title": "我儿子在前头",
+            "whenDead": [
+              "liaohua"
+            ],
+            "whenAlive": [
+              "laomu"
+            ],
+            "text": "第十天，山道上走来一个老太太。不快，也不停。有人问她，她说：我儿子在前头。她一直往西走。没有人知道她是谁，也没有人知道她身后那四个字。",
+            "note": "批注：母亲的脚比史书长。"
+          },
+          {
+            "title": "背",
+            "whenAnyFlags": [
+              "lh_mother_hurt",
+              "lh_mother_fell"
+            ],
+            "text": "第十天，山道转过去，是汉中的方向。母亲在你背上——后一半的路，她全在你背上。她自己走的只有出城那三里。她说：「我走得动。」你说：我知道。你没放她下来。",
+            "note": "批注：化诈死，携母西行，昼夜不止。「携」字写得太轻。"
+          },
+          {
+            "title": "各走各的",
+            "whenFlags": [
+              "lh_left_them"
+            ],
+            "text": "第十天，山道转过去，是汉中的方向。母亲在你背上睁着眼。她问过你一次那家人去哪了，你说先走了。她没再问。她知道你撒了谎，也知道你为什么撒。「化儿。」她说。就这两个字。",
+            "note": "批注：卒归先主。归的不止一个人，没归的也不止一个人。"
+          }
+        ],
+        "tails": [
+          {
+            "whenFlags": [
+              "lh_honest_route"
+            ],
+            "text": "你一直没认得路，认得的只是方向。到了之后你才知道：这十天你走的是一条没人走过的路。"
+          },
+          {
+            "whenFlags": [
+              "lh_listened"
+            ],
+            "text": "她说的那些事，你后来一件一件想起来。想起一件记一件，记了半辈子。"
+          },
+          {
+            "whenFlags": [
+              "lh_hurried"
+            ],
+            "text": "她在石陉里没说完的那些话，你后来再没机会听。你一直想知道，你三岁那年她还哭了什么。"
+          },
+          {
+            "whenFlags": [
+              "lh_together"
+            ],
+            "whenNotFlags": [
+              "lh_left_them",
+              "lh_exposed"
+            ],
+            "text": "同路的那家人也到了。那个小的后来叫你叔。"
+          },
+          {
+            "whenFlags": [
+              "lh_exposed"
+            ],
+            "text": "分头跑进林子的那家人，你没再见过。母亲问过一次。你说：先到了。"
+          },
+          {
+            "whenFlags": [
+              "lh_beaten"
+            ],
+            "text": "腰上那道杖痕，阴天先知道。"
+          },
+          {
+            "whenFlags": [
+              "lh_met_deserter"
+            ],
+            "text": "坟地里那个溃兵，后来也到了汉中。他认出了你。你们谁都没提那一夜。"
+          },
+          {
+            "whenFlags": [
+              "lh_warned"
+            ],
+            "text": "那包盐，你们吃到了汉中。"
+          }
+        ],
         "default": {
+          "title": "西还",
           "text": "第十天，山道转过去，是汉中的方向。母亲在你背上睡着了。",
           "note": "批注：化诈死，携母西行，昼夜不止，卒归先主。"
         }
-      }
+      },
+      "locations": [
+        {
+          "id": "lh_road",
+          "name": "官道",
+          "threat": 2,
+          "mark": "danger",
+          "aliases": [
+            "官道",
+            "大路"
+          ],
+          "flavor": "白天躲、夜里走的路。月亮大的夜里，车辙看得清清楚楚——追你的人也看得清。",
+          "rooms": [
+            {
+              "id": "lh_r_pavilion",
+              "name": "路亭",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lh_r_box",
+                  "name": "亭下",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "water",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "raw",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "firewood",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "lh_r_grave",
+              "name": "坟地",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lh_r_edge",
+                  "name": "新坟边",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "canned",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "book",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "jewel",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lh_village",
+          "name": "塌了半边的里",
+          "threat": 1,
+          "mark": "food",
+          "aliases": [
+            "荒村",
+            "空宅"
+          ],
+          "flavor": "人都走空了的里。灶是冷的，井是活的。",
+          "rooms": [
+            {
+              "id": "lh_v_house",
+              "name": "空宅",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lh_v_stove",
+                  "name": "冷灶",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "raw",
+                      "count": [
+                        1,
+                        3
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "veg",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "firewood",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "lh_v_well",
+              "name": "井台",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lh_v_well",
+                  "name": "井",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "water",
+                      "count": [
+                        2,
+                        4
+                      ],
+                      "w": 3
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lh_pass",
+          "name": "山道",
+          "threat": 2,
+          "mark": "story",
+          "aliases": [
+            "山道",
+            "山径"
+          ],
+          "flavor": "向西的山径。岔口的哨卡是绕不过去的题。",
+          "rooms": [
+            {
+              "id": "lh_p_fork",
+              "name": "岔口",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lh_p_offering",
+                  "name": "路祭",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "canned",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "moonshine",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "lh_p_gorge",
+              "name": "石陉",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "lh_p_hut",
+                  "name": "猎户的窝",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "meat",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "herb",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "bandage",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "changban",
@@ -488,25 +2613,398 @@
         "weng1",
         "weng2"
       ],
-      "setup": {
-        "inventory": {
-          "raw": 4,
-          "water": 3
-        },
-        "knownLocs": [
-          "frontline",
-          "villas"
+      "scene": {
+        "where": "建安二十四年，当阳长坂——十一年前（建安十三年）大军溃过的旧战场。大瓮和小瓮是拾荒者，住坡下的窝棚，翻检旧战场。",
+        "rules": "这局是纯人性小品：没有围城、没有江陵、没有商人。能去的只有溃军道、箭镞坡、枯井。威胁是野犬、同行、过兵、井。大瓮话少，小瓮爱问。「骨头只是骨头」是这局的母题——不要给骸骨编真相，也不要替师父解开他的笛声。",
+        "opening": "土一翻就见箭镞。"
+      },
+      "home": {
+        "name": "坡下的窝棚",
+        "rooms": [
+          {
+            "id": "cb_hut",
+            "name": "窝棚",
+            "door": "open",
+            "containers": [
+              {
+                "id": "cb_sort_mat",
+                "name": "分拣席",
+                "type": "open",
+                "loot": [
+                  {
+                    "item": "parts",
+                    "count": [
+                      1,
+                      3
+                    ],
+                    "w": 3
+                  },
+                  {
+                    "item": "comp",
+                    "count": [
+                      0,
+                      1
+                    ],
+                    "w": 1
+                  }
+                ]
+              }
+            ]
+          }
         ]
       },
-      "intro": "当阳，长坂。十一年前这里溃过一次大军。你们是拾荒者——翻检旧战场的人。野犬、溃兵、和埋得很浅的从前。五天。翻检旧战场的人有一条铁律：骨头只是骨头——直到你认出其中一具的鞋。",
+      "setup": {
+        "inventory": {
+          "raw": 5,
+          "canned": 2,
+          "water": 5,
+          "firewood": 3,
+          "parts": 4,
+          "comp": 2,
+          "shovel": 1
+        },
+        "facilities": {
+          "stove": 1,
+          "bed": 2
+        },
+        "knownLocs": [
+          "cb_field",
+          "cb_mound",
+          "cb_well"
+        ]
+      },
+      "intro": "当阳，长坂。十一年前这里溃过一次大军。你们是拾荒者——大瓮和他的徒弟小瓮——翻检旧战场的人。野犬、溃兵、同行，和埋得很浅的从前。五天。翻检旧战场的人有一条铁律：骨头只是骨头——直到你认出其中一具的鞋。",
+      "fates": {
+        "fallen": "第{{day}}天，{{name}}留在了他翻了很多年的土里。",
+        "survived": "骨头不咬人。",
+        "weng1": {
+          "alive": "骨头不咬人。他还这么说。"
+        },
+        "weng2": {
+          "alive": "他不怕野犬了。怕的是别的。"
+        }
+      },
       "ending": {
         "title": "拾遗",
-        "variants": [],
+        "variants": [
+          {
+            "title": "分拣席",
+            "wiped": true,
+            "text": "没有人来收他们的摊。风把分拣席上的东西又盖了一层土。十一年后，有人翻到两具挨着的骸骨，一把铲子。有些骨头只是骨头。",
+            "note": "批注：翻检骨头的人，自己也成了骨头。没有谁翻他们。"
+          },
+          {
+            "title": "鞋",
+            "whenDead": [
+              "weng2"
+            ],
+            "text": "第五天，大瓮一个人收的摊。他把小瓮的鞋摆回窝棚门口——旧战场的规矩：骨头只是骨头。这条规矩头一回咬了立规矩的人。他埋了那具抱琴的，埋了小瓮，一个坑挨着一个坑。走的时候没回头。",
+            "note": "批注：有些骨头只是骨头。有些不是。他分得清，这是他的病。"
+          },
+          {
+            "title": "徒弟",
+            "whenDead": [
+              "weng1"
+            ],
+            "text": "第五天，小瓮一个人收的摊。师父的铲子他拿不动，拖着。抱琴的那具他埋了——照师父说的，埋回去。师父的那具也埋了。他不知道师父十一年前的笛声是为谁吹的。他现在知道自己的是为谁了。",
+            "note": "批注：学翻检的人，先学会了埋。"
+          },
+          {
+            "title": "琴板",
+            "whenFlags": [
+              "cb_took_qin"
+            ],
+            "text": "第五天，你们把一具骸骨埋回了土里——琴不在。琴板拆在背篓里，开春换了两升米。米吃完了。琴声的账没人收。",
+            "note": "批注：有些骨头只是骨头。有些不是，但也卖了。"
+          },
+          {
+            "title": "针脚",
+            "whenFlags": [
+              "cb_shoe"
+            ],
+            "text": "第五天，你们把一具抱着琴的骸骨埋回了土里。它下面什么都没有——没有暗格，没有真相。只有一双北边针脚的鞋，埋得比琴深。十一年，够一个人走成一堆白骨，也够另一个人学会不去问。",
+            "note": "批注：有些骨头只是骨头。认出它的鞋的人，不这么想。"
+          }
+        ],
+        "tails": [
+          {
+            "whenFlags": [
+              "cb_well_covered"
+            ],
+            "text": "那口井后来一直盖着。有人掀过一回，又盖上了。"
+          },
+          {
+            "whenFlags": [
+              "cb_well_loot"
+            ],
+            "text": "井底那对耳坠，大瓮没卖。他说等有人来认。没人来。"
+          },
+          {
+            "whenFlags": [
+              "cb_asked_flute"
+            ],
+            "text": "小瓮后来也没再问。有些账，师父自己都没对完。"
+          },
+          {
+            "whenFlags": [
+              "cb_listened_flute"
+            ],
+            "text": "那三声笛，小瓮记了一辈子。后来他也学会了吹，不成调。"
+          },
+          {
+            "whenFlags": [
+              "cb_rule_value"
+            ],
+            "text": "小瓮学会了看斤两。他看什么都是斤两，很多年。"
+          },
+          {
+            "whenFlags": [
+              "cb_left_arrows"
+            ],
+            "text": "坡上的箭镞还在土里。同一家铸的，今年还在铸。"
+          }
+        ],
         "default": {
+          "title": "拾遗",
           "text": "第五天，你们把一具抱着琴的骸骨埋回了土里。它下面什么都没有——没有暗格，没有真相。",
           "note": "批注：有些骨头只是骨头。"
         }
-      }
+      },
+      "locations": [
+        {
+          "id": "cb_field",
+          "name": "溃军道",
+          "threat": 1,
+          "mark": "story",
+          "aliases": [
+            "溃道"
+          ],
+          "flavor": "十一年前，八千人在这条道上跑。现在土一翻就见箭镞。",
+          "rooms": [
+            {
+              "id": "cb_f_road",
+              "name": "溃道",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "cb_f_top",
+                  "name": "浅土",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "parts",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "comp",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "book",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "cb_f_ditch",
+              "name": "壕沟",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "cb_f_mud",
+                  "name": "沟底",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "comp",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "jewel",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cb_mound",
+          "name": "箭镞坡",
+          "threat": 1,
+          "mark": "treasure",
+          "aliases": [
+            "箭镞坡",
+            "坡"
+          ],
+          "flavor": "土一翻就见箭镞。兵器行不认年头，只认斤两。",
+          "rooms": [
+            {
+              "id": "cb_m_slope",
+              "name": "坡面",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "cb_m_soil",
+                  "name": "翻过的土",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "comp",
+                      "count": [
+                        2,
+                        3
+                      ],
+                      "w": 3
+                    },
+                    {
+                      "item": "parts",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "cb_m_bottom",
+              "name": "沟底",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "cb_m_silt",
+                  "name": "淤泥",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "elec",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "wood",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cb_well",
+          "name": "枯井",
+          "threat": 2,
+          "mark": "danger",
+          "aliases": [
+            "井"
+          ],
+          "flavor": "战时藏人的井。有人进去，没出来。井口的筐里还有半截绳。",
+          "rooms": [
+            {
+              "id": "cb_w_head",
+              "name": "井台",
+              "door": "open",
+              "containers": [
+                {
+                  "id": "cb_w_basket",
+                  "name": "井口的筐",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "water",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "raw",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "cb_w_bottom",
+              "name": "井底",
+              "door": "bars",
+              "containers": [
+                {
+                  "id": "cb_w_depth",
+                  "name": "井底",
+                  "type": "open",
+                  "loot": [
+                    {
+                      "item": "jewel",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 2
+                    },
+                    {
+                      "item": "brocade",
+                      "count": [
+                        0,
+                        1
+                      ],
+                      "w": 1
+                    },
+                    {
+                      "item": "book",
+                      "count": [
+                        1,
+                        2
+                      ],
+                      "w": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "cards": [
@@ -522,7 +3020,7 @@
         "once": true
       },
       "title": "第一日 · 装船",
-      "text": "舱底压着券局的货：裹创布、硝石，和一口不问来路的箱。南市的牙人问：这一船，先卸给谁？",
+      "text": "舱底压着券局的货：裹创布、硝石，和一口不问来路的箱。阿橹蹲在船尾解缆，没问箱里是什么——他爹教的：船上的东西不问。南市的牙人隔着水问：这一船，先卸给谁？",
       "options": [
         {
           "key": "army",
@@ -534,7 +3032,7 @@
             "items": {
               "jewel": 1
             },
-            "text": "军需曹的秤很公道。公道得让人不舒服。"
+            "text": "军需曹的秤很公道。公道得让人不舒服。阿橹数了三遍钱，没数错。"
           }
         },
         {
@@ -547,7 +3045,7 @@
             "mood": {
               "all": 1
             },
-            "text": "守藏吏数也没数，就盖了检。他从不核编号段——你知道为什么，你不知道为什么。"
+            "text": "守藏吏数也没数，就盖了检。他从不核编号段——你知道为什么，你不知道为什么。阿橹第一次见人收货不数。"
           }
         },
         {
@@ -560,13 +3058,53 @@
             "items": {
               "brocade": 1
             },
-            "text": "一天下来舱轻了一半。行情就是活着。"
+            "text": "一天下来舱轻了一半。行情就是活着。阿橹问：叔，那口箱呢？你说：箱不卖。"
           }
         }
       ]
     },
     {
-      "id": "lz_d2",
+      "id": "lz_d1_dusk",
+      "kind": "timeline",
+      "side": "luzhou",
+      "when": {
+        "dayWindow": [
+          1,
+          1
+        ],
+        "once": true,
+        "at": "dusk"
+      },
+      "title": "头一夜 · 泊",
+      "text": "天黑前得定下泊在哪。津戍的浮桥灯亮着——泊那儿省事，守卒看得见你的水线。往下三里是芦苇荡：黑，静，露水重。",
+      "options": [
+        {
+          "key": "ferry",
+          "label": "泊浮桥",
+          "effects": {
+            "flags": {
+              "lz_moor_ferry": true
+            },
+            "text": "缆绳绕上桩子。守卒隔着灯看了一眼你的水线，记住了。"
+          }
+        },
+        {
+          "key": "reeds",
+          "label": "摇进芦苇荡",
+          "effects": {
+            "flags": {
+              "lz_moor_reeds": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "芦苇把船吞了。阿橹摇到胳膊抬不起来，一句话没说。露水半夜把船板打透。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lz_d2a",
       "kind": "timeline",
       "side": "luzhou",
       "when": {
@@ -574,10 +3112,67 @@
           2,
           2
         ],
-        "once": true
+        "once": true,
+        "requiresFlag": "lz_moor_ferry"
+      },
+      "title": "第二日 · 津戍开箱",
+      "text": "守卒敲舱板：「开箱。」他昨夜看过你的水线——吃水那么深，不是空船。你的符传在怀里，上家的花押在符传上。",
+      "options": [
+        {
+          "key": "pass",
+          "label": "示符传",
+          "effects": {
+            "flags": {
+              "lz_pass": true
+            },
+            "text": "他扫了一眼花押，手停在半空，然后收回去。符传比刀好使——但他记下了你的脸。这就是这座城真正的问题：谁都记着谁。"
+          }
+        },
+        {
+          "key": "bribe",
+          "label": "塞一卷裹创布",
+          "cost": [
+            {
+              "item": "bandage",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "lz_bribe": true
+            },
+            "text": "他收了，挥手放行，动作熟得像每天一百次。大概真是每天一百次。"
+          }
+        },
+        {
+          "key": "open",
+          "label": "开——让他看",
+          "effects": {
+            "flags": {
+              "lz_opened": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "篷一掀，他看见了硝石，看见了那口箱。他看了你很久，没掀箱盖。「走吧。」他什么都看见了，什么都没说——这比塞布贵。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lz_d2b",
+      "kind": "timeline",
+      "side": "luzhou",
+      "when": {
+        "dayWindow": [
+          2,
+          2
+        ],
+        "once": true,
+        "requiresFlag": "lz_moor_reeds"
       },
       "title": "第二日 · 津戍",
-      "text": "津戍的守卒敲了敲舱板：「开箱。」你的符传在怀里，上家的花押在符传上。",
+      "text": "津戍的守卒敲了敲舱板：「开箱。」你的符传在怀里，上家的花押在符传上。他没见过你的水线——昨夜你在芦苇里。",
       "options": [
         {
           "key": "pass",
@@ -619,7 +3214,7 @@
         "once": true
       },
       "title": "第三日 · 收纸",
-      "text": "上家的纸条只有一行：收纸，价不问。那家宅子的地窖里有一沓旧简——你知道这些纸到了上家手里，会变成什么。",
+      "text": "上家的纸条只有一行：收纸，价不问。那家空宅的地窖里有一沓旧简——券局拿到手，会变成几封「真」家书，寄给围城军里想家的人。阿橹不识字。他看着你看那张纸条。",
       "options": [
         {
           "key": "take",
@@ -631,17 +3226,29 @@
             "mood": {
               "all": -2
             },
-            "text": "纸上了船。你没数。你从来都数。"
+            "text": "纸上了船。你没数。你从来都数。阿橹问这是什么，你说是账。"
           }
         },
         {
           "key": "fake",
           "label": "仿一卷赝品交差",
-          "effects": {
-            "flags": {
-              "lz_fake": true
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "flags": {
+                "lz_fake": true
+              },
+              "text": "你熬了半宿。笔迹、编号段、削痕——上家读不出区别。"
             },
-            "text": "你熬了半宿。笔迹、编号段、削痕——赌上家读不出区别。"
+            "onFail": {
+              "flags": {
+                "lz_fake_spotted": true
+              },
+              "mood": {
+                "all": -2
+              },
+              "text": "你熬了半宿。第二天上家的回信只有四个字：「手艺不错。」他认出来了。他什么都没说，这比说什么都重。"
+            }
           }
         },
         {
@@ -654,13 +3261,68 @@
             "mood": {
               "all": 1
             },
-            "text": "你把纸条烧了。船照样走。有些东西不是货。"
+            "text": "你把纸条烧了。船照样走。有些东西不是货。阿橹看着火，没问。"
+          }
+        }
+      ],
+      "as": "luzhou"
+    },
+    {
+      "id": "lz_d3_dusk",
+      "kind": "timeline",
+      "side": "luzhou",
+      "when": {
+        "dayWindow": [
+          3,
+          3
+        ],
+        "once": true,
+        "at": "dusk",
+        "requiresChar": "alu"
+      },
+      "title": "阿橹的问题",
+      "text": "泊定了，阿橹擦着橹，忽然问：叔，舱底那口箱，是什么？你知道他爹的船是怎么没的——也是替人运不问来路的箱。",
+      "options": [
+        {
+          "key": "truth",
+          "label": "照实说",
+          "effects": {
+            "flags": {
+              "lz_told_alu": true
+            },
+            "mood": {
+              "alu": 2
+            },
+            "text": "你说了。他听完，把橹擦得更慢了。「那我以后摇得轻点。」"
+          }
+        },
+        {
+          "key": "lie",
+          "label": "说是货",
+          "effects": {
+            "flags": {
+              "lz_lied_alu": true
+            },
+            "mood": {
+              "alu": -1
+            },
+            "text": "「货。」他点点头。你知道他知道你在撒谎——船上的人分得清水声。"
+          }
+        },
+        {
+          "key": "silence",
+          "label": "不答",
+          "effects": {
+            "flags": {
+              "lz_silent_alu": true
+            },
+            "text": "你没答。他也没再问。这是船上的规矩，他爹教的。"
           }
         }
       ]
     },
     {
-      "id": "lz_d4",
+      "id": "lz_d4a",
       "kind": "timeline",
       "side": "luzhou",
       "when": {
@@ -668,7 +3330,78 @@
           4,
           4
         ],
-        "once": true
+        "once": true,
+        "requiresFlag": "lz_refused_docs"
+      },
+      "title": "第四日 · 查船",
+      "text": "券局的快船在江心拦下你，不远不近。船头的人笑着问：鲁舟，这一趟怎么空着回？",
+      "options": [
+        {
+          "key": "lie",
+          "label": "说纸早被人收走了",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "flags": {
+                "lz_lied_through": true
+              },
+              "text": "他信了，或者装作信了。船错开的时候他说：下回早点。"
+            },
+            "onFail": {
+              "flags": {
+                "lz_beaten": true
+              },
+              "wound": 1,
+              "mood": {
+                "all": -2
+              },
+              "text": "他没信。两个人上船，把你按在舱板上打了一顿，没动货。走的时候说：下回别空着。"
+            }
+          }
+        },
+        {
+          "key": "firm",
+          "label": "照实说：这单我不收",
+          "effects": {
+            "flags": {
+              "lz_stood_firm": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "他没笑了。看了你很久，又看了阿橹一眼。「记住了。」快船走了。你的名字进了一本你看不见的簿子。"
+          }
+        },
+        {
+          "key": "pay",
+          "label": "赔一口箱",
+          "cost": [
+            {
+              "item": "jewel",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "lz_paid_off": true
+            },
+            "text": "珠玑过了船。他掂了掂，笑了：「鲁舟还是鲁舟。」你不知道这句是夸是骂。"
+          }
+        }
+      ],
+      "as": "luzhou"
+    },
+    {
+      "id": "lz_d4b",
+      "kind": "timeline",
+      "side": "luzhou",
+      "when": {
+        "dayWindow": [
+          4,
+          4
+        ],
+        "once": true,
+        "requiresNotFlag": "lz_refused_docs"
       },
       "title": "第四日 · 江上",
       "text": "夜里另一条船跟着你，不远不近。水面很黑，桨声很轻。",
@@ -693,13 +3426,13 @@
             "flags": {
               "lz_hide": true
             },
-            "text": "你在芦苇里蹲到天亮。露水把船板打透了。"
+            "text": "你在芦苇里蹲到天亮。露水把船板打透了。阿橹问要不要换他摇，你说不用。"
           }
         }
       ]
     },
     {
-      "id": "lz_d5",
+      "id": "lz_d5a",
       "kind": "timeline",
       "side": "luzhou",
       "when": {
@@ -707,10 +3440,57 @@
           5,
           5
         ],
-        "once": true
+        "once": true,
+        "requiresFlag": "lz_folk"
       },
       "title": "第五日 · 回程",
-      "text": "回程的水很轻。舱空了，账在心里。",
+      "text": "回到江陵水域。施粥棚的人在码头上等——不是等货，是等船。她们提着一袋米。「没别的，这个你拿着。」",
+      "options": [
+        {
+          "key": "take",
+          "label": "收下",
+          "effects": {
+            "flags": {
+              "lz_took_gift": true
+            },
+            "items": {
+              "raw": 2
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "米不多。你知道这袋米是从多少碗粥里省出来的。阿橹把米袋抱在怀里，像抱一只猫。"
+          }
+        },
+        {
+          "key": "decline",
+          "label": "不收——船上有",
+          "effects": {
+            "flags": {
+              "lz_declined_gift": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "她们没争。回去的时候，领头的说：逢双日，我们在。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lz_d5b",
+      "kind": "timeline",
+      "side": "luzhou",
+      "when": {
+        "dayWindow": [
+          5,
+          5
+        ],
+        "once": true,
+        "requiresNotFlag": "lz_folk"
+      },
+      "title": "第五日 · 回程",
+      "text": "回程的水很轻。舱空了，账在心里。江陵的城墙在雾里慢慢长出来。",
       "options": [
         {
           "key": "end",
@@ -720,6 +3500,144 @@
               "all": 1
             },
             "text": "缆绳绕上桩子。逢双日，你还在。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lz_k_boat",
+      "kind": "knock",
+      "side": "luzhou",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4
+      },
+      "title": "夜里的问路人",
+      "text": "半夜有小船靠过来，船上的人压着声问：往下水去的路，哪一段有哨？他出的是珠玑。",
+      "options": [
+        {
+          "key": "tell",
+          "label": "告诉他",
+          "effects": {
+            "items": {
+              "jewel": 1
+            },
+            "mood": {
+              "all": -1
+            },
+            "flags": {
+              "lz_sold_route": true
+            },
+            "text": "你说了。船走了。你不知道船上装的是逃兵还是刀。"
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "不知道",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "text": "他骂了一句，摇走了。阿橹长出一口气。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lz_k_sick",
+      "kind": "internal",
+      "side": "luzhou",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4,
+        "requiresChar": "alu",
+        "minDay": 2
+      },
+      "title": "阿橹发热",
+      "text": "阿橹早上起来脸是红的，摸着烫。船上没有医。",
+      "options": [
+        {
+          "key": "med",
+          "label": "给他良药",
+          "cost": [
+            {
+              "item": "meds",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "alu": 2
+            },
+            "flags": {
+              "lz_alu_treated": true
+            },
+            "text": "药下去，下午就退了。他说：叔，这药贵吧。"
+          }
+        },
+        {
+          "key": "rest",
+          "label": "让他歇一天，别摇",
+          "effects": {
+            "mood": {
+              "alu": 1
+            },
+            "flags": {
+              "lz_alu_rested": true
+            },
+            "sick": 1,
+            "text": "你一个人摇了一天。船走得慢，水不急。"
+          }
+        },
+        {
+          "key": "push",
+          "label": "熬着——船不能停",
+          "effects": {
+            "mood": {
+              "alu": -2
+            },
+            "sick": 2,
+            "text": "他摇了一天，没吭声。晚上你发现他把橹绳在手上缠了三道——怕手滑。"
+          }
+        }
+      ],
+      "as": "alu"
+    },
+    {
+      "id": "lz_k_letter",
+      "kind": "knock",
+      "side": "luzhou",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 3
+      },
+      "title": "津戍老卒的私托",
+      "text": "一个老卒蹲在岸边等你靠岸，手里攥着一封信：「捎到下游第二个渡口，交给卖柴的老婆子。」他没钱。",
+      "options": [
+        {
+          "key": "carry",
+          "label": "捎",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "lz_letter": true
+            },
+            "text": "信在怀里。你没问信里写什么。"
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "船不捎私信",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "text": "他没骂你。他把信揣回去，蹲回原地。"
           }
         }
       ]
@@ -736,7 +3654,7 @@
         "once": true
       },
       "title": "第一日 · 两份药",
-      "text": "药瓮见底了。棚里两个重伤：左边是羽军的什长，右边是降卒营捞出来的魏卒。都熬不过今夜。",
+      "text": "药瓮见底了，只剩一剂良药。棚里两个重伤：左边是羽军的什长，右边是降卒营捞出来的魏卒。都熬不过今夜。小满在门口站着，等你说先后。",
       "options": [
         {
           "key": "left",
@@ -749,12 +3667,12 @@
           ],
           "effects": {
             "flags": {
-              "dz_bent": true
+              "dz_bent_1": true
             },
             "mood": {
               "all": -1
             },
-            "text": "他先来的吗？你不去想。夜里你给右边换了三次水，他天亮还活着——不是你救的，是他自己撑的。"
+            "text": "他先来的吗？你不去想。夜里你给右边换了三次水，他天亮还活着——不是你救的，是他自己撑的。小满没问。"
           }
         },
         {
@@ -768,12 +3686,72 @@
           ],
           "effects": {
             "flags": {
-              "dz_fair": true
+              "dz_fair_1": true
             },
             "mood": {
               "all": 1
             },
-            "text": "什长的部下在棚口站了一夜。你当没看见。先来后到，右边先抬进来的。"
+            "text": "什长的部下在棚口站了一夜。你当没看见。先来后到，右边先抬进来的。小满在簿子上记了一笔。"
+          }
+        },
+        {
+          "key": "split",
+          "label": "一剂掰两半",
+          "cost": [
+            {
+              "item": "meds",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "dz_split_1": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "两个人都喂了半剂。天亮时两个人都还活着，都没好。半剂药救不了人，只能让人多疼一天。小满问：这算先来后到吗？你没答。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dz_d1_dusk",
+      "kind": "timeline",
+      "side": "duzhong",
+      "when": {
+        "dayWindow": [
+          1,
+          1
+        ],
+        "once": true,
+        "at": "dusk",
+        "requiresChar": "xiaoman"
+      },
+      "title": "小满的簿子",
+      "text": "收棚的时候小满把簿子翻过来给你看。她在今天那一行底下画了一道。「先生，这道划什么？」",
+      "options": [
+        {
+          "key": "rule",
+          "label": "划规矩——先来后到",
+          "effects": {
+            "flags": {
+              "dz_taught_rule": true
+            },
+            "mood": {
+              "xiaoman": 1
+            },
+            "text": "她点头，在旁边写了四个字。字很丑，很用力。"
+          }
+        },
+        {
+          "key": "nothing",
+          "label": "什么都不划",
+          "effects": {
+            "flags": {
+              "dz_taught_nothing": true
+            },
+            "text": "「有的事不写。」她把笔放下了。你知道她记在别处了。"
           }
         }
       ]
@@ -790,14 +3768,17 @@
         "once": true
       },
       "title": "第二日 · 疫病",
-      "text": "降卒营送来一排发热的。隔离来不及了——疫病早过了界。",
+      "text": "降卒营送来一排发热的。隔离来不及了——疫病早过了界。棚外两边的人都退后了三步。",
       "options": [
         {
           "key": "quarantine",
           "label": "划出半个棚，只收发热",
           "effects": {
             "flags": {
-              "dz_fair": true
+              "dz_fair_2": true
+            },
+            "mood": {
+              "all": -1
             },
             "text": "你在地上划了一道线。线那边咳嗽声整夜没停，线这边也是。"
           }
@@ -807,15 +3788,33 @@
           "label": "只看有希望救的",
           "effects": {
             "flags": {
-              "dz_bent": true
+              "dz_bent_2": true
             },
             "mood": {
               "all": -2
             },
-            "text": "你说了十一年前别人对你说的那句话。说出口才发现，它一直没离开过你。"
+            "sick": 1,
+            "text": "你说了十一年前别人对你说的那句话。说出口才发现，它一直没离开过你。夜里小满开始咳。"
+          }
+        },
+        {
+          "key": "call",
+          "label": "报给两边军吏：各出药、各出人",
+          "effects": {
+            "flags": {
+              "dz_called_help": true
+            },
+            "items": {
+              "herbmed": 1
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "羽军送来一个医佐和两包药，降卒营送来三个会烧水的。棚里第一次有人跟你抢活干。你知道这意味着什么：棚不再只是你的了。"
           }
         }
-      ]
+      ],
+      "as": "xiaoman"
     },
     {
       "id": "dz_d3",
@@ -829,14 +3828,14 @@
         "once": true
       },
       "title": "第三日 · 军吏的私嘱",
-      "text": "军吏站在棚口，压着声：降卒营的病「不必都治」。他把一小袋五铢放在药柜上。",
+      "text": "军吏站在棚口，压着声：降卒营的病「不必都治」。他把一小袋五铢放在药柜上。小满在药庐里，听得见。",
       "options": [
         {
           "key": "refuse",
           "label": "把钱推回去",
           "effects": {
             "flags": {
-              "dz_fair": true
+              "dz_fair_3": true
             },
             "mood": {
               "all": 1
@@ -849,7 +3848,7 @@
           "label": "收下（药是要钱的）",
           "effects": {
             "flags": {
-              "dz_bent": true
+              "dz_bent_3": true
             },
             "mood": {
               "all": -1
@@ -857,7 +3856,68 @@
             "items": {
               "herbmed": 1
             },
-            "text": "钱收了。药多了。夜里你洗了三遍手。"
+            "text": "钱收了。药多了。夜里你洗了三遍手。小满把簿子合上了，没记。"
+          }
+        },
+        {
+          "key": "take_open",
+          "label": "收下，当着他的面全买药",
+          "effects": {
+            "flags": {
+              "dz_took_open": true
+            },
+            "items": {
+              "herbmed": 1,
+              "herb": 2
+            },
+            "mood": {
+              "xiaoman": 1
+            },
+            "text": "你当着他点了钱，说：这是药钱，谢军吏。他脸色变了，没敢要回去。药多了一倍。他下次不会再来了——这是代价。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dz_d3_dusk",
+      "kind": "timeline",
+      "side": "duzhong",
+      "when": {
+        "dayWindow": [
+          3,
+          3
+        ],
+        "once": true,
+        "at": "dusk",
+        "requiresFlag": "dz_called_help"
+      },
+      "title": "医佐的柜子",
+      "text": "羽军派来的医佐把你的药柜重新排了一遍——按军籍。羽军的在上两层，降卒的在底下。他说这是「规矩」。",
+      "options": [
+        {
+          "key": "rearrange",
+          "label": "排回去——按病",
+          "effects": {
+            "flags": {
+              "dz_fair_3b": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "你一样一样挪回去。他看着，没拦。走的时候说：先生，这棚撑不过冬天。"
+          }
+        },
+        {
+          "key": "allow",
+          "label": "由他",
+          "effects": {
+            "flags": {
+              "dz_bent_3b": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "你没动。小满夜里偷偷把底下两层挪了上来一半。你装没看见。"
           }
         }
       ]
@@ -874,14 +3934,14 @@
         "once": true
       },
       "title": "第四日 · 裹创布尽了",
-      "text": "布用完了。伤还在来。",
+      "text": "布用完了。伤还在来。河滩上，水送回来的人身上还有干净的布——那是从死人身上剥的。",
       "options": [
         {
           "key": "tear",
           "label": "拆自己的帐子",
           "effects": {
             "flags": {
-              "dz_fair": true
+              "dz_fair_4": true
             },
             "text": "帐子拆了。夜里风进来，棚里的人都醒着，没人说话。"
           }
@@ -891,12 +3951,28 @@
           "label": "轻伤的先不换了",
           "effects": {
             "flags": {
-              "dz_bent": true
+              "dz_bent_4": true
             },
             "mood": {
               "all": -1
             },
             "text": "轻伤的看着你，点点头。他们比你懂事，这最难受。"
+          }
+        },
+        {
+          "key": "dead",
+          "label": "去河滩——剥死人的",
+          "effects": {
+            "flags": {
+              "dz_dead_cloth": true
+            },
+            "items": {
+              "bandage": 2
+            },
+            "mood": {
+              "all": -2
+            },
+            "text": "布是干的。你煮了两遍才敢用。晚上小满问布从哪来的，你说：河上。她没再问。她知道河上是哪。"
           }
         }
       ]
@@ -922,7 +3998,146 @@
             "mood": {
               "all": 1
             },
+            "flags": {
+              "dz_opened_5": true
+            },
             "text": "手到药就不抖了。这双手认路。"
+          }
+        },
+        {
+          "key": "rest",
+          "label": "今天不开——歇一天",
+          "effects": {
+            "mood": {
+              "all": 2
+            },
+            "flags": {
+              "dz_rested_5": true
+            },
+            "text": "棚门闭了一天。门外的脚步声来了又走，来了又走。你睡了十一年来第一个整觉。醒来的时候，门外放着一碗没凉透的粥，不知道是哪边放的。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dz_k_child",
+      "kind": "internal",
+      "side": "duzhong",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4,
+        "minDay": 2
+      },
+      "title": "容儿",
+      "text": "棚里有个六岁的孩子发热三天了——不是哪边的兵，是城里人家送来的。她娘跪在棚口。药只够一个人。",
+      "options": [
+        {
+          "key": "child",
+          "label": "给孩子",
+          "cost": [
+            {
+              "item": "herbmed",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "dz_child_saved": true
+            },
+            "text": "孩子退了热。她娘走的时候给了小满一块饴。"
+          }
+        },
+        {
+          "key": "soldier",
+          "label": "兵先",
+          "effects": {
+            "mood": {
+              "all": -2
+            },
+            "flags": {
+              "dz_child_refused": true
+            },
+            "text": "你没说出口的那句是：孩子不是来打仗的。你没说。你去看了左边的兵。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dz_k_knock",
+      "kind": "knock",
+      "side": "duzhong",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4
+      },
+      "title": "夜里的敲门",
+      "text": "半夜有人敲棚，很轻。门外是降卒营的一个魏卒，抱着另一个。「他们不让抬进营医那儿。」",
+      "options": [
+        {
+          "key": "open",
+          "label": "开门",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "dz_night_open": true
+            },
+            "text": "你开了门。他把人放下，看了你一眼，没说话，退回黑里。"
+          }
+        },
+        {
+          "key": "shut",
+          "label": "天亮再来",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "text": "脚步声走了。天亮的时候门外没有人，只有地上一道拖痕。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dz_k_book",
+      "kind": "internal",
+      "side": "duzhong",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 3,
+        "requiresChar": "xiaoman",
+        "minDay": 2
+      },
+      "title": "《汤液》下半本",
+      "text": "小满背完了她会的半本《汤液》，眼巴巴看着你。「先生，下半本什么时候教？」",
+      "options": [
+        {
+          "key": "teach",
+          "label": "教她一方",
+          "effects": {
+            "mood": {
+              "xiaoman": 2
+            },
+            "flags": {
+              "dz_taught_recipe": true
+            },
+            "text": "你教了她治寒热的那一方。她背了四十遍。棚里的人跟着背，背错了就笑。"
+          }
+        },
+        {
+          "key": "later",
+          "label": "等棚空了",
+          "effects": {
+            "mood": {
+              "xiaoman": -1
+            },
+            "text": "「棚什么时候空？」她问。你没答。"
           }
         }
       ]
@@ -939,7 +4154,7 @@
         "once": true
       },
       "title": "第一夜 · 抄更籍的人",
-      "text": "灯下的人不点灯。他出价买的不是米，是你脑子里的东西：沿江屯候的名册与更次。「你妹妹的乐籍，我们办。」",
+      "text": "灯下的人不点灯。他出价买的不是米，是你脑子里的东西：沿江屯候的名册与更次。「你妹妹的乐籍，我们办。」陈六在楼下换箭，听不见。",
       "options": [
         {
           "key": "sell",
@@ -951,7 +4166,7 @@
             "mood": {
               "all": -2
             },
-            "text": "你写得很慢。每一个名字你都认识，每一处更次你都守过。写完你吹了吹墨。"
+            "text": "你写得很慢。每一个名字你都认识，每一处更次你都守过。写完你吹了吹墨。楼下陈六的箭壶响了一声。"
           }
         },
         {
@@ -965,6 +4180,57 @@
               "all": 1
             },
             "text": "他走的时候没说什么。你知道这种人不会来第二次——会用别的办法。"
+          }
+        },
+        {
+          "key": "stall",
+          "label": "拖——三日后给",
+          "effects": {
+            "flags": {
+              "sb_stall": true
+            },
+            "text": "「三日。」他说。他走的时候脚步没声。你知道这种人不等三日——他们等的是你松口的那一瞬，而你松了。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sb_d1_dusk",
+      "kind": "timeline",
+      "side": "subo",
+      "when": {
+        "dayWindow": [
+          1,
+          1
+        ],
+        "once": true,
+        "at": "dusk",
+        "requiresChar": "chenliu"
+      },
+      "title": "换气",
+      "text": "黄昏换岗。陈六上楼来，照例在鼓前站半刻。「第四小节前那半口气，」他说，「我放了三年箭，一直想问：是故意的？」",
+      "options": [
+        {
+          "key": "tell",
+          "label": "告诉他是为谁",
+          "effects": {
+            "flags": {
+              "sb_told_chen": true
+            },
+            "mood": {
+              "chenliu": 2
+            },
+            "text": "你说了妹妹的名字。他听完，很久没说话，然后说：「那我以后放得更准点。」"
+          }
+        },
+        {
+          "key": "deflect",
+          "label": "习惯",
+          "effects": {
+            "flags": {
+              "sb_deflected_chen": true
+            },
+            "text": "「习惯。」他点头。他知道你在瞒。放箭的人听得出鼓里的话。"
           }
         }
       ]
@@ -981,7 +4247,7 @@
         "once": true
       },
       "title": "第二夜 · 鼓语",
-      "text": "鼓谱压在枕下。《蒿里》的拍子改成放箭的间隔，是你改的。第四小节前偷半口气——只有你知道为什么。",
+      "text": "鼓谱压在枕下。《蒿里》的拍子改成放箭的间隔，是你改的。第四小节前偷半口气——只有你知道为什么。今夜你忽然想：要是哪天你不在了，这半口气谁敲？",
       "options": [
         {
           "key": "keep",
@@ -1005,11 +4271,68 @@
             },
             "text": "你抄得很工整。抄到换气记号那里，笔停了很久。"
           }
+        },
+        {
+          "key": "teach",
+          "label": "教给陈六",
+          "requires": {
+            "char": "chenliu"
+          },
+          "effects": {
+            "flags": {
+              "sb_taught": true
+            },
+            "mood": {
+              "chenliu": 1
+            },
+            "text": "你把谱摊开，一拍一拍敲给他看。敲到换气记号那里，你停了。他说：「我听见了。」"
+          }
         }
       ]
     },
     {
-      "id": "sb_d3",
+      "id": "sb_d2_dusk",
+      "kind": "timeline",
+      "side": "subo",
+      "when": {
+        "dayWindow": [
+          2,
+          2
+        ],
+        "once": true,
+        "at": "dusk",
+        "requiresFlag": "sb_stall"
+      },
+      "title": "三日未到",
+      "text": "灯下的人没等三日。黄昏时渡口来了一个卖柴的，柴担底下压着一张纸条：「明夜。渡石。」没有署名。",
+      "options": [
+        {
+          "key": "go",
+          "label": "明夜去",
+          "effects": {
+            "flags": {
+              "sb_will_go": true
+            },
+            "text": "你把纸条烧了。火光里你想：去了就是卖，不去就是等人来拿。"
+          }
+        },
+        {
+          "key": "burn",
+          "label": "不去",
+          "effects": {
+            "flags": {
+              "sb_wont_go": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "你把纸条烧了。火很小。明夜他会用别的办法——你知道，陈六不知道。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sb_d3a",
       "kind": "timeline",
       "side": "subo",
       "when": {
@@ -1017,10 +4340,11 @@
           3,
           3
         ],
-        "once": true
+        "once": true,
+        "requiresFlag": "sb_sold"
       },
       "title": "第三夜 · 点卯",
-      "text": "军正到了，名册在案上摊开。更籍外流的事发了。他要一个名字。",
+      "text": "军正到了，名册在案上摊开。更籍外流的事发了。他要一个名字。你写的那一卷此刻在哪里，你比他清楚。陈六站在你身后，不知道。",
       "options": [
         {
           "key": "bear",
@@ -1044,6 +4368,273 @@
             },
             "text": "军正记下了，合上名册。他走后你才明白：名册上本来就没有那个人。"
           }
+        },
+        {
+          "key": "frame",
+          "label": "说是陈六",
+          "requires": {
+            "char": "chenliu"
+          },
+          "effects": {
+            "flags": {
+              "sb_frame_chen": true
+            },
+            "mood": {
+              "all": -3
+            },
+            "text": "你说了陈六的名字。他在你身后没有动。军正看了他一眼，又看了你一眼。「射手？」他问。你说：是。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sb_d3b",
+      "kind": "timeline",
+      "side": "subo",
+      "when": {
+        "dayWindow": [
+          3,
+          3
+        ],
+        "once": true,
+        "requiresFlag": "sb_stall"
+      },
+      "title": "第三夜 · 点卯",
+      "text": "军正到了，比买名册的人先到。灯下那人昨夜在渡石被巡哨截住，没等到你——他招了，招的是你的名字。军正说：他说你答应了。",
+      "options": [
+        {
+          "key": "admit",
+          "label": "认——是答应了",
+          "effects": {
+            "flags": {
+              "sb_bear": true
+            },
+            "text": "你说：答应了，没给。军正看了你很久。「阵殁」两个字，他写得很慢。答应也是罪。"
+          }
+        },
+        {
+          "key": "deny",
+          "label": "咬死不认",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "flags": {
+                "sb_got_away": true
+              },
+              "text": "军正查了一夜。名册没出去，鼓谱在枕下，陈六说他没见过什么灯下的人。军正走了。你活着——因为你拖的那三日。"
+            },
+            "onFail": {
+              "flags": {
+                "sb_caught": true
+              },
+              "mood": {
+                "all": -2
+              },
+              "text": "军正翻出了纸条的灰——你烧得不够干净。「渡石」两个字还在。他写得很慢。"
+            }
+          }
+        }
+      ],
+      "as": "subo"
+    },
+    {
+      "id": "sb_d3c",
+      "kind": "timeline",
+      "side": "subo",
+      "when": {
+        "dayWindow": [
+          3,
+          3
+        ],
+        "once": true,
+        "requiresFlag": "sb_refused"
+      },
+      "title": "第三夜 · 查台",
+      "text": "军正到了。更籍还是漏了——不是你，是抄更籍的小吏。灯下的人果然用了别的办法。军正要查每一台，从第三台开始。你的枕下压着那本谱。",
+      "options": [
+        {
+          "key": "hide",
+          "label": "藏进鼓腔",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "flags": {
+                "sb_score_safe": true
+              },
+              "text": "谱进了鼓腔。军正翻了铺位，翻了箭壶，拍了拍鼓。鼓是空的，响得很正。"
+            },
+            "onFail": {
+              "flags": {
+                "sb_score_lost": true
+              },
+              "mood": {
+                "all": -2
+              },
+              "text": "军正拍鼓的时候听出了不对——鼓音闷了。谱被翻出来，拿走了。他不认得那是什么，只知道不该有。"
+            }
+          }
+        },
+        {
+          "key": "submit",
+          "label": "交出去",
+          "effects": {
+            "flags": {
+              "sb_score_given": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "你把谱交了。军正翻了一页，看不懂，收了。妹妹回家的路标，进了军正的袖子。"
+          }
+        },
+        {
+          "key": "open",
+          "label": "摊开给他看——这是鼓谱，台上人人都会",
+          "requires": {
+            "char": "chenliu"
+          },
+          "effects": {
+            "flags": {
+              "sb_score_open": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "陈六接过谱，当着军正敲了一遍。一拍没错。军正点头：「鼓谱。」他没听见那半口气——听得见的人，不在这间屋里。"
+          }
+        }
+      ],
+      "as": "subo"
+    },
+    {
+      "id": "sb_k_patrol",
+      "kind": "internal",
+      "side": "subo",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4,
+        "minDay": 2
+      },
+      "title": "巡哨的灯",
+      "text": "后半夜巡哨上堤，灯从柳林那头过来。素伯数着步子——巡哨的步子他听了七年，今晚多了一双草鞋声。",
+      "options": [
+        {
+          "key": "wait",
+          "label": "躺着听",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "sb_heard_sandals": true
+            },
+            "text": "多出来的那双草鞋在堤口停了半刻，走了。明天你会认出他——认出你就得装不认得。"
+          }
+        },
+        {
+          "key": "sleep",
+          "label": "睡了",
+          "effects": {
+            "text": "你睡了。鼓没响，台没乱。有些事睡着的时候发生，比醒着的时候干净。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sb_k_quiver",
+      "kind": "knock",
+      "side": "subo",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 3,
+        "requiresChar": "chenliu"
+      },
+      "title": "陈六的箭",
+      "text": "陈六把箭壶倒出来数——二十一支，少了一支。「不是丢了，」他说，「是那晚脱拍放出去的那支。我后来去找过，没找到。」",
+      "options": [
+        {
+          "key": "ask",
+          "label": "问他那晚的事",
+          "requires": {
+            "char": "chenliu"
+          },
+          "effects": {
+            "mood": {
+              "chenliu": 1
+            },
+            "flags": {
+              "sb_asked_arrow": true
+            },
+            "text": "他说完就不说了。脱拍放出去的箭，他找了十一年前……不，三年了。他记得落点，你不记得。"
+          }
+        },
+        {
+          "key": "drop",
+          "label": "不问",
+          "effects": {
+            "text": "你把箭一支一支插回去。有的账不该在守夜前翻。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fc_d1",
+      "kind": "timeline",
+      "side": "fancheng",
+      "when": {
+        "dayWindow": [
+          1,
+          1
+        ],
+        "once": true
+      },
+      "title": "上城",
+      "text": "汉水漫进樊城的第三天，戍长在城头点名：报丁口的，领口粮；不报的，自己想办法。老卒把小子和往后拉了一把。",
+      "options": [
+        {
+          "key": "register",
+          "label": "报——三口",
+          "effects": {
+            "flags": {
+              "fc_registered": true
+            },
+            "items": {
+              "raw": 2,
+              "canned": 1
+            },
+            "text": "三个名字进了册。口粮领了。戍长在册子上你们那行点了点：「运土。」"
+          }
+        },
+        {
+          "key": "hide",
+          "label": "不报",
+          "effects": {
+            "flags": {
+              "fc_hidden": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "你们没排队。戍长扫了一眼，没追。口粮没有，征发也没有——暂时。"
+          }
+        },
+        {
+          "key": "half",
+          "label": "只报两口——小子和不报",
+          "effects": {
+            "flags": {
+              "fc_half": true
+            },
+            "items": {
+              "raw": 1
+            },
+            "mood": {
+              "fuyi2": -1
+            },
+            "text": "册子上两个名字。小子和在后面站着，像一袋土。他明白了：报名字的人要运土，不报的人不吃饭。"
+          }
         }
       ]
     },
@@ -1051,6 +4642,7 @@
       "id": "fc_d2",
       "kind": "timeline",
       "side": "fancheng",
+      "beat": true,
       "when": {
         "dayWindow": [
           2,
@@ -1069,6 +4661,112 @@
               "all": -1
             },
             "text": "板还剩几块，人就还在。数到第七遍，大家都睡着了。"
+          },
+          "auto": true
+        }
+      ]
+    },
+    {
+      "id": "fc_d3",
+      "kind": "timeline",
+      "side": "fancheng",
+      "when": {
+        "dayWindow": [
+          3,
+          3
+        ],
+        "once": true
+      },
+      "title": "筏子",
+      "text": "天亮时水面上漂来一面筏子，三个大人，一个孩子，喊着城里的话。戍卒在垛口上端着弩问：拉不拉？细作也会说城里的话。",
+      "options": [
+        {
+          "key": "pull",
+          "label": "拉上来",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "fc_rescued": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "拉上来了。三个大人，一个孩子，一个会编筏。他们分了你们一顿饭，第二天编了三张筏，一张给你们。"
+          }
+        },
+        {
+          "key": "turn",
+          "label": "喊话——往下水去",
+          "effects": {
+            "flags": {
+              "fc_turned": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "筏子转了个圈，顺水漂下去了。孩子回头看了你们很久。小子和一直看着筏子，直到看不见。"
+          }
+        },
+        {
+          "key": "report",
+          "label": "报给戍长",
+          "effects": {
+            "flags": {
+              "fc_reported": true
+            },
+            "mood": {
+              "fuyi2": -1
+            },
+            "text": "戍长让人把筏子拉上来，把人带走了。你们再没见过他们。戍长给了你们一个点头。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fc_d3_dusk",
+      "kind": "timeline",
+      "side": "fancheng",
+      "when": {
+        "dayWindow": [
+          3,
+          3
+        ],
+        "once": true,
+        "at": "dusk",
+        "requiresFlag": "fc_rescued"
+      },
+      "title": "阿篾的筏",
+      "text": "被救上来的那个会编筏的，叫阿篾。天黑前他把一张筏推到你们窝棚底下：「水再涨，这个比墙管用。」",
+      "options": [
+        {
+          "key": "accept",
+          "label": "收下",
+          "effects": {
+            "flags": {
+              "fc_got_raft": true
+            },
+            "items": {
+              "wood": 3
+            },
+            "text": "筏子藏在垛口下。小子和夜里去摸了三次，摸它在不在。"
+          }
+        },
+        {
+          "key": "give",
+          "label": "给垛口上带孩子的那家",
+          "effects": {
+            "flags": {
+              "fc_gave_raft": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "筏子推给了带孩子的那家。阿篾看了你们一眼，第二天又编了一张。"
           }
         }
       ]
@@ -1077,6 +4775,7 @@
       "id": "fc_d4",
       "kind": "timeline",
       "side": "fancheng",
+      "beat": true,
       "when": {
         "dayWindow": [
           4,
@@ -1095,6 +4794,76 @@
               "all": 1
             },
             "text": "马是好马。水是好水。你们是好百姓。都沉得住。"
+          },
+          "auto": true
+        }
+      ]
+    },
+    {
+      "id": "fc_d5",
+      "kind": "timeline",
+      "side": "fancheng",
+      "when": {
+        "dayWindow": [
+          5,
+          5
+        ],
+        "once": true
+      },
+      "title": "哑婶的饼",
+      "text": "存粮见底了。哑婶把最后两升面做了六个饼，一个一个摆在板上。垛口上守了三夜的戍卒看着饼。军棚那边有人来问：有面吗？箭杆要糊羽。",
+      "options": [
+        {
+          "key": "share",
+          "label": "分给垛口守卒三个",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "fc_shared": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "三个饼过了垛口。戍卒没说谢，当夜把他的毡给了小子和。"
+          }
+        },
+        {
+          "key": "hoard",
+          "label": "都留着——只给小子和",
+          "effects": {
+            "flags": {
+              "fc_hoarded": true
+            },
+            "mood": {
+              "fuyi2": 1,
+              "fuyi1": -1,
+              "fuyi3": -1
+            },
+            "text": "六个饼藏进麻袋。哑婶做饼的手停了一下。她不说话，她从不说话。"
+          }
+        },
+        {
+          "key": "trade",
+          "label": "两个饼换军棚的裹创布",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "fc_traded": true
+            },
+            "items": {
+              "bandage": 1
+            },
+            "text": "两个饼换了一卷布。军棚的人说：下回还来。"
           }
         }
       ]
@@ -1103,6 +4872,7 @@
       "id": "fc_d6",
       "kind": "timeline",
       "side": "fancheng",
+      "beat": true,
       "when": {
         "dayWindow": [
           6,
@@ -1118,9 +4888,95 @@
           "label": "搬土",
           "effects": {
             "text": "土是湿的，比米重。"
-          }
+          },
+          "auto": true
         }
       ]
+    },
+    {
+      "id": "fc_d7",
+      "kind": "timeline",
+      "side": "fancheng",
+      "when": {
+        "dayWindow": [
+          7,
+          7
+        ],
+        "once": true
+      },
+      "title": "热",
+      "text": "小子和夜里发热。哑婶摸了摸他的额头，看着你。城隍庙檐下有神婆，军棚有医卒——都要东西。",
+      "options": [
+        {
+          "key": "nurse",
+          "label": "哑婶守着——冷水巾换一夜",
+          "effects": {
+            "flags": {
+              "fc_nursed": true
+            },
+            "mood": {
+              "fuyi2": 1
+            },
+            "sick": 1,
+            "text": "哑婶用冷水巾换了一夜。天亮热退了一半。她的眼睛是红的。"
+          }
+        },
+        {
+          "key": "temple",
+          "label": "去城隍庙求神婆",
+          "cost": [
+            {
+              "item": "canned",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "fc_temple": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "sick": 1,
+            "text": "神婆给了一道符和一碗水。小子和喝了，睡了。退没退热不知道，人安静了。老卒说：安静也是药。"
+          }
+        },
+        {
+          "key": "medic",
+          "label": "去军棚找医卒",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 2
+            }
+          ],
+          "effects": {
+            "flags": {
+              "fc_medic": true
+            },
+            "items": {
+              "herbmed": 1
+            },
+            "sick": 1,
+            "text": "两升米换了一碗汤药。医卒说：这孩子底子好。你听出来他是说：这孩子饿。"
+          }
+        },
+        {
+          "key": "wait2",
+          "label": "熬",
+          "effects": {
+            "flags": {
+              "fc_untreated": true
+            },
+            "mood": {
+              "all": -2
+            },
+            "sick": 2,
+            "text": "小子和熬了一夜。天亮没退。他说：我不怕。你们呢？"
+          }
+        }
+      ],
+      "as": "fuyi2"
     },
     {
       "id": "fc_d8",
@@ -1138,12 +4994,283 @@
       "options": [
         {
           "key": "answer",
-          "label": "答他",
+          "label": "答他：板没了就数人",
           "effects": {
+            "flags": {
+              "fc_answered": true
+            },
             "mood": {
               "all": 1
             },
             "text": "你说：板没了就数人。他点点头，好像真的有用。"
+          }
+        },
+        {
+          "key": "hand",
+          "label": "不答，把手里那块板递给他",
+          "effects": {
+            "flags": {
+              "fc_handed": true
+            },
+            "mood": {
+              "fuyi2": 2
+            },
+            "text": "你把板递给他。他接过去，没问为什么。从那天起，板是他数的。"
+          }
+        },
+        {
+          "key": "silence",
+          "label": "骂他闭嘴",
+          "effects": {
+            "flags": {
+              "fc_silenced": true
+            },
+            "mood": {
+              "fuyi2": -2,
+              "fuyi1": -1
+            },
+            "text": "你骂了。他闭嘴了。哑婶把饼推给他，他没吃。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fc_d9",
+      "kind": "timeline",
+      "side": "fancheng",
+      "when": {
+        "dayWindow": [
+          9,
+          9
+        ],
+        "once": true
+      },
+      "title": "一寸",
+      "text": "第九天夜里，水线退了一寸。有人不信，数了三遍。戍长说：最后一夜，垛口得有人。",
+      "options": [
+        {
+          "key": "fix",
+          "label": "连夜补垛口",
+          "cost": [
+            {
+              "item": "wood",
+              "n": 2
+            }
+          ],
+          "effects": {
+            "flags": {
+              "fc_fixed": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "三个人补了一夜。补完的时候天亮了，水又退了一寸——不知道是补的功劳还是水自己的。"
+          }
+        },
+        {
+          "key": "sleep",
+          "label": "睡最后一个整觉",
+          "effects": {
+            "flags": {
+              "fc_slept": true
+            },
+            "mood": {
+              "all": 2
+            },
+            "text": "你们睡了。十天来第一个整觉。垛口上戍卒自己补的，没叫你们。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fc_d10",
+      "kind": "timeline",
+      "side": "fancheng",
+      "when": {
+        "dayWindow": [
+          10,
+          10
+        ],
+        "once": true
+      },
+      "title": "数到第十天",
+      "text": "第十天早上，水面上露出来的板比昨天多了一块。小子和数了四遍。老卒说：刻上。",
+      "options": [
+        {
+          "key": "carve",
+          "label": "刻在垛口上",
+          "effects": {
+            "flags": {
+              "fc_carved": true
+            },
+            "text": "十道刻痕，一道一天。刻完老卒把刀还给戍卒。"
+          }
+        },
+        {
+          "key": "no",
+          "label": "不刻",
+          "effects": {
+            "flags": {
+              "fc_not_carved": true
+            },
+            "text": "「刻了也没人看。」哑婶把手放在板上，放了很久。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fc_k_borrow",
+      "kind": "knock",
+      "side": "fancheng",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4
+      },
+      "title": "借柴",
+      "text": "水线铺面的妇人上城头来，抱着一个湿透的包袱：「借两根柴，孩子冷。」",
+      "options": [
+        {
+          "key": "lend",
+          "label": "借",
+          "cost": [
+            {
+              "item": "firewood",
+              "n": 2
+            }
+          ],
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "fc_lent": true
+            },
+            "text": "柴过去了。她第二天还了半块饼。"
+          }
+        },
+        {
+          "key": "refuse",
+          "label": "自己也不够",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "text": "她没再问。走的时候包袱往怀里裹了裹。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fc_k_patrol",
+      "kind": "internal",
+      "side": "fancheng",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 3,
+        "minDay": 3
+      },
+      "title": "将军的靴子",
+      "text": "满宠将军从垛口走过去，没停。他看了一眼水线，看了一眼你们，没说话。他的靴子是湿的——将军的靴子也是湿的。",
+      "options": [
+        {
+          "key": "look",
+          "label": "看他走过去",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "text": "他走过去了。老卒说：他也在数板。"
+          },
+          "auto": true
+        }
+      ],
+      "beat": true
+    },
+    {
+      "id": "fc_k_sign",
+      "kind": "internal",
+      "side": "fancheng",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 3,
+        "minDay": 2
+      },
+      "title": "城隍庙的签",
+      "text": "哑婶从城隍庙檐下回来，手里攥着一支签。签上两个字她不认，递给老卒。老卒认了半天：「待水」。",
+      "options": [
+        {
+          "key": "keep",
+          "label": "收着",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "text": "签插在窝棚门口。水每退一寸，哑婶就看它一眼。"
+          }
+        },
+        {
+          "key": "toss",
+          "label": "扔了",
+          "effects": {
+            "text": "签扔进了水里。哑婶看着它漂走，没拦。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lh_d1",
+      "kind": "timeline",
+      "side": "liaohua",
+      "when": {
+        "dayWindow": [
+          1,
+          1
+        ],
+        "once": true
+      },
+      "title": "出城",
+      "text": "城开那天你成了该死的人。你诈死，背起母亲，往西走。第一夜得选路：官道快，有驿、有哨；坟地慢，没人；水路芦苇荡，湿，静，不知道通到哪。母亲在你背上说：你定。",
+      "options": [
+        {
+          "key": "road",
+          "label": "官道",
+          "effects": {
+            "flags": {
+              "lh_road": true
+            },
+            "text": "官道上月亮很大。你走在车辙里，母亲数着亭。「第三个亭了。」她说。"
+          }
+        },
+        {
+          "key": "grave",
+          "label": "坟地",
+          "effects": {
+            "flags": {
+              "lh_grave": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "坟地里脚下软。母亲一声没出。天亮前她说：「他们不咬人，化儿。活人才咬人。」"
+          }
+        },
+        {
+          "key": "reeds",
+          "label": "水路",
+          "effects": {
+            "flags": {
+              "lh_reeds": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "items": {
+              "water": 2
+            },
+            "text": "芦苇割手。水是凉的，母亲的脚泡白了。但没有人。一夜没有人。"
           }
         }
       ]
@@ -1163,13 +5290,169 @@
       "text": "白天躲在坟地里。母亲问：化儿，还认得路吗？你点头。说到底你早不认得了——认得的只是方向。",
       "options": [
         {
-          "key": "rest",
-          "label": "歇半个时辰",
+          "key": "yes",
+          "label": "认得",
           "effects": {
+            "flags": {
+              "lh_lied_route": true
+            },
+            "mood": {
+              "laomu": 1
+            },
+            "text": "她信了，或者装作信了。她睡着了。你数她的呼吸，像数更。"
+          }
+        },
+        {
+          "key": "honest",
+          "label": "不认得路——认得方向",
+          "effects": {
+            "flags": {
+              "lh_honest_route": true
+            },
             "mood": {
               "all": 1
             },
-            "text": "她睡着了。你数她的呼吸，像数更。"
+            "text": "「方向就够了。」她说。「你爹当年也只认方向。」她睡着了。你数她的呼吸，像数更。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lh_d3",
+      "kind": "timeline",
+      "side": "liaohua",
+      "when": {
+        "dayWindow": [
+          3,
+          3
+        ],
+        "once": true
+      },
+      "title": "寒",
+      "text": "第三天母亲着了凉。咳，不停。白天你们躲在塌了半边的里，空宅的灶是冷的。你有一天的干粮，没有药。",
+      "options": [
+        {
+          "key": "rest",
+          "label": "停一天——让她歇",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "lh_rested": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "你生了火。她靠着灶咳了一天，傍晚咳轻了。「别为我停。」她说。你说：不是为你，是我累了。她笑了。"
+          }
+        },
+        {
+          "key": "push",
+          "label": "连夜赶",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "text": "她在你背上咳了一夜。天亮的时候咳停了——不是好了，是没力气咳。",
+              "mood": {
+                "laomu": -1
+              }
+            },
+            "onFail": {
+              "wound": 2,
+              "flags": {
+                "lh_mother_hurt": true
+              },
+              "text": "半夜她从你背上滑下来——不是你没抱住，是她手松了。她的腿撞在石头上，没叫。天亮你才看见血。"
+            }
+          }
+        },
+        {
+          "key": "search",
+          "label": "翻空宅找姜",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "items": {
+                "herb": 2
+              },
+              "flags": {
+                "lh_found_herb": true
+              },
+              "text": "空宅的灶膛里有半块姜，墙角有干艾。你煮了一碗，她喝了，说：「苦。」然后说：「好。」"
+            },
+            "onFail": {
+              "flags": {
+                "lh_seen": true
+              },
+              "mood": {
+                "all": -2
+              },
+              "text": "宅子里有人——一个老头，缩在灶后。他看见你了。他没喊。他看了很久，说：「往西？」你没答。他说：「我也是。」"
+            }
+          }
+        }
+      ],
+      "as": "laomu"
+    },
+    {
+      "id": "lh_d4",
+      "kind": "timeline",
+      "side": "liaohua",
+      "when": {
+        "dayWindow": [
+          4,
+          4
+        ],
+        "once": true
+      },
+      "title": "同路",
+      "text": "山道上遇到另一家西行的人：一个妇人，两个孩子，一个老仆。妇人看了你母亲一眼，说：「一起走？人多不怕。」老仆看着你的刀。",
+      "options": [
+        {
+          "key": "together",
+          "label": "同行",
+          "effects": {
+            "flags": {
+              "lh_together": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "两家人走成了一队。孩子夜里哭，老仆用袖子捂。母亲把水囊递给了那个小的。"
+          }
+        },
+        {
+          "key": "apart",
+          "label": "让她们先行",
+          "effects": {
+            "flags": {
+              "lh_apart": true
+            },
+            "text": "你说：你们先走，我们慢。妇人没再劝。她们走远了，母亲说：「人多目标大，你想得对。」她说得很慢。"
+          }
+        },
+        {
+          "key": "trade",
+          "label": "换干粮再分路",
+          "cost": [
+            {
+              "item": "canned",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "lh_traded": true
+            },
+            "items": {
+              "raw": 2,
+              "herb": 1
+            },
+            "text": "肉脯换了两升米和一包草药。老仆说：药是治咳的。他看了你母亲一眼。"
           }
         }
       ]
@@ -1192,10 +5475,207 @@
           "key": "go",
           "label": "连夜走",
           "effects": {
+            "flags": {
+              "lh_night_go": true
+            },
             "mood": {
               "all": -1
             },
             "text": "火没有跟上来。追你的人也在想值不值得。"
+          }
+        },
+        {
+          "key": "ditch",
+          "label": "伏进沟里等火过去",
+          "effects": {
+            "flags": {
+              "lh_ditch": true
+            },
+            "mood": {
+              "all": -2
+            },
+            "text": "你们在沟里躺了一夜。火在坡上走了一个来回，走了。母亲在你怀里一声没出，天亮才发现她一直咬着袖子。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lh_d5_dusk",
+      "kind": "timeline",
+      "side": "liaohua",
+      "when": {
+        "dayWindow": [
+          5,
+          5
+        ],
+        "once": true,
+        "at": "dusk",
+        "requiresFlag": "lh_together"
+      },
+      "title": "哭声",
+      "text": "黄昏，同路那家的孩子又哭了。东边的火还没灭。老仆看着你，妇人看着老仆。谁都知道哭声能传多远。",
+      "options": [
+        {
+          "key": "stay",
+          "label": "一起——捂着走",
+          "effects": {
+            "mood": {
+              "all": 1
+            }
+          },
+          "riskCheck": {
+            "onPass": {
+              "text": "孩子的哭声被袖子吞了。火没有过来。天亮的时候妇人没说谢，给了母亲半块饼。"
+            },
+            "onFail": {
+              "flags": {
+                "lh_exposed": true
+              },
+              "mood": {
+                "all": -2
+              },
+              "text": "哭声还是传出去了。火转了方向。你们分头跑进了林子——天亮再没见到那家人。母亲问：「他们呢？」你说：先走了。"
+            }
+          }
+        },
+        {
+          "key": "leave",
+          "label": "分路——各走各的",
+          "effects": {
+            "flags": {
+              "lh_left_them": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "你说：我们走快些。妇人懂了。老仆说了一句什么，你没听清。母亲在背上说：「化儿。」就这两个字。"
+          }
+        }
+      ],
+      "as": "liaohua"
+    },
+    {
+      "id": "lh_d6",
+      "kind": "timeline",
+      "side": "liaohua",
+      "when": {
+        "dayWindow": [
+          6,
+          6
+        ],
+        "once": true
+      },
+      "title": "关卡",
+      "text": "岔口有吴兵的哨卡，三个人，一面旗。白天过不去。夜里哨棚有灯。绕山要多走一天——干粮不够一天。",
+      "options": [
+        {
+          "key": "detour",
+          "label": "绕山",
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "lh_detoured": true
+            },
+            "mood": {
+              "all": -1
+            },
+            "text": "山路把你的鞋走穿了。母亲在背上说：「我可以走。」你说：路不好。她没再说。"
+          }
+        },
+        {
+          "key": "bluff",
+          "label": "装流民硬过",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "flags": {
+                "lh_passed": true
+              },
+              "mood": {
+                "all": 1
+              },
+              "text": "哨卒看了看你，看了看你背上的老太太，挥手。「流民多了。」他对同伴说。你听见了。"
+            },
+            "onFail": {
+              "flags": {
+                "lh_beaten": true
+              },
+              "wound": 1,
+              "mood": {
+                "all": -2
+              },
+              "text": "哨卒拦了你。问话，你答得慢了一拍。一棍子下来，没问第二句——他们只是打，不是查。打完放你走了。母亲一直没出声。"
+            }
+          }
+        },
+        {
+          "key": "night",
+          "label": "夜里贴着哨棚过",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "flags": {
+                "lh_sneaked": true
+              },
+              "text": "灯下的哨卒在打盹。你贴着棚背后过去，母亲的呼吸停了十步。过去之后她说：「我憋得住。」"
+            },
+            "onFail": {
+              "flags": {
+                "lh_chased": true
+              },
+              "mood": {
+                "all": -2
+              },
+              "text": "狗叫了。你跑进林子，母亲在背上颠得像一袋米。狗没追远——它们也饿。"
+            }
+          }
+        }
+      ],
+      "as": "liaohua"
+    },
+    {
+      "id": "lh_d7",
+      "kind": "timeline",
+      "side": "liaohua",
+      "when": {
+        "dayWindow": [
+          7,
+          7
+        ],
+        "once": true
+      },
+      "title": "她的话",
+      "text": "第七天白天，躲在石陉里。母亲忽然说起你小时候：你三岁那年掉进水塘，是她跳下去捞的，她不会水。「捞上来你哭，我也哭。」她说，「我哭是因为我不会水。」",
+      "options": [
+        {
+          "key": "listen",
+          "label": "听完",
+          "effects": {
+            "flags": {
+              "lh_listened": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "你听完了。她又说了几件。你一件都不记得，她一件都没忘。"
+          }
+        },
+        {
+          "key": "hurry",
+          "label": "让她省力气",
+          "effects": {
+            "flags": {
+              "lh_hurried": true
+            },
+            "mood": {
+              "laomu": -1
+            },
+            "text": "「省什么力气。」她说，「走的是你。」她不说了。你想听下去，她睡了。"
           }
         }
       ]
@@ -1218,10 +5698,282 @@
           "key": "water",
           "label": "喝",
           "effects": {
+            "flags": {
+              "lh_drank": true
+            },
             "mood": {
               "all": 1
             },
             "text": "水是温的。她把水囊焐在怀里焐了一夜。"
+          }
+        },
+        {
+          "key": "mother",
+          "label": "先给她",
+          "effects": {
+            "flags": {
+              "lh_mother_first": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "你把水囊递回去。她推回来。推了三回，你们各喝了一口。水是温的——她焐了一夜。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lh_d9",
+      "kind": "timeline",
+      "side": "liaohua",
+      "when": {
+        "dayWindow": [
+          9,
+          9
+        ],
+        "once": true
+      },
+      "title": "界",
+      "text": "山道上遇见一个猎户。他说：翻过前面那道梁，就是汉中地界了。还剩一天。母亲在背上，很轻。这几天她一天比一天轻。",
+      "options": [
+        {
+          "key": "push",
+          "label": "连夜翻梁",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "flags": {
+                "lh_final_push": true
+              },
+              "mood": {
+                "all": 1
+              },
+              "text": "梁翻过去了。天亮的时候山那边的雾里有烽燧的影子。母亲说：「到了？」你说：快了。"
+            },
+            "onFail": {
+              "flags": {
+                "lh_mother_fell": true
+              },
+              "wound": 2,
+              "mood": {
+                "all": -2
+              },
+              "text": "下梁的时候她从你背上滑下去了——你的腿软了。她说没事，你知道有事。她的脚踝肿起来，像一个馒头。"
+            }
+          }
+        },
+        {
+          "key": "rest",
+          "label": "歇整夜，明日过",
+          "effects": {
+            "flags": {
+              "lh_final_rest": true
+            },
+            "mood": {
+              "all": 2
+            },
+            "text": "你们在猎户的窝棚里睡了一夜。他给了一碗热的。母亲喝了半碗，剩下半碗推给你。"
+          }
+        }
+      ],
+      "as": "laomu"
+    },
+    {
+      "id": "lh_d10",
+      "kind": "timeline",
+      "side": "liaohua",
+      "when": {
+        "dayWindow": [
+          10,
+          10
+        ],
+        "once": true
+      },
+      "title": "山那边的火",
+      "text": "第十天夜里，山那边有烽燧的火——汉中的。母亲在你背上。你看着那火，忽然不想走了——不是不想到，是不想这十天就这么完了。",
+      "options": [
+        {
+          "key": "go",
+          "label": "朝着火光走",
+          "effects": {
+            "flags": {
+              "lh_to_fire": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "你走了。火一步一步近了。母亲在你背上说：「化儿，到了叫我。」"
+          }
+        },
+        {
+          "key": "wait2",
+          "label": "等天亮再走",
+          "effects": {
+            "flags": {
+              "lh_wait_dawn": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "你在山口坐了一夜。母亲靠着你。天亮的时候她说：「走吧。」你说：好。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lh_k_deserter",
+      "kind": "knock",
+      "side": "liaohua",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4
+      },
+      "title": "坟地里的活人",
+      "text": "坟地里有人——一个溃兵，蹲在碑后面，刀横在膝上。他看见你了。他看见你背上的人了。",
+      "options": [
+        {
+          "key": "talk",
+          "label": "搭话",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "lh_met_deserter": true
+            },
+            "text": "他是江陵的。他问：往哪？你说：西。他说：我也想。他没跟来。"
+          }
+        },
+        {
+          "key": "avoid",
+          "label": "绕开",
+          "effects": {
+            "text": "你绕开了。他没动。天亮前你听见那边有响动，不知道是他走了还是别的。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lh_k_rations",
+      "kind": "internal",
+      "side": "liaohua",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4,
+        "minDay": 2
+      },
+      "title": "干粮的算法",
+      "text": "母亲把干粮分成了两堆，一大一小。大的推给你。你换过来。她又换过去。「背人的吃多的，」她说，「这是规矩。」",
+      "options": [
+        {
+          "key": "obey",
+          "label": "依她",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "text": "你吃了大的那堆。她看着你吃完，才吃。"
+          },
+          "auto": true
+        }
+      ],
+      "beat": true
+    },
+    {
+      "id": "lh_k_fire2",
+      "kind": "internal",
+      "side": "liaohua",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 3,
+        "minDay": 3
+      },
+      "title": "山谷对面的火",
+      "text": "半夜山谷对面亮起一点火——另一拨西行的人。他们不知道这火能看多远。",
+      "options": [
+        {
+          "key": "warn",
+          "label": "过去提醒",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "mood": {
+                "all": 1
+              },
+              "flags": {
+                "lh_warned": true
+              },
+              "text": "你摸过去，踢灭了火。那边的人吓住了，然后懂了。走的时候有人塞给你一包盐。"
+            },
+            "onFail": {
+              "mood": {
+                "all": -1
+              },
+              "text": "你摸过去，被当成了贼。挨了一拳，火灭了。两边都没说话。"
+            }
+          }
+        },
+        {
+          "key": "ignore",
+          "label": "不管",
+          "effects": {
+            "text": "火亮了一夜。天亮的时候灭了，不知道是烧完了还是被人灭的。"
+          }
+        }
+      ],
+      "as": "liaohua"
+    },
+    {
+      "id": "cb_d1",
+      "kind": "timeline",
+      "side": "changban",
+      "when": {
+        "dayWindow": [
+          1,
+          1
+        ],
+        "once": true
+      },
+      "title": "下铲的规矩",
+      "text": "当阳，长坂。十一年前的溃军道。大瓮把铲子插进土里，对小瓮说规矩。小瓮等着——每个师父都有规矩。",
+      "options": [
+        {
+          "key": "bones",
+          "label": "骨头只是骨头——值钱的拿，人不碰",
+          "effects": {
+            "flags": {
+              "cb_rule_bones": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "「骨头只是骨头。」小瓮点头，记住了。他不知道这条规矩是用来守住什么的。"
+          }
+        },
+        {
+          "key": "value",
+          "label": "值钱的归值钱——骨头上的也一样",
+          "effects": {
+            "flags": {
+              "cb_rule_value": true
+            },
+            "items": {
+              "parts": 2
+            },
+            "text": "「兵器行不认年头，只认斤两。」小瓮点头。他的眼睛亮了一下，大瓮没看见。"
+          }
+        },
+        {
+          "key": "quiet",
+          "label": "不立规矩——看着学",
+          "effects": {
+            "flags": {
+              "cb_rule_none": true
+            },
+            "text": "大瓮没说规矩，自己下了铲。小瓮看着。看了一天，学会了怎么下铲，没学会什么时候停。"
           }
         }
       ]
@@ -1244,11 +5996,169 @@
           "key": "keep",
           "label": "收了",
           "effects": {
-            "knowledge": 1,
+            "items": {
+              "comp": 2
+            },
+            "flags": {
+              "cb_took_arrows": true
+            },
             "text": "箭镞入袋。兵器行不认年头，只认斤两。"
+          }
+        },
+        {
+          "key": "leave",
+          "label": "留着——这是坟上的",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "flags": {
+              "cb_left_arrows": true
+            },
+            "text": "大瓮把箭镞扔回土里。小瓮问为什么。大瓮说：同一家铸的。小瓮没懂。"
           }
         }
       ]
+    },
+    {
+      "id": "cb_d2_dusk",
+      "kind": "timeline",
+      "side": "changban",
+      "when": {
+        "dayWindow": [
+          2,
+          2
+        ],
+        "once": true,
+        "at": "dusk"
+      },
+      "title": "野犬",
+      "text": "天黑前坡上来了三条野犬——瘦，眼睛亮。小瓮往大瓮身后缩。它们不是来咬人的，是来翻你们翻过的土。",
+      "options": [
+        {
+          "key": "drive",
+          "label": "赶",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "mood": {
+                "weng2": 1
+              },
+              "flags": {
+                "cb_drove_dogs": true
+              },
+              "text": "大瓮抡着铲子赶了三回。狗退到坡那边蹲着，不走。小瓮说：它们比我们先来。"
+            },
+            "onFail": {
+              "wound": 1,
+              "mood": {
+                "all": -1
+              },
+              "text": "一条狗扑上来了。铲子砸中了它，它咬中了大瓮的小腿。狗跑了。小瓮脸白得像土里的东西。"
+            }
+          }
+        },
+        {
+          "key": "feed",
+          "label": "丢块肉脯",
+          "cost": [
+            {
+              "item": "canned",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "flags": {
+              "cb_fed_dogs": true
+            },
+            "mood": {
+              "weng2": 1
+            },
+            "text": "狗叼了肉脯跑了。小瓮长出一口气。大瓮说：明天它们还来。"
+          }
+        },
+        {
+          "key": "ignore",
+          "label": "不管——它们不咬人",
+          "effects": {
+            "flags": {
+              "cb_ignored_dogs": true
+            },
+            "mood": {
+              "weng2": -1
+            },
+            "text": "狗在坡那边翻了一夜。小瓮一夜没睡。"
+          }
+        }
+      ],
+      "as": "weng1"
+    },
+    {
+      "id": "cb_d3",
+      "kind": "timeline",
+      "side": "changban",
+      "when": {
+        "dayWindow": [
+          3,
+          3
+        ],
+        "once": true
+      },
+      "title": "枯井",
+      "text": "溃道边有一口枯井。战时藏人的——有人进去，没出来。井口的筐里还有半截绳。小瓮不肯靠近。大瓮往里扔了块石头，响得很深。",
+      "options": [
+        {
+          "key": "down",
+          "label": "下去",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "items": {
+                "jewel": 1,
+                "book": 1
+              },
+              "flags": {
+                "cb_well_loot": true
+              },
+              "text": "井底有三个人，坐着，靠着，像在等。怀里有东西：一对耳坠，一卷竹简。大瓮一样一样拿出来，一样一样放好。上来的时候他说：他们等的不是我们。"
+            },
+            "onFail": {
+              "wound": 2,
+              "mood": {
+                "all": -2
+              },
+              "flags": {
+                "cb_well_hurt": true
+              },
+              "text": "绳断在一半。大瓮摔在井底，腿压在什么东西上——是一具，不是一块石头。小瓮在井口哭着放绳，放了半个时辰。"
+            }
+          }
+        },
+        {
+          "key": "probe",
+          "label": "扔石头听响——不下",
+          "effects": {
+            "flags": {
+              "cb_well_probed": true
+            },
+            "text": "石头落下去，很久才响。响了两声——一声是石头，一声不知道是什么。大瓮说：走。"
+          }
+        },
+        {
+          "key": "cover",
+          "label": "盖上井口",
+          "effects": {
+            "flags": {
+              "cb_well_covered": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "大瓮找了块板，盖住井口。小瓮帮着压了石头。「让他们睡。」大瓮说。小瓮第一次听他用「他们」。"
+          }
+        }
+      ],
+      "as": "weng1"
     },
     {
       "id": "cb_d4",
@@ -1262,12 +6172,15 @@
         "once": true
       },
       "title": "抱琴的人",
-      "text": "壕沟底有一具骸骨，怀里抱着琴。小瓮问：他身上有什么值钱的吗？大瓮没答。",
+      "text": "壕沟底有一具骸骨，怀里抱着琴。小瓮问：他身上有什么值钱的吗？大瓮没答。他在看那具骸骨的鞋——纳底的针脚，北边的样式。十一年前从北边跑出来的人，跑到了这里。",
       "options": [
         {
           "key": "bury",
           "label": "埋回去",
           "effects": {
+            "flags": {
+              "cb_buried": true
+            },
             "mood": {
               "all": 1
             },
@@ -1278,13 +6191,249 @@
           "key": "take",
           "label": "琴拆了能卖",
           "effects": {
-            "mood": {
-              "all": -2
+            "flags": {
+              "cb_took_qin": true
             },
             "items": {
               "parts": 2
             },
-            "text": "弦早锈了。琴板拆开的时候，声音很轻。"
+            "mood": {
+              "all": -2
+            },
+            "text": "弦早锈了。琴板拆开的时候，声音很轻。小瓮说：这个值钱吗？大瓮说：值。"
+          }
+        },
+        {
+          "key": "shoe",
+          "label": "认那双鞋",
+          "effects": {
+            "flags": {
+              "cb_shoe": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "大瓮蹲了很久。十一年前他也是从北边跑来的，鞋也是这样纳的。他认不出这是谁——跑出来的人太多了。他把鞋埋回去，埋得比琴深。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cb_d4_dusk",
+      "kind": "timeline",
+      "side": "changban",
+      "when": {
+        "dayWindow": [
+          4,
+          4
+        ],
+        "once": true,
+        "at": "dusk",
+        "requiresChar": "weng1"
+      },
+      "title": "笛",
+      "text": "夜里大瓮吹了一声笛——不成调。小瓮第一次听见。十一年前的笛声，大瓮从没说过。",
+      "options": [
+        {
+          "key": "listen",
+          "label": "听着",
+          "effects": {
+            "flags": {
+              "cb_listened_flute": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "他吹了三声，停了。小瓮没问。有的师父的事，不问是规矩。"
+          }
+        },
+        {
+          "key": "ask",
+          "label": "问",
+          "effects": {
+            "flags": {
+              "cb_asked_flute": true
+            },
+            "text": "「师父，十一年前你在这？」大瓮把笛子收了。「翻你的土。」他说。小瓮翻了。他翻得很慢。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cb_d5",
+      "kind": "timeline",
+      "side": "changban",
+      "when": {
+        "dayWindow": [
+          5,
+          5
+        ],
+        "once": true
+      },
+      "title": "最后一堆",
+      "text": "第五天，分拣席上还剩一堆没翻的——不值钱的东西：破布、木片、半片竹简。该走了。大瓮看着那堆，小瓮看着大瓮。",
+      "options": [
+        {
+          "key": "dig",
+          "label": "翻完",
+          "effects": {
+            "flags": {
+              "cb_last_dig": true
+            },
+            "items": {
+              "parts": 2,
+              "comp": 1
+            },
+            "text": "翻完了。竹简上有半行字，没人认得。大瓮塞进袋里，说：有人认得。"
+          }
+        },
+        {
+          "key": "bury",
+          "label": "一起埋了",
+          "effects": {
+            "flags": {
+              "cb_last_bury": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "两个人挖了一个坑，把那堆埋了。小瓮埋得很用力，像在埋什么别的东西。"
+          }
+        },
+        {
+          "key": "burn",
+          "label": "烧掉",
+          "effects": {
+            "flags": {
+              "cb_last_burn": true
+            },
+            "mood": {
+              "all": 1
+            },
+            "text": "火不大。破布烧得快，木片烧得慢，竹简烧的时候爆了一声。小瓮说：像放箭。大瓮没接。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cb_k_rival",
+      "kind": "knock",
+      "side": "changban",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 4,
+        "minDay": 2
+      },
+      "title": "同行",
+      "text": "坡那边来了另一拨拾荒的，三个人，铲子比你们新。领头的说：这坡是我们先占的。",
+      "options": [
+        {
+          "key": "yield",
+          "label": "让坡",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "flags": {
+              "cb_yielded": true
+            },
+            "text": "你们挪到了沟底。沟底的东西更深，更难翻，也更没人翻过。"
+          }
+        },
+        {
+          "key": "stand",
+          "label": "不让",
+          "effects": {},
+          "riskCheck": {
+            "onPass": {
+              "mood": {
+                "all": 1
+              },
+              "flags": {
+                "cb_stood": true
+              },
+              "text": "大瓮把铲子插在两拨人中间。「十一年前这里死了八千人，」他说，「够分。」他们走了。"
+            },
+            "onFail": {
+              "wound": 1,
+              "mood": {
+                "all": -2
+              },
+              "text": "铲子对铲子。大瓮的胳膊挨了一下。他们没赢，你们也没。坡分了一半。"
+            }
+          }
+        }
+      ],
+      "as": "weng1"
+    },
+    {
+      "id": "cb_k_troops",
+      "kind": "internal",
+      "side": "changban",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 3,
+        "minDay": 2
+      },
+      "title": "兵过",
+      "text": "官道上过兵——新的兵，往南。旗是你们认得的旗，十一年前也是这面。小瓮数了一百，数不过来了。",
+      "options": [
+        {
+          "key": "watch",
+          "label": "看着",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "text": "兵过完了。大瓮说：十一年后，又有人来翻他们。小瓮没懂。十一年后他懂了。"
+          },
+          "auto": true
+        }
+      ],
+      "beat": true
+    },
+    {
+      "id": "cb_k_dark",
+      "kind": "internal",
+      "side": "changban",
+      "when": {
+        "once": true,
+        "chance": 1,
+        "weight": 3,
+        "requiresChar": "weng2"
+      },
+      "title": "怕黑",
+      "text": "小瓮夜里不敢出窝棚，说坡上有人在走。大瓮听了半天：是风。",
+      "options": [
+        {
+          "key": "light",
+          "label": "点一支柴陪他",
+          "cost": [
+            {
+              "item": "firewood",
+              "n": 1
+            }
+          ],
+          "effects": {
+            "mood": {
+              "weng2": 2
+            },
+            "flags": {
+              "cb_lit": true
+            },
+            "text": "柴烧了一夜。小瓮睡了。大瓮没睡——他也听见了，不是风。"
+          }
+        },
+        {
+          "key": "tough",
+          "label": "让他自己熬",
+          "effects": {
+            "mood": {
+              "weng2": -1
+            },
+            "text": "小瓮熬到天亮。天亮他说：师父，是风。大瓮说：是风。"
           }
         }
       ]

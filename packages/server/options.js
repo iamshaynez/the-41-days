@@ -1,7 +1,8 @@
 // 谋士选项的验证器（统一交互面）：LLM 出的选项必须「点得动」——
 // 形状（意图白名单）→ 可行性（feasibleIntent 只读检查）→ 禁词（正典防火墙），
 // 三关全过才许渲染。纯视图数据：不碰 state、不进事件流，点了才走输入管线。
-import { validateIntentShape, feasibleIntent, normalizeIntent, nightHomeView, locNeedProfile, locYieldLine } from '../core/index.js';
+import { sideSceneBrief } from './narrate.js';
+import { validateIntentShape, feasibleIntent, normalizeIntent, nightHomeView, locNeedProfile, locYieldLine, homeOf } from '../core/index.js';
 import { LOC_ALIAS } from '../core/src/parser.js';
 
 /** 防御性截断：在标点处收尾（不放残句——线上教训：「派一个人对折他，」） */
@@ -128,7 +129,10 @@ export function idTable(state, pack, { night = false } = {}) {
   const stock = state.franko
     ? `商人货架（只有这些可买）：${state.franko.stock.filter((x) => x.n > 0).map((x) => `${x.item}×${x.n}`).join('、')}`
     : '';
-  return `【id 对照——意图里只准写等号右边的 id】\n角色：${chars}${localNpcs ? `\n此地遇到的人：${localNpcs}` : ''}\n地点：${locs}\n物品：${items}${stock ? `\n${stock}` : ''}`;
+  // 别传：方略生成者也得知道这局不在橘里（选项标签里不许冒出南市和船牙）
+  const side = state.sidestory ? pack.sideMap?.[state.sidestory.id] : null;
+  const sideLine = side ? `\n${sideSceneBrief(side, state)}` : '';
+  return `【id 对照——意图里只准写等号右边的 id】\n角色：${chars}${localNpcs ? `\n此地遇到的人：${localNpcs}` : ''}\n地点：${locs}\n物品：${items}${stock ? `\n${stock}` : ''}${sideLine}`;
 }
 
 /** 现在真正能做的事（动态可行域）：**分工商簿**——按人列，各算各的。
@@ -166,9 +170,9 @@ export function actionMenu(state, pack) {
     if (mates.length) m.push(`talk 交谈（对象：${mates.map((x) => x.id).join('、')}）`);
     m.push('guard 守门 / sleep 补眠 / rest 卧床');
     if (F('listen_radio')) m.push('listen_radio 听更鼓');
-    const leftovers = (pack.locMap.home.rooms || []).flatMap((r) => s.house.opened[r.id] ? (r.containers || []).filter((ct) => !s.house.searched[ct.id] && (ct.type !== 'locked' || s.house.searched[ct.id + ':open'])) : []);
+    const leftovers = (homeOf(pack, s).rooms || []).flatMap((r) => s.house.opened[r.id] ? (r.containers || []).filter((ct) => !s.house.searched[ct.id] && (ct.type !== 'locked' || s.house.searched[ct.id + ':open'])) : []);
     if (leftovers.length) m.push(`search_home 搜家（还有 ${leftovers.length} 处没翻，如 ${leftovers[0].id}）`);
-    const rooms = (pack.locMap.home.rooms || []).filter((r) => !s.house.opened[r.id] && F('open_room', { target: r.id }));
+    const rooms = (homeOf(pack, s).rooms || []).filter((r) => !s.house.opened[r.id] && F('open_room', { target: r.id }));
     if (rooms.length) m.push(`open_room 开房（${rooms.map((r) => r.id).join('、')}）`);
     if (F('chop')) m.push('chop 劈家具');
     if (F('repair')) m.push('repair 修门');
@@ -247,7 +251,7 @@ export function cardBrief(state, pack, card) {
       }).join('、');
     const famineVow = (mealsN <= 1 && Object.values(state.directions || {}).some((d) => d.kind === 'vow' && d.alive))
       ? '眼下断粮，嘴最急——不要出践誓类选项（带不回吃的的誓地这晚就是空炮），誓等缓过来再兑。' : '';
-    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。${famineLine}${famineVow}夜里出门只能一个人（围城规矩：人多目标大）——「大家都出去」做不到，选一个最合适的，其余在家守或睡。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
+    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。${famineLine}${famineVow}夜里出门只能一个人（${state.sidestory ? '这一局的规矩' : '围城规矩'}：人多目标大）——「大家都出去」做不到，选一个最合适的，其余在家守或睡。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
   }
   if (card === 'night') {
     const loc = pack.locMap[state.night?.locId];

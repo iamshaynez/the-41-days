@@ -1,7 +1,7 @@
 // 管家层（决断意志模型）：玩家只做决断与表达，日常由内核按策略自动张罗。
 // 三个规划器产出与裁判/直读解析器完全相同的意图对象，走同一条 resolve 管线——
 // 自动化不发明第二条状态通道。bots.js 是这些策略的对抗性参考，本文件是游戏内正式版。
-import { aliveChars, apMaxOf, policyOf, moodLevel } from './state.js';
+import { aliveChars, apMaxOf, policyOf, moodLevel, homeOf } from './state.js';
 import { fireEventCard } from './events.js';
 import { DAY_ACTIONS, AP_COST } from './dayActions.js';
 import { LOC_ALIAS } from './parser.js';
@@ -70,11 +70,11 @@ export function feasibleIntent(state, pack, intent) {
         case 'listen_radio': return !!s.facilities.radio;
         case 'search_home': {
           if (intent.target === 'yard' && (s.echoes?.capsules || []).some((x) => !s.capsuleFound?.[x.key])) return true;
-          return (pack.locMap.home.rooms || []).some((r) => s.house.opened[r.id] && (r.containers || []).some((ct) =>
+          return (homeOf(pack, s).rooms || []).some((r) => s.house.opened[r.id] && (r.containers || []).some((ct) =>
             !s.house.searched[ct.id] && (ct.type !== 'locked' || s.house.searched[ct.id + ':open'])));
         }
         case 'open_room': {
-          const r = (pack.locMap.home.rooms || []).find((x) => x.id === intent.target);
+          const r = (homeOf(pack, s).rooms || []).find((x) => x.id === intent.target);
           if (!r || s.house.opened[r.id]) return false;
           if (r.door === 'locked') return has(s, 'crowbar') || has(s, 'lockpick');
           if (r.door === 'rubble') return has(s, 'shovel') && c.ap >= 2;
@@ -276,7 +276,7 @@ export function planDay(state, pack) {
   // —— 搜家：还有没翻过的角落就翻 ——
   {
     const idler = free();
-    const homeLeft = pack.locMap.home.rooms.some((r) => s.house.opened[r.id] && (r.containers || []).some((ct) => !s.house.searched[ct.id]));
+    const homeLeft = homeOf(pack, s).rooms.some((r) => s.house.opened[r.id] && (r.containers || []).some((ct) => !s.house.searched[ct.id]));
     if (idler && homeLeft) intents.push(delegated({ type: 'act', actor: idler.id, action: 'search_home' }));
   }
   return intents;
@@ -921,7 +921,7 @@ export function suggests(state, pack) {
     }
     // 搜家：家里还有没翻完的角落——白天最稳妥的进项
     {
-      const leftovers = (pack.locMap.home.rooms || []).flatMap((r) => s.house.opened[r.id]
+      const leftovers = (homeOf(pack, s).rooms || []).flatMap((r) => s.house.opened[r.id]
         ? (r.containers || []).filter((ct) => !s.house.searched[ct.id] && (ct.type !== 'locked' || s.house.searched[ct.id + ':open'])) : []);
       if (leftovers.length) {
         const who = aliveChars(s).find((c) => c.ap > 0 && !c.bedRest);

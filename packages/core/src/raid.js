@@ -14,6 +14,9 @@ export function resolveRaid(ctx) {
     - (aliveChars(s).some((c) => c.guardTonight) ? pack.manifest.raid.guardDeter : 0)) * cfg.raidMul;
   // 家徒四壁减半（流民也懒得来）
   if (homeValue(s, pack) < 20) p *= 0.5;
+  // 别传衰减：短局一两人的家（船/窝棚/歇处）不是贼的账本——压力来自卡，不来自门。
+  // 实测不加衰减：鲁舟线首夜空船被袭、阿橹重伤，五天船期变成五天病床
+  if (s.sidestory) p *= 0.4;
   // v0.2 校准（交割月衰减）：D40 后城里能走的都走了——士族闭门、流民散尽、商路收摊，
   // 贼也是。交割前的压力从"抢"换成"空"，袭击概率逐日衰减（下限 0.3）。
   if (s.day > 40) p *= Math.max(0.3, 1 - (s.day - 40) * 0.05);
@@ -26,7 +29,7 @@ export function resolveRaid(ctx) {
   // 夜窃变体（15%）：无声，晨报发现
   const quiet = ctx.rng.chance(0.15);
   // 威胁与防御（R-03：家产值 = 库存总值/10，再按 /50 折算——家当越多越招贼）
-  const T = 2 + s.day / 5 + homeValue(s, pack) / 500 + s.notoriety;
+  const T = (2 + s.day / 5 + homeValue(s, pack) / 500 + s.notoriety) * (s.sidestory ? 0.5 : 1); // 别传的小家招不来大队人马
   let guards = aliveChars(s).filter((c) => c.guardTonight || c.awakeTonight);
   // CY-32 危机兑现：被长期克扣口粮的守夜人可能"没听见"（因果引擎，至多一人）
   const slumbered = slumberGuard(ctx, guards);

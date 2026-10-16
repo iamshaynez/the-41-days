@@ -1,7 +1,7 @@
 // 节拍层（长线体验-v0.2 §4.4 概述日 + §4.1 快局）：
 // 41 天的均匀节拍是白开水——平淡日由内核裁决收卷，只留一笔给叙事者；
 // 玩家随时可用规矩关掉（policy.overviewDays）。纯函数 + 内容数值，零随机。
-import { policyOf, aliveChars, apMaxOf } from './state.js';
+import { policyOf, aliveChars, apMaxOf, homeOf } from './state.js';
 import { dawnProblems } from './delegate.js';
 
 /** 概述日会被吞掉的例行流水 fact（做饭吃饭修修补补）——大事（文档/封印/死亡）永不吞 */
@@ -87,7 +87,7 @@ export function applyQuickStart(state, pack) {
   if (qs.homeFurniture !== undefined) s.homeFurniture = qs.homeFurniture;
   if (qs.knownLocs) s.knownLocs = [...new Set([...s.knownLocs, ...qs.knownLocs])];
   if (qs.searchedHome) {
-    for (const room of pack.locMap.home.rooms || []) {
+    for (const room of homeOf(pack, s).rooms || []) {
       if (s.house.opened[room.id]) for (const ct of room.containers || []) s.house.searched[ct.id] = true;
     }
   }

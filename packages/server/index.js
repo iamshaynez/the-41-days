@@ -15,7 +15,7 @@ import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect, humanFacts, narrationLint, buildFeedback } from './narrate.js';
 import { rejectText } from '../core/src/rejects.js';
 import { describeIntent } from './narrate.js';
-import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView, charCare, relationsOf } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView, charCare, relationsOf , homeOf } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
@@ -270,6 +270,10 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     const view = { ...state };
     view.itemNames = Object.fromEntries(pack.items.map((i) => [i.id, i.name]));
     view.itemFlavors = Object.fromEntries(pack.items.filter((i) => i.flavor).map((i) => [i.id, i.flavor]));
+    // 这个家的房间名（别传住的是船舱/医棚/窝棚，不是橘里的门厅）
+    const home = homeOf(pack, state);
+    view.roomNames = Object.fromEntries((home.rooms || []).map((r) => [r.id, r.name]));
+    if (state.sidestory) view.homeName = home.name;
     // 叙事双轴三视图（叙事双轴-v0.1）：序章节拍 / 舆图（三态+走向+留痕）/ 史卷（步+闲笔+digest）
     if (state.phase === 'prologue' && !state.over) view.preludeView = preludeBeatView(pack, state);
     view.mapView = mapView(state, pack);
@@ -518,8 +522,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         const prologue = body.sidestory ? false : body.prologue !== false; // 玩家局默认带序章（围城头九天）；测试/sim 显式关闭
         // 快局（长线体验 §4.1 围城切片）：跳过序章，从预设中盘（D21）入局
         const quick = !!body.quick && !sideDef;
-        // —— 跨周目回响装配（长线体验 EC 系）：档案馆里有什么，新局就从什么里长出来 ——
-        const echoes = collectEchoes(db, s.userId);
+        // —— 跨周目回响装配（长线体验 EC 系）：档案馆里有什么，新局就从什么里长出来。
+        //      别传是独立短局：不吃遗愿倒计时，不带池回声进江陵
+        const echoes = sideDef ? null : collectEchoes(db, s.userId);
         // 开场二选一门（拍板 v5 = v4 的选择形式 + v2 的账号门回归）：本账号「完结一周目」
         // ——活到战争收束的结局（全灭/别传不算：死过的人，还配听一遍完整的开场）——
         // 才给「完整三幕 or 精简版」选择；未通关一律直接完整三幕。body.preludeMode 仍是测试/开发后门。
@@ -1164,7 +1169,7 @@ function parseCookie(str) {
 export function sideUnlocked(u, arch) {
   if (!u) return true;
   if (u.kind === 'seal') return arch.some((e) => e.kind === 'seal' && e.key === u.key);
-  if (u.kind === 'annal') return arch.some((e) => e.kind === 'annal');
+  if (u.kind === 'annal') return arch.some((e) => e.kind === 'annal' && !String(e.key).startsWith('side_')); // 别传自己也写野史页——但别传的门不认别传的页
   if (u.kind === 'run_ending') return arch.some((e) => e.kind === 'run_memory' && e.data.ending === u.ending);
   if (u.kind === 'docs') return arch.filter((e) => e.kind === 'doc').length >= u.count;
   return false;

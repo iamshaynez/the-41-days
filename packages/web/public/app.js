@@ -1058,14 +1058,14 @@ function openHomebook() {
   const sheet = $('homebook');
   const sums = catSums(s.inventory);
   const facs = FAC_NAME(s);
-  const opened = Object.entries(s.house?.opened || {}).filter(([, v]) => v).map(([k]) => ROOM_NAME[k] || k);
+  const opened = Object.entries(s.house?.opened || {}).filter(([, v]) => v).map(([k]) => s.roomNames?.[k] || ROOM_NAME[k] || k);
   let html = `<div class="sheet-head"><span class="kicker">家底 · 细目</span>
     <button class="sheet-x" type="button" aria-label="合上">${svgUse('close')}</button></div>`;
   // 围城日历（从报头搬进抽屉：45 天的尺度，交割日涂雾）
   html += `<section class="hb-sec"><p class="m-kicker">时局</p><div id="hb-siege"></div>
     <p class="hint">${WEATHER_NAME[s.weather] || s.weather}${s.winterActive ? ' · 严冬' : ''} · 第 ${s.day} 日</p></section>`;
   // 这个家
-  html += `<section class="hb-sec"><p class="m-kicker">这个家</p>
+  html += `<section class="hb-sec"><p class="m-kicker">${s.homeName ? esc(s.homeName) : '这个家'}</p>
     <p class="hb-line">门板加固 ${s.doorLevel || 0} 层${facs.length ? ' · ' + esc(facs.join('、')) : ' · 还没有像样的家什'}</p>
     <p class="hb-line dim">走得动的房间：${esc(opened.join('、') || '门厅')}</p></section>`;
   // 物资格
@@ -1119,6 +1119,25 @@ function renderInvGrid(box, inv) {
 /** 围城日历：45 天的尺度，交割前夜涂雾，今日拨针 */
 function renderSiegeInto(box, s) {
   if (!box) return;
+  if (s.sidestory) { // 别传：短局日历（N 天到点收束），不画围城四十一天与交割雾带
+    const N = Math.max(1, (s.war?.endDay || 2) - 1);
+    const W = 640, H = 40, x0 = 34, x1 = W - 14, dayX = (d) => x0 + (x1 - x0) * ((d - 1) / Math.max(1, N - 1));
+    let ticks = '';
+    for (let d = 1; d <= N; d++) {
+      const x = dayX(d);
+      ticks += `<line x1="${x}" y1="24" x2="${x}" y2="18"/><text x="${x}" y="34" text-anchor="middle" class="${d === s.day ? 'tick-now' : ''}">${d}</text>`;
+    }
+    const today = dayX(Math.min(s.day, N));
+    box.innerHTML = `<div class="siege"><span class="siege-label">${esc(s.sidestory.title)} · 第 ${Math.min(s.day, N)}/${N} 日</span>
+  <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="${x0}" y1="22" x2="${x1}" y2="22" class="axis"/>
+    ${ticks}
+    <line x1="${dayX(N)}" y1="14" x2="${dayX(N)}" y2="22" class="hard-end"/>
+    <line x1="${today}" y1="10" x2="${today}" y2="22" class="today-line"/>
+    <path d="M${today - 4} 8 L${today + 4} 8 L${today} 13 Z" class="today-pin"/>
+  </svg></div>`;
+    return;
+  }
   const W = 640, H = 40, x0 = 34, x1 = W - 14, dayX = (d) => x0 + (x1 - x0) * ((d - 1) / 59);
   let ticks = '';
   for (let d = 1; d <= 60; d += 5) {
