@@ -146,6 +146,22 @@ describe('seed 闭环（实测：北津台话头白天点了没反应、晚上�
     assert.ok(ctx.facts.some((f) => f.k === 'hist_seed_done'), '结账落一笔（对话历史里也留个收尾）');
   });
 
+  test('黄昏抑郁拒出门自动换人（实测：方案反复出现又反复失败）：玩家的拍子不被 50% 骰子弹回', () => {
+    let swapped = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const { state } = newRun({ seed, roster: ['bron', 'marta', 'katya'] });
+      let s = step(state, [{ type: 'advance' }]).state;
+      s.knownLocs.push('market');
+      ch(s, 'bron').moodPts = -12; // 石大抑郁（阈值 -10 以下）：50% 拒出门
+      const r = step(s, [{ type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: { marta: 'sleep', katya: 'sleep' } }]);
+      const st = r.state;
+      assert.ok(st.phase === 'night' && st.night && !st.night.home, `seed ${seed}: 夜必须成行——抑郁拒绝时内核换人，不弹回玩家`);
+      assert.ok(['bron', 'marta', 'katya'].includes(st.night.charId), '出门的是走得动的人');
+      if (st.night.charId !== 'bron') swapped++;
+    }
+    assert.ok(swapped > 0, '20 个种子里换人路径必然被触发（50% 拒绝）');
+  });
+
   test('许约到兑现全链路（实测反馈：老是契约约定，点了没人去）：白天许约 → 黄昏践誓方案排第一 → 点它真的去、到地即践', () => {
     // 前提：识途北津台（誓以识途为前提——planDusk 才排得出践誓方案）
     let s = newRun({ seed: 850, roster: ['bron', 'marta', 'katya'] }).state;
