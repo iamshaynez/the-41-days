@@ -124,6 +124,25 @@ describe('黄昏卡不收非答案：守誓／改约类纯念头不留', () => {
     assert.ok(!/已了结的话头/.test(cardBrief(clean, PACK, 'day')), '没有已了结主题时不硬塞');
   });
 
+  test('已种下的话头亮给谋士：史种活着未发芽 → 日/黄昏点名「等发芽，别再提」（实测：谋士天天出惦记北津台、天天点了只浇水）', () => {
+    const s = duskState();
+    s.directions = { d1: { id: 'd1', text: '北津台该有人举火', kind: 'hist', seed: 'beacon', day: 18, lastDay: 18, alive: true, watered: 0 } };
+    for (const card of ['day', 'dusk']) {
+      const brief = cardBrief(s, PACK, card);
+      assert.match(brief, /已种下的话头/, `${card} 卡要有已种下清单`);
+      assert.match(brief, /北津台/, '点名已种主题');
+    }
+    const clean = duskState();
+    assert.ok(!/已种下的话头/.test(cardBrief(clean, PACK, 'day')), '没有已种主题时不硬塞');
+  });
+
+  test('过窗的话头亮给谋士：明晨已出回应卡窗口 → 归入已了结（提了也长不出来）', () => {
+    const s = duskState();
+    s.day = 40; // hs_beacon 窗口 [29,36]：day+1 > 36
+    const brief = cardBrief(s, PACK, 'day');
+    assert.match(brief, /已了结的话头.*北津台|北津台.*已了结的话头/, '过窗主题按已了结压制');
+  });
+
   test('选项对账·标签与意图一致（实测：选项、行为、结果对不上）：写着别处的地点/点错人的标签整条丢弃', () => {
     const s = duskState();
     s.knownLocs.push('hospital');
