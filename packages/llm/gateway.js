@@ -77,12 +77,16 @@ export async function memoirist({ provider, prompts }, storyline, onDelta) {
 /** 史官（叙事双轴 §4.5）：主线日步骨架 → 当日大事条目（史书体 ≤120 字）。
  *  校验（锚点零改动／标记合法／文风禁词／字数）由调用方执行，违规回落 fallback。 */
 export async function annalist({ provider, prompts }, brief) {
+  const cite = brief.cite
+    ? `${brief.cite.text}（${brief.cite.src}）` + (brief.cite.gloss ? `\n白话：${brief.cite.gloss}` : '')
+    : '';
   const system = prompts.annalist
     .replace('{{anchor}}', brief.anchor || '')
     .replace('{{surface}}', brief.surface || '')
     .replace('{{undertow}}', brief.undertow || '（无）')
     .replace('{{pens}}', (brief.pens || []).join('\n') || '（无）')
     .replace('{{digest}}', brief.digest || '（无）')
+    .replace('{{cite}}', cite || '（无）')
     .replace('{{prev}}', (brief.prev || []).join('\n') || '（无）')
     .replace('{{names}}', brief.names || '');
   const r = await provider.call({ system, user: '写这一日。', temperature: 0.85, maxTokens: 600, thinking: THINKING_LOW });

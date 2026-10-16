@@ -43,6 +43,9 @@ describe('故事线提取（CY-33）', () => {
 
   test('人的账：辛夷无法释怀拒助，文简刺痛烧简，石大有守夜账', () => {
     let s = playedRun();
+    // 补夜前把随机晨抽池关闸（夹具只关心因果——门板顶格排除袭击同款思路）：
+    // 内容包加新卡会挪动种子下的晨抽流，别让「收留逃兵」这类临时卡挤掉账目断言
+    for (const c of PACK.cards) if (c.kind === 'knock' || c.kind === 'internal') s.eventCooldowns[c.id] = 999;
     // 再补两夜守卫，凑过"守夜账"的显形阈值（3 夜）
     for (let i = 0; i < 2 && !s.over; i++) {
       if (s.activeEvent) s = step(s, [{ type: 'event_choice', option: PACK.cardMap[s.activeEvent.cardId]?.options?.[0]?.key || 'refuse' }]).state;

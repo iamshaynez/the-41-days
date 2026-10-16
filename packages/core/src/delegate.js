@@ -5,6 +5,7 @@ import { aliveChars, apMaxOf, policyOf, moodLevel } from './state.js';
 import { DAY_ACTIONS, AP_COST } from './dayActions.js';
 import { LOC_ALIAS } from './parser.js';
 import { threadsStateLines } from './threads.js';
+import { dissolveTier } from './mainline.js';
 
 const itemName = (pack, id) => pack.itemMap[id]?.name || id;
 const has = (s, id, n = 1) => (s.inventory[id] || 0) >= n;
@@ -342,14 +343,10 @@ export function dawnProblems(state, pack) {
     out.push({ sev: 1, key: 'plague', text: '疫病进了门——这个家在发烧。' });
   }
   // 军心表（B·戏剧弧）：家书投进去的暗河，给玩家一个可见的对面水位。
-  // 不给数字给档位词——D41 的刀落刀偏，要有 41 天的铺垫可循
-  if (s.day >= 3 && !s.sidestory) {
-    const th = pack.manifest.war?.dissolveThreshold ?? 22;
-    const d = s.dissolve || 0;
-    const tier = d >= th ? '大军像化雪，一夜瘦一圈'
-      : d >= th * 0.5 ? '夜里有人成队地走散'
-        : d >= th * 0.25 ? '握矛的手松了些' : '握矛的手很稳';
-    out.push({ sev: 0, key: 'dissolve', text: `北边的军心：${tier}。` });
+  // 不给数字给档位词——D41 的刀落刀偏，要有 41 天的铺垫可循（档位词与史卷卷首同一出处）
+  {
+    const m = dissolveTier(s, pack);
+    if (s.day >= 3 && m) out.push({ sev: 0, key: 'dissolve', text: `北边的军心：${m.tier}。` });
   }
   if (s.franko) out.push({ sev: 0, key: 'franko', text: '鲁舟的船靠在渡口边。' });
   // 或然亲和的暗提示（二周目起）：读过城的人记得哪里有纸——不指路，只提醒城有夹层

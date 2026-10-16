@@ -57,3 +57,28 @@ describe('裁判提示词 · 默认裁决与愿望拒绝', () => {
     assert.ok(/变身超人|超人/.test(referee) && /手枪/.test(referee), '金样本覆盖变身与手枪');
   });
 });
+
+// —— 史官提示词 · 史源织入契约（史实共振：正史引文进史笔，一字不改）——
+const annalist = readFileSync(join(here, '../../content/base/prompts/annalist.md'), 'utf8');
+describe('史官提示词 · 史源织入', () => {
+  test('史源段存在且占位符齐全', () => {
+    assert.match(annalist, /# 史源/, '史源段存在');
+    for (const k of ['{{anchor}}', '{{surface}}', '{{undertow}}', '{{pens}}', '{{digest}}', '{{cite}}', '{{prev}}', '{{names}}']) {
+      assert.ok(annalist.includes(k), `占位符 ${k} 缺失`);
+    }
+  });
+  test('引文铁律：整句照录、不得改字、至多一句', () => {
+    assert.match(annalist, /一个字不得改/, '改字禁令');
+    assert.match(annalist, /至多引一句/, '密度上限');
+    assert.match(annalist, /史书云/, '引出体例给了');
+  });
+  test('金样本：内容包 11 条史注原句可整句照录（gloss 白话随行）', () => {
+    const ml = JSON.parse(readFileSync(join(here, '../../content/base/mainline.json'), 'utf8'));
+    const cited = ml.steps.filter((s) => s.cite);
+    assert.ok(cited.length >= 10, '史注密度（与 historic-cites 契约同源）');
+    assert.ok(cited.filter((s) => s.cite.gloss).length >= cited.length - 2, '白话 gloss 随行');
+    for (const s of cited) {
+      assert.ok(!/突然|渐渐|慢慢|悄悄|立刻|马上|终于|已经|正在|十分|非常|特别|居然|竟然|其实|简直|几乎|越来越/.test(s.cite.gloss || ''), `步 ${s.id} 的 gloss 触禁词（文风圣经同律）`);
+    }
+  });
+});

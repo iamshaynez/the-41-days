@@ -5,6 +5,7 @@ import { genFrankoStock } from './trade.js';
 import { recordCausal } from './causality.js';
 import { threadsFrankoPick } from './threads.js';
 import { unlockMet } from './unlock.js';
+import { stepGateOk } from './mainline.js';
 
 const mod = (n) => n;
 
@@ -389,6 +390,7 @@ export function drawMorningEvents(ctx) {
     const [lo, hi] = card.when.dayWindow || [];
     if (s.firedOnce[card.id]) continue; // firedOnce 的语义就是"发过一次"——不论从哪条路径烧的
     if (card.when.requiresFlag && !s.eventFlags[card.when.requiresFlag]) continue;
+    if (!stepGateOk(s, ctx.pack, card.when)) continue; // 主线门控（史实共振）：锚前期待窗/锚后余波窗
     if (lo !== undefined && (s.day < lo || s.day > hi)) continue;
     if (s.activeEvent) break; // 一次一张
     s.firedOnce[card.id] = true;
@@ -399,6 +401,22 @@ export function drawMorningEvents(ctx) {
     break;
   }
   if (s.activeEvent) return;
+  // C 心事保底前置（史实共振加固）：D15 起心结首拍欠着的人先于随机晨抽显形——
+  // 余波卡/停问把晨位占满的日子，心事不再无限期让路（「人人有心结」由内核兜底，
+  // 不再赌空晨）。D12~14 仍留给随机池自然接住，之后硬保证。
+  if (!s.sidestory && s.day >= 15) {
+    const pending = aliveChars(s)
+      .map((c) => ctx.pack.charMap[c.id]?.persona?.knotCard)
+      .filter((id) => id && ctx.pack.cardMap[id] && !s.firedOnce[id]);
+    if (pending.length) {
+      s.firedOnce[pending[0]] = true;
+      ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
+      s.activeEvent = { cardId: pending[0] };
+      ctx.emit('EVENT_FIRED', { cardId: pending[0] });
+      ctx.fact('event', { cardId: pending[0], title: ctx.pack.cardMap[pending[0]].title });
+      return;
+    }
+  }
   // 随机外部/内部卡
   if (!ctx.rng.chance(0.55)) return;
   const eligible = cards.filter((c) => {
@@ -417,6 +435,7 @@ export function drawMorningEvents(ctx) {
     if (w.requiresDocs && !w.requiresDocs.every((d) => s.docsSeen.includes(d))) return false;
     if (w.requiresAnyDoc && !w.requiresAnyDoc.some((d) => s.docsSeen.includes(d))) return false;
     if (w.requiresFacility && !s.facilities[w.requiresFacility]) return false;
+    if (!stepGateOk(s, ctx.pack, w)) return false; // 主线门控（史实共振）：日常卡感知锚步
     if (w.knowledge && s.knowledge < w.knowledge - (s.echoBoon || 0) * 2) return false; // 或然亲和：读过城的人，门槛让二分
     if (w.flagDayGte && s.day < (s.eventFlags[w.flagDayGte] || 0)) return false; // "几天后"相对门（"+N"旗标配套）
     if (w.minDay && s.day < w.minDay) return false;

@@ -78,6 +78,10 @@ export function mainlineTick(ctx) {  const s = ctx.s;
   if (step?.sense?.moodAll) ctx.moodAll(step.sense.moodAll, 'ml_' + step.id, { helpMul: false });
   if (step) {
     s.firedOnce['ml_' + step.id] = true;
+    // 步落旗标（史实共振）：全城可读「哪天落了什么步」——余波卡、地点脚本、管家建议都看它
+    s.eventFlags = { ...s.eventFlags, ['ml_' + step.id]: s.day };
+    ctx.emit('FLAG', { key: 'eventFlags', val: structuredClone(s.eventFlags) });
+    applyRipples(ctx, step);
     ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
   }
   if (!step && !pens.length && !mirrors.length) return;
@@ -87,6 +91,75 @@ export function mainlineTick(ctx) {  const s = ctx.s;
   ctx.emit('MAINLINE_STEP', entry);
   ctx.fact('mainline_step', { day: s.day, stepId: entry.stepId, pens: pens.length, mirrors: mirrors.length });
   if (echo) ctx.fact('mainline_echo', { step: step.title, text: echo }); // 进当日叙事轨——史与你要在同一页上
+}
+
+/** 步后涟漪（史实共振）：锚落地那晨入账——心情即时起波，物价/袭击按 lasts 天生效。
+ *  全部走 FLAG 镜像（s.ripples），fold 可回放；读数走纯函数，过期自然失效。 */
+function applyRipples(ctx, step) {
+  const r = step.ripples;
+  if (!r) return;
+  const s = ctx.s;
+  if (r.moodAll !== undefined) ctx.moodAll(r.moodAll, 'ml_' + step.id, { helpMul: false });
+  if (r.priceMul || r.raidAdd !== undefined) {
+    s.ripples = {
+      ...(s.ripples || {}),
+      [step.id]: {
+        day: s.day, until: s.day + (r.lasts || 3),
+        ...(r.priceMul ? { priceMul: r.priceMul } : {}),
+        ...(r.raidAdd !== undefined ? { raidAdd: r.raidAdd } : {})
+      }
+    };
+    ctx.emit('FLAG', { key: 'ripples', val: structuredClone(s.ripples) });
+    ctx.fact('mainline_ripple', { step: step.id, lasts: r.lasts || 3, items: Object.keys(r.priceMul || {}), raid: r.raidAdd ?? 0 });
+  }
+}
+
+/** 生效中的涟漪（纯函数）：trade/raid/视图读它，不动 RNG 游标 */
+export function activeRipples(s) {
+  const out = [];
+  for (const [id, r] of Object.entries(s.ripples || {})) {
+    if (r && s.day <= r.until) out.push({ id, ...r });
+  }
+  return out;
+}
+/** 某物当日的市价倍率（多涟漪连乘，钳 0.5~2） */
+export function priceMulOf(s, itemId) {
+  let m = 1;
+  for (const r of activeRipples(s)) if (r.priceMul?.[itemId]) m *= r.priceMul[itemId];
+  return Math.max(0.5, Math.min(2, m));
+}
+/** 当日袭击概率加数（多涟漪相加） */
+export function raidAddOf(s) {
+  return activeRipples(s).reduce((a, r) => a + (r.raidAdd || 0), 0);
+}
+
+/** 事件卡主线门控（史实共振）：afterStep＝锚落之后 N 日的余波窗；beforeStep＝锚落之前的期待窗。
+ *  读步落旗标（eventFlags['ml_<id>']），旗未立不放行、锚落地期待窗即关。 */
+export function stepGateOk(s, pack, w) {
+  if (w.afterStep) {
+    const f = s.eventFlags?.['ml_' + w.afterStep.id];
+    return f !== undefined && s.day - f <= w.afterStep.withinDays;
+  }
+  if (w.beforeStep) {
+    const st = pack?.mainline?.steps.find((x) => x.id === w.beforeStep.id);
+    if (!st) return false;
+    if (s.eventFlags?.['ml_' + st.id] !== undefined) return false; // 锚已落地，期待关窗
+    const target = st.day ?? st.dayWindow?.[1];
+    return target - s.day >= 0 && target - s.day <= w.beforeStep.withinDays;
+  }
+  return true;
+}
+
+/** 军心刻度（B·戏剧弧）：dissolve 档位词的单一出处——史卷卷首与管家建议共用一套话。
+ *  别传局无军心可刻（null）。 */
+export function dissolveTier(s, pack) {
+  if (s.sidestory) return null;
+  const th = pack?.manifest?.war?.dissolveThreshold ?? 22;
+  const d = s.dissolve || 0;
+  const tier = d >= th ? '大军像化雪，一夜瘦一圈'
+    : d >= th * 0.5 ? '夜里有人成队地走散'
+      : d >= th * 0.25 ? '握矛的手松了些' : '握矛的手很稳';
+  return { tier, d, th };
 }
 
 /** 回声钩子匹配（内容即数据：step.echoHooks = [{when:{...}, text}]，命中即用，先挂先得）
@@ -185,6 +258,7 @@ export function dayDigest(state, day) {
 /**
  * 史卷视图（server enrich 直用）：步日志 → 条目（含结局收束步与日digest）。
  * annalsByDay：LLM 史笔（day→text），缺省回落 step.fallback。
+ * 史实共振三件附品：卷首军心刻度（morale）、过幕幕结行（actWraps）、锚落之日的伏笔回响（payoffs）。
  */
 export function buildChronicle(state, pack, annalsByDay = null) {
   const ml = pack.mainline;
@@ -197,6 +271,13 @@ export function buildChronicle(state, pack, annalsByDay = null) {
   for (const e of state.mainline || []) {
     const step = e.stepId ? stepMap[e.stepId] : null;
     const text = (annalsByDay && annalsByDay[e.day]) || step?.fallback || (e.pens?.length ? '' : '');
+    // 伏笔回响（史实共振）：锚落之日，认出早前读过的闲笔——figure.payoff 指向本步，
+    // 且闲笔在锚前（含同日）出现过。没读过的伏笔不回响。
+    const payoffs = step ? (pack.historia?.figures || []).filter((f) => {
+      if (f.payoff !== step.id) return false;
+      const seenDay = (state.mainline || []).find((x) => (x.pens || []).includes(f.id))?.day;
+      return seenDay !== undefined && seenDay <= e.day;
+    }).map((f) => ({ name: f.name, line: f.payoffLine })) : [];
     entries.push({
       day: e.day,
       act: step ? (actMap[step.act]?.title || '') : '',
@@ -206,6 +287,7 @@ export function buildChronicle(state, pack, annalsByDay = null) {
       anchor: !!step,
       ...(step?.cite ? { cite: step.cite } : {}), // 史注（0.33.0）：正史落锚的日子带志书引文
       ...(e.echo ? { echo: e.echo } : {}), // 主线×玩家回声（ME-2）：史册步下带一行"你"的影子
+      ...(payoffs.length ? { payoffs } : {}),
       pens: (e.pens || []).map((id) => figureMap[id]).filter(Boolean).map((f) => ({ name: f.name, line: f.line })),
       mirrors: (e.mirrors || []).map((id) => mirrorMap[id]).filter(Boolean).map((m) => m.line),
       digest: e.day <= state.day ? dayDigest(state, e.day) : null
@@ -216,7 +298,21 @@ export function buildChronicle(state, pack, annalsByDay = null) {
   if (ending) {
     for (const line of ending) entries.push({ day: state.day, act: '收束', title: '结局', text: line, anchor: true, ending: true, pens: [], mirrors: [], digest: null });
   }
+  // 幕结行（史实共振）：幕收之后，这一幕的城事×家事对表——家史与正史同页收束
+  const deedName = (id) => state.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || '';
+  const actWraps = [];
+  for (const a of ml.acts || []) {
+    if (!(a.days && state.day > a.days[1])) continue;
+    const city = (state.mainline || [])
+      .filter((e) => { const st = e.stepId ? stepMap[e.stepId] : null; return st && st.act === a.id; })
+      .map((e) => stepMap[e.stepId].title).join('、') || '无大事';
+    const deeds = (state.causality?.entries || []).filter((e) =>
+      e.day >= a.days[0] && e.day <= a.days[1] && e.weight >= 1 && !e.tags?.includes('prologue'));
+    const top = [...deeds].sort((x, y) => y.weight - x.weight)[0];
+    const you = top ? `${top.via ? deedName(top.via) : (top.actor === 'player' ? '你' : '')}${DIGEST_VERB[top.verb] || ''}${top.target && pack.charMap?.[top.target] ? '·' + deedName(top.target) : ''}` : null;
+    actWraps.push({ act: a.id, title: a.title, day: a.days[1], city, you: you || '日子照常过' });
+  }
   // 当前幕
   const acts = (ml.acts || []).filter((a) => state.day >= a.days[0]);
-  return { acts: ml.acts || [], currentAct: acts.length ? acts[acts.length - 1] : null, entries };
+  return { acts: ml.acts || [], currentAct: acts.length ? acts[acts.length - 1] : null, entries, morale: dissolveTier(state, pack), actWraps };
 }

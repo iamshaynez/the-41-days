@@ -29,7 +29,7 @@ export {
 export { buildStoryline, renderMemoirDirect, memoirLint, renderBiographiesDirect, biographyLint, endingBanHit } from './src/storyline.js';
 export { evaluateSeals, sealMet, unlockedSealTexts } from './src/seals.js';
 export { preludeBeats, preludeBeatView } from './src/prelude.js';
-export { mainlineTick, buildChronicle, dayDigest } from './src/mainline.js';
+export { mainlineTick, buildChronicle, dayDigest, stepGateOk, priceMulOf, raidAddOf, activeRipples, dissolveTier } from './src/mainline.js';
 export { overviewDecision, overviewThreshold, dayIsQuiet, actOfDay, ROUTINE_DAY_FACTS, digestOfDayFacts, applyQuickStart } from './src/pacing.js';
 export { ensembleTick, validateEnsemble, renderEnsembleDirect, ENS_CANON_BAN } from './src/ensemble.js';
 export { bumpPairArc } from './src/causality.js';
