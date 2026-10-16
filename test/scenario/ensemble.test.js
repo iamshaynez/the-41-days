@@ -30,6 +30,8 @@ describe('堂屋：主线日必评史', () => {
 describe('堂屋：随机场（性格与关系驱动）', () => {
   test('暗账过阈 → 暗面场压过评史（夜的伤口比朝的新闻急）', () => {
     const { state } = newRun({ seed: 7, roster: ['anton', 'marta', 'bron'] });
+    // 预烧节拍卡：剧情节拍会随日子自动落账（带心情微调），别让它干扰本例的暗面心情账
+    for (const c of PACK.cards.filter((x) => x.beat)) state.firedOnce[c.id] = true;
     state.causality.shadowTouched = { anton: 2 };
     const before = ch(state, 'anton').moodPts;
     const s = skipDayAtHome(state);

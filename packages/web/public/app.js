@@ -1348,7 +1348,7 @@ function syncAsks(s) {
       for (const p of String(v.text).split('\n').filter(Boolean)) { const elp = el('p', '', rich(p)); markNouns(elp); body.appendChild(elp); }
       node.appendChild(body);
       const opts = el('div', 'ask-opts');
-      v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendIntents([{ type: 'event_choice', option: o.key }], o.label), '', o.ok === false ? (o.why || '条件不够') : '')));
+      v.options.forEach((o, i) => opts.appendChild(optBtn(o.label, String(i + 1), () => sendIntents([{ type: 'event_choice', option: o.key }], o.label), o.note || '', o.ok === false ? (o.why || '条件不够') : '')));
       node.appendChild(opts);
       node.appendChild(freeOptRow(s, 'event'));
     });

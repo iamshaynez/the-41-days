@@ -228,6 +228,7 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'auto_anton_struck': lines.push('文简记账的手停了一下。有些名字，从今天起不在他的账上了。'); break;
       case 'auto_vera_ledger': lines.push('薄姑在一个小簿上写了一行字，然后把它收进了贴身的袖袋。'); break;
       case 'event': lines.push(`——${f.title}——`); break;
+      case 'card_resolved': lines.push(`（${f.result}）`); break; // 节拍卡的落定句（剧情分层：故事流进叙述）
       case 'event_text': lines.push(f.text); break;
       case 'loc_unlocked': lines.push(t.loc_unlocked.replace('{{loc}}', f.loc)); break;
       case 'capsule_found': lines.push(`后院墙角，土比别处松。挖开来：一件旧物，一张字条。字条上写：「${f.message}」（${f.fresh ? '东西还在，拿起来了。' : '东西上次已经取走了。'}）`); break;

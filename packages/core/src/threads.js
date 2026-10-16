@@ -3,6 +3,7 @@
 // 状态行常驻晨报——种（卡/物品）→轻触→翻转（卡）→回收（终局）。
 // 激活与去重全部从 state 派生（firedOnce/flags/day/dissolve），fold 可回放。
 import { aliveChars } from './state.js';
+import { fireEventCard } from './events.js';
 import { DEED_PHRASES } from './ge.js';
 import { hashStr } from './rng.js';
 
@@ -34,9 +35,7 @@ export function tickThreads(ctx) {
     const card = ctx.pack.cardMap[id];
     if (!card) return false;
     mark(id);
-    s.activeEvent = { cardId: id, ...(actorId ? { actorId } : {}) };
-    ctx.emit('EVENT_FIRED', { cardId: id, ...(actorId ? { actorId } : {}) });
-    ctx.fact('event', { cardId: id, title: card.title, ...(actorId ? { who: actorId } : {}) });
+    fireEventCard(ctx, id, actorId ? { actorId } : {});
     return true;
   };
   for (const t of th.threads || []) {

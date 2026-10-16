@@ -456,7 +456,8 @@
               "yura": 2
             },
             "ap_cost": 1
-          }
+          },
+          "auto": true
         },
         {
           "key": "scold",
@@ -472,7 +473,8 @@
           "label": "装没看见",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "t_ceasefire1",
@@ -497,9 +499,11 @@
             "flags": {
               "ceasefire1": true
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "t_massacre",
@@ -525,9 +529,11 @@
             "flags": {
               "massacre1": true
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "t_ceasefire2",
@@ -552,9 +558,11 @@
             "flags": {
               "ceasefire2": true
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "t_break2",
@@ -577,9 +585,11 @@
             "mood": {
               "all": -3
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "t_curse41",
@@ -605,9 +615,11 @@
             "flags": {
               "curse_spoken": true
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "s_looter",
@@ -809,14 +821,16 @@
             "flags": {
               "zofia_hum": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
           "label": "不打扰她",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_vera_stamps",
@@ -842,14 +856,16 @@
             "flags": {
               "vera_ledger_hint": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
           "label": "不追问",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_katya_tape",
@@ -875,14 +891,16 @@
             "flags": {
               "katya_guilt": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
           "label": "算了",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_alexey_leg",
@@ -908,14 +926,16 @@
             "flags": {
               "alexey_leg": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
           "label": "装作没看见",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_bron_locks",
@@ -941,14 +961,16 @@
             "flags": {
               "bron_locks": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
           "label": "翻身装睡",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_yura_sugar",
@@ -974,7 +996,8 @@
             "flags": {
               "yura_sugar": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
@@ -985,7 +1008,8 @@
             }
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_marta_name",
@@ -1011,14 +1035,16 @@
             "flags": {
               "marta_ilya": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
           "label": "不问",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_anton_ledger",
@@ -1044,14 +1070,16 @@
             "flags": {
               "anton_roster": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
           "label": "不打扰",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_pair_doorplank",
@@ -1081,14 +1109,16 @@
             "flags": {
               "pair_door_seen": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
           "label": "什么都不问",
           "effects": {}
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_zofia",
@@ -1116,7 +1146,8 @@
             "flags": {
               "zofia_brother": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "hold",
@@ -1130,7 +1161,8 @@
             }
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_vera",
@@ -1158,9 +1190,11 @@
             "flags": {
               "vera_confessed": true
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_katya",
@@ -1188,9 +1222,11 @@
             "flags": {
               "katya_confessed": true
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_alexey",
@@ -1220,9 +1256,11 @@
               "knows_beacon": true
             },
             "text": "他想了想，又说：「北津台的鼓架还在。哪天要去，我带路——或者你替我去。」（新地点：北津台）"
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_bron",
@@ -1249,7 +1287,8 @@
             "flags": {
               "bron_confessed": true
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "sit",
@@ -1263,7 +1302,8 @@
             }
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_yura",
@@ -1291,9 +1331,11 @@
             "flags": {
               "yura_sister": true
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_marta",
@@ -1320,9 +1362,11 @@
             "flags": {
               "marta_confessed": true
             }
-          }
+          },
+          "auto": true
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_pair_doorplank_2",
@@ -1354,7 +1398,8 @@
               "pair_door_peace": true
             },
             "text": "那一夜没人睡。天亮时，大柯把薄姑漏风的窗修好了。薄姑把门版上的编号抄进了她的私人簿记。两个人都没道歉，但都记住了。"
-          }
+          },
+          "auto": true
         },
         {
           "key": "silence",
@@ -1370,7 +1415,8 @@
             "text": "门版回了墙角。窗还是漏风。他们继续在同一张桌上吃饭，只是不再说话。"
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_anton_quest",
@@ -1397,7 +1443,8 @@
             "mood": {
               "anton": 2
             }
-          }
+          },
+          "auto": true
         },
         {
           "key": "later",
@@ -1408,7 +1455,8 @@
             }
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_anton_choice",
@@ -1427,6 +1475,7 @@
         {
           "key": "truth",
           "label": "把信给他，让他自己决定",
+          "note": "把信给他真相——他自己决定去不去。他会痛，会走，但那是他自己的人生。",
           "effects": {
             "flags": {
               "anton_truth": true,
@@ -1440,6 +1489,7 @@
         {
           "key": "hope",
           "label": "收下信，告诉他渡口太险",
+          "note": "把信收下，骗他渡口太险。他留下，心安一点；谎是棉被，也是锁链。",
           "effects": {
             "flags": {
               "anton_hope": true
@@ -1661,6 +1711,7 @@
         {
           "key": "launch",
           "label": "启动《还师》：今夜把铁证送上烽台",
+          "note": "三天后全城城门贴满铁证。这是把家押上台面——军心会动，城会变，再收不回来。",
           "effects": {
             "flags": {
               "lighthouse_day": "+3"
@@ -1674,6 +1725,7 @@
         {
           "key": "wait",
           "label": "再等等",
+          "note": "再等等。证据还在，火候未到；但等太久，有些门会先关上。",
           "effects": {
             "flags": {
               "lighthouse_declined": true
@@ -1703,6 +1755,7 @@
         {
           "key": "accept",
           "label": "接受：船与符传，代价是沉默",
+          "note": "船与符传换你的沉默——你活着离开江陵，江陵没有。这条路的代价写在很远的地方。",
           "effects": {
             "flags": {
               "join_table": true
@@ -1713,6 +1766,7 @@
         {
           "key": "refuse",
           "label": "拒绝",
+          "note": "拒了，鲁舟的船再不会泊这道渡口。少一条退路，多一分心安。",
           "effects": {
             "flags": {
               "refused_table": true,
@@ -1741,6 +1795,7 @@
         {
           "key": "deliver",
           "label": "通过里社，递进治中府",
+          "note": "证据走里社递进治中府——官面上见光，纵火案断了根，但也把你家卷进官府的眼里。",
           "effects": {
             "flags": {
               "alt_jiangling": true
@@ -1755,6 +1810,7 @@
         {
           "key": "burn",
           "label": "烧了它，这种事不该落在小人物手里",
+          "note": "烧了最安全，小人物不沾大事。可纪南大仓的火，就可能还有第二把。",
           "effects": {
             "mood": {
               "all": -1
@@ -1782,6 +1838,7 @@
         {
           "key": "go",
           "label": "上北津台：修台、举火、照鼓谱击鼓",
+          "note": "终局一搏：今夜把人派上北津台——修台、举火、击鼓。成了，烽燧链把消息早一步送出去，史书可能改半行；败了，一夜白险。",
           "effects": {
             "flags": {
               "alt_maicheng_attempt": true
@@ -1792,6 +1849,7 @@
         {
           "key": "stay",
           "label": "守在家里",
+          "note": "守在家里最稳，但那个家都会记得：城开前最后一夜，塔是安静的。心情会沉一天。",
           "effects": {
             "mood": {
               "all": -1
@@ -2499,7 +2557,8 @@
             },
             "knowledge": 1,
             "text": "看完了。胜军之将走在别人账簿里，败军之将走在别人队伍里——这座城的秋天，两样都见过了。"
-          }
+          },
+          "auto": true
         },
         {
           "key": "inside",
@@ -2511,7 +2570,8 @@
             "text": "车轮声从门板外碾过去，碾了很久。不看，它也在过。"
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "o_plea",
@@ -2531,6 +2591,7 @@
         {
           "key": "sign",
           "label": "签下名字",
+          "note": "联名劝刀——签下的名字换一条可能被听见的路，也把自己放进了名单里。",
           "effects": {
             "flags": {
               "alt_plea": true
@@ -2548,6 +2609,7 @@
         {
           "key": "decline",
           "label": "这种事，小人物不掺和",
+          "note": "不掺和。帖子去下一家，你们的日子照旧——刀落不落，与你们无关地落。",
           "effects": {
             "mood": {
               "default": 0
@@ -2841,7 +2903,8 @@
               "pavel_night": true
             },
             "text": "他没讲故事，只说了句：那晚的月亮很好，看得清路。说完继续磨鞋底。有人坐着，磨得慢了些。"
-          }
+          },
+          "auto": true
         },
         {
           "key": "leave",
@@ -2850,7 +2913,8 @@
             "text": "鞋底磨好了。他系上，像什么都没发生过——他最擅长的就是像什么都没发生过。"
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_emil_grain",
@@ -2874,7 +2938,8 @@
               "emil": 1
             },
             "text": "他捻开一把米，看了半晌：三成。还掺得算有良心。北边的仓他不敢想——那孩子的手，如今比他稳。"
-          }
+          },
+          "auto": true
         },
         {
           "key": "skip",
@@ -2883,7 +2948,8 @@
             "text": "他把手里的米放回缸里，一粒没洒。有些账，他自己心里平着呢。"
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_grigory_door",
@@ -2909,7 +2975,8 @@
               "grigory_door": true
             },
             "text": "两人干到掌灯。他拍了拍门板，说了句：这副，征不走。声音不大，像说给很远的人听。"
-          }
+          },
+          "auto": true
         },
         {
           "key": "wait",
@@ -2918,7 +2985,8 @@
             "text": "他独自干完，把凿下的木屑扫得干干净净——木屑也要留着烧。那副门版教过他的。"
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "i_danilo_med",
@@ -2945,7 +3013,8 @@
               "danilo_med": true
             },
             "text": "讲到验关那一夜，他的手停在药箱上很久。令是令，人是人——他说这话说得很慢，像还在替那夜的自己找下台阶。"
-          }
+          },
+          "auto": true
         },
         {
           "key": "quiet",
@@ -2954,7 +3023,8 @@
             "text": "药码得整整齐齐。有些事的台阶，得自己找。旁人能做的，只是把药箱理好。"
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "c_fuel",
@@ -3553,6 +3623,7 @@
         {
           "key": "carry",
           "label": "背一捆柴上台阶——万一呢",
+          "note": "两捆柴换一个「万一」——柴码在台口，没人来点，它也一直在。",
           "cost": [
             {
               "item": "firewood",
@@ -3574,6 +3645,7 @@
         {
           "key": "just_words",
           "label": "话只是话，柴要留着过冬",
+          "note": "柴留过冬——冬天会证明这是对的；话留在了话里。",
           "effects": {
             "text": "话留在了话里。台上的风把什么都吹得干干净净。"
           }
@@ -4122,7 +4194,8 @@
               "all": 1
             },
             "ap_cost": 1
-          }
+          },
+          "auto": true
         },
         {
           "key": "eat",
@@ -4134,7 +4207,8 @@
             }
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_prisoners",
@@ -4159,7 +4233,8 @@
               "all": -1
             },
             "knowledge": 1
-          }
+          },
+          "auto": true
         },
         {
           "key": "soft",
@@ -4171,7 +4246,8 @@
             }
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_snowsweep",
@@ -4247,7 +4323,8 @@
               "all": -1
             },
             "knowledge": 1
-          }
+          },
+          "auto": true
         },
         {
           "key": "lamp",
@@ -4270,7 +4347,8 @@
             }
           }
         }
-      ]
+      ],
+      "beat": true
     },
     {
       "id": "r_oldtale",
@@ -4295,7 +4373,8 @@
               "all": 1
             },
             "knowledge": 1
-          }
+          },
+          "auto": true
         },
         {
           "key": "skip",
@@ -4307,7 +4386,8 @@
             }
           }
         }
-      ]
+      ],
+      "beat": true
     }
   ],
   "broadcasts": {

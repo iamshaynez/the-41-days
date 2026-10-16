@@ -30,18 +30,18 @@ describe('战争 W/N 系', () => {
     assert.ok(Array.isArray(state.ending.threeThings));
   });
 
-  test('V-06 D41 魔咒事件：第 41~44 天晨抽必发一次', () => {
+  test('V-06 D41 魔咒事件：第 41~44 天晨抽必发一次（节拍化：流为叙述，不拦白天）', () => {
     let { state } = newRun({ seed: 6, roster: ['bron', 'katya'] });
     state.day = 40;
     state.inventory.meal = 50;
     state.war.endDay = 45;
     let s = step(state, [{ type: 'advance' }]);
     s = step(s.state, [{ type: 'dusk_assign', scavenger: null, others: {} }]);
-    // 第 41 天晨抽：时间轴卡在窗口内必发
-    assert.equal(s.state.activeEvent?.cardId, 't_curse41', '41 天早晨魔咒事件必发');
-    const c = step(s.state, [{ type: 'event_choice', option: 'listen' }]);
-    assert.ok(c.state.firedOnce['t_curse41']);
-    assert.ok(c.state.knowledge >= 1, '听老人讲古 +1 知晓度');
+    // 第 41 天晨抽：老人讲古是节拍卡——自动落账为当日叙述，不再拦玩家的白天
+    assert.ok(s.state.firedOnce['t_curse41'], '41 天早晨魔咒事件必发');
+    assert.ok(!s.state.activeEvent, '节拍不占行动位');
+    assert.ok(s.state.knowledge >= 1, '听老人讲古 +1 知晓度（auto 选项照落）');
+    assert.ok(s.facts.some((f) => f.k === 'card_resolved' && /楼梯口|讲古/.test(f.card + f.result)), '故事随事实流入叙述');
   });});
 
 describe('直读解析器（LLM 离线同构）', () => {
