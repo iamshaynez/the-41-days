@@ -3,7 +3,7 @@
 // v2 决断意志模型：auto_day / auto_night 宏意图在这里惰性展开为管家规划（delegate.js），
 // 展开产物与玩家手输意图共用同一校验、同一扣账、同一事件流——自动化没有第二条通道。
 import { Ctx } from './ctx.js';
-import { aliveChars, charById, apMaxOf, policyOf, DEFAULT_POLICY } from './state.js';
+import { aliveChars, charById, apMaxOf, policyOf, DEFAULT_POLICY, moodLevel } from './state.js';
 import { applyDayAction } from './dayActions.js';
 import { startNight, applyNightAction, endNightReturn } from './night.js';
 import { resolveRaid } from './raid.js';
@@ -21,6 +21,28 @@ import { preludeBeats } from './prelude.js';
 import { mainlineTick } from './mainline.js';
 import { ensembleTick } from './ensemble.js';
 import { overviewDecision, ROUTINE_DAY_FACTS, digestOfDayFacts } from './pacing.js';
+
+/** 黄昏派工的「拒出门自动换人」（实测：方案反复出现又反复失败）：
+ *  抑郁者 50% 拒绝出门（startNight 的旧骰子）——拒绝直接弹回玩家，
+ *  玩家再点、再赌。角色的常识是：这个家等不了重试——话没说完，
+ *  下一个走得动的人已经把行囊接了过去。夜必须成行。 */
+function startNightWithSwap(ctx, intent) {
+  const r = startNight(ctx, intent);
+  if (r.ok === false && r.reason === 'DEPRESSED' && intent.scavenger) {
+    const s = ctx.s;
+    const alt = aliveChars(s).find((c) => c.id !== intent.scavenger
+      && c.wound < 3 && c.sick < 3
+      && moodLevel(c.moodPts).key !== 'depressed' && moodLevel(c.moodPts).key !== 'breakdown');
+    if (alt) {
+      ctx.fact('dusk_swap', { from: intent.scavenger, to: alt.id });
+      const others = { ...(intent.others || {}) };
+      delete others[alt.id];
+      others[intent.scavenger] = 'sleep';
+      return startNight(ctx, { ...intent, scavenger: alt.id, others });
+    }
+  }
+  return r;
+}
 
 /** 意图白名单（shared 契约） */
 export function validateIntentShape(intent) {
@@ -204,7 +226,7 @@ function applyOne(ctx, intent) {
         ctx.emit('EVENT_CHOSEN', { cardId, option: 'passed' });
         ctx.fact('fate_passed', { title: fateCard?.title || '' });
       }
-      return startNight(ctx, intent);
+      return startNightWithSwap(ctx, intent);
     }
     case 'dusk_auto': {
       // 托管黄昏（策略级输入的兜底解）：「派人出门找吃的」——没点名没点地，
@@ -219,7 +241,7 @@ function applyOne(ctx, intent) {
         for (const c of aliveChars(s)) if (c.id !== i.scavenger) others[c.id] = 'sleep';
         i.others = others;
       }
-      return startNight(ctx, i);
+      return startNightWithSwap(ctx, i);
     }
     case 'night': {
       if (s.night?.home) return { ok: false, reason: 'HOME_NIGHT' };
