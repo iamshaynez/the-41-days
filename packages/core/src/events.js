@@ -44,7 +44,7 @@ export function eventOptionsView(s, pack, card) {
   const ro = { s, hasItem: (i, n = 1) => (s.inventory[i] || 0) >= n }; // 只读鸭子 ctx：optionAvailable/CostOk 只读库存
   return (card.options || []).map((o) => {
     const ok = optionAvailable(ro, o) && optionCostOk(ro, o);
-    return { key: o.key, label: o.label, ok, ...(ok ? {} : { why: optionWhy(s, pack, o) }) };
+    return { key: o.key, label: o.label, ok, ...(o.note ? { note: o.note } : {}), ...(ok ? {} : { why: optionWhy(s, pack, o) }) };
   });
 }
 
@@ -103,8 +103,32 @@ export function chooseEventOption(ctx, optionKey) {
   return { ok: true };
 }
 
-function applyEffects(ctx, card, option, ev) {
-  const s = ctx.s, e = option.effects || {};
+/** 点卡的统一入口（剧情分层总纲）：日常剧本是背景流，关键抉择才配一张卡。
+ *  card.beat（内容侧标记）＝节拍卡：到点即自动落账（auto 选项或首项），
+ *  故事随 event/event_text/card_resolved 三段事实流入当日叙述——不占 activeEvent，
+ *  不拦玩家的生存拍子。决断卡照旧挂 activeEvent 等玩家选。
+ *  发火点的 firedOnce 记账职责不变（各点自设，beat 不重设）。 */
+export function fireEventCard(ctx, cardId, extra = {}) {
+  const s = ctx.s;
+  const card = ctx.pack.cardMap[cardId] || s.geCards?.[cardId];
+  if (card?.beat) {
+    ctx.emit('EVENT_FIRED', { cardId: card.id, beat: true });
+    ctx.fact('event', { cardId: card.id, title: card.title });
+    if (card.text) ctx.fact('event_text', { text: String(card.text).replaceAll('{{names}}', s.chars.map((c) => c.name).join('、')) });
+    const opt = (card.options || []).find((o) => o.auto) || (card.options || [])[0];
+    if (opt && optionAvailable(ctx, opt) && optionCostOk(ctx, opt)) {
+      applyEffects(ctx, card, opt, { beat: true });
+      ctx.fact('card_resolved', { card: card.title, option: opt.label, result: (opt.effects || {}).text || opt.label, beat: true, ...(card.actor || card.for ? { who: card.actor || card.for } : {}) });
+    }
+    return { ok: true, beat: true };
+  }
+  s.activeEvent = { cardId, ...extra };
+  ctx.emit('EVENT_FIRED', { cardId, ...(extra.actorId ? { actorId: extra.actorId } : {}), ...(extra.night ? { night: true } : {}) });
+  ctx.fact('event', { cardId, title: card?.title, ...(extra.actorId ? { who: extra.actorId } : {}) });
+  return { ok: true };
+}
+
+function applyEffects(ctx, card, option, ev) {  const s = ctx.s, e = option.effects || {};
   // 消耗（cost 组取第一个持有项；consumeChoice 同）
   for (const cst of option.cost || []) {
     if (ctx.hasItem(cst.item, cst.n)) { ctx.takeItem(cst.item, cst.n, '事件'); break; }

@@ -8,7 +8,7 @@ import { applyDayAction } from './dayActions.js';
 import { startNight, applyNightAction, endNightReturn } from './night.js';
 import { resolveRaid } from './raid.js';
 import { executeTrade } from './trade.js';
-import { chooseEventOption, optionAvailable, optionCostOk } from './events.js';
+import { chooseEventOption, optionAvailable, optionCostOk, fireEventCard } from './events.js';
 import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents, assignNightBeds } from './vitals.js';
 import { tickAutonomous, tickDirections, bumpPairArc } from './causality.js';
 import { evaluateSeals } from './seals.js';
@@ -474,9 +474,7 @@ export function beginRun(state, pack, { prologue = false } = {}) {
       const card = pack.cards.find((c) => c.side === state.sidestory.id && c.kind === 'timeline' && (c.when?.dayWindow || [])[0] === 1);
       if (card) {
         state.firedOnce[card.id] = true;
-        state.activeEvent = { cardId: card.id };
-        ctx.emit('EVENT_FIRED', { cardId: card.id });
-        ctx.fact('event', { cardId: card.id, title: card.title });
+        fireEventCard(ctx, card.id);
       }
     }
     mainlineTick(ctx); // 主线 D1 大事步（无序章开局与序章落幕同拍）

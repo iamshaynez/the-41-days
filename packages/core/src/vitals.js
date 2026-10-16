@@ -1,6 +1,7 @@
 // 破晓结算（内核设计 PH-02 八步顺序）与六轴状态机。
 // 顺序即测试顺序：归位→饥饿→伤病→疲劳→温度→心情→日进→抽取。
 import { moodLevel, apMaxOf, difficultyCfg, aliveChars, charById } from './state.js';
+import { fireEventCard } from './events.js';
 import { genFrankoStock } from './trade.js';
 import { recordCausal } from './causality.js';
 import { threadsFrankoPick } from './threads.js';
@@ -367,9 +368,7 @@ export function drawMorningEvents(ctx) {
       && (s.reputation?.church || 0) >= 1
       && s.eventFlags.fire_witness) { // 濠鼠活证（正典圣经-v0.2 §7.2：人证齐了才谈得上拆机关）
       s.firedOnce['alt_jiangling'] = true;
-      s.activeEvent = { cardId: 'alt_jiangling' };
-      ctx.emit('EVENT_FIRED', { cardId: 'alt_jiangling' });
-      ctx.fact('event', { cardId: 'alt_jiangling', title: ctx.pack.cardMap['alt_jiangling']?.title });
+      fireEventCard(ctx, 'alt_jiangling');
       return;
     }
     // 或然 A《麦城得脱》：交割前夜之晨（endDay-1），素徽线已揭示 + 逄灶在 + 知晓度 8
@@ -378,9 +377,7 @@ export function drawMorningEvents(ctx) {
       && charById(s, 'zofia') && charById(s, 'alexey')
       && s.eventFlags.zofia_brother && s.knowledge >= 8) {
       s.firedOnce['alt_maicheng_drum'] = true;
-      s.activeEvent = { cardId: 'alt_maicheng_drum' };
-      ctx.emit('EVENT_FIRED', { cardId: 'alt_maicheng_drum' });
-      ctx.fact('event', { cardId: 'alt_maicheng_drum', title: ctx.pack.cardMap['alt_maicheng_drum']?.title });
+      fireEventCard(ctx, 'alt_maicheng_drum');
       return;
     }
   }
@@ -395,9 +392,7 @@ export function drawMorningEvents(ctx) {
     if (s.activeEvent) break; // 一次一张
     s.firedOnce[card.id] = true;
     ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
-    s.activeEvent = { cardId: card.id };
-    ctx.emit('EVENT_FIRED', { cardId: card.id });
-    ctx.fact('event', { cardId: card.id, title: card.title });
+    fireEventCard(ctx, card.id);
     break;
   }
   if (s.activeEvent) return;
@@ -411,9 +406,7 @@ export function drawMorningEvents(ctx) {
     if (pending.length) {
       s.firedOnce[pending[0]] = true;
       ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
-      s.activeEvent = { cardId: pending[0] };
-      ctx.emit('EVENT_FIRED', { cardId: pending[0] });
-      ctx.fact('event', { cardId: pending[0], title: ctx.pack.cardMap[pending[0]].title });
+      fireEventCard(ctx, pending[0]);
       return;
     }
   }
@@ -450,12 +443,10 @@ export function drawMorningEvents(ctx) {
   const card = ctx.rng.weighted(eligible.map((c) => ({ w: (c.weight ?? 5) / (1 + (s.cardCount?.[c.id] || 0)), c }))).c; // ?? 不把 0 当缺省
   s.cardCount = { ...(s.cardCount || {}), [card.id]: (s.cardCount?.[card.id] || 0) + 1 };
   ctx.emit('FLAG', { key: 'cardCount', val: structuredClone(s.cardCount) });
-  s.activeEvent = { cardId: card.id };
   if (card.when?.once) { s.firedOnce[card.id] = true; ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) }); }
   s.eventCooldowns[card.id] = s.day + (card.when?.cooldown || 8);
   ctx.emit('FLAG', { key: 'eventCooldowns', val: structuredClone(s.eventCooldowns) });
-  ctx.emit('EVENT_FIRED', { cardId: card.id });
-  ctx.fact('event', { cardId: card.id, title: card.title });
+  fireEventCard(ctx, card.id);
 }
 
 /** C-2 随机池资格（纯函数，测试直查）：同卡一局至多两回 */
