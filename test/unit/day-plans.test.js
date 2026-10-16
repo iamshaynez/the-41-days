@@ -125,7 +125,7 @@ describe('戏文轨（scene 意图 + 微效果）', () => {
     const { state } = newRun({ seed: 73, roster: ['anton', 'marta', 'bron'] });
     const ok = applySceneEffects(state, PACK, { mood_char: { name: '文简', n: -1 }, seed: { subject: null, text: '把灯留在窗台上' } });
     assert.ok(ok.ok, JSON.stringify(ok.reasons));
-    assert.equal(state.chars.find((c) => c.id === 'anton').moodPts, 1); // 2 - 1
+    assert.equal(state.chars.find((c) => c.id === 'anton').moodPts, 0); // 2 − 1（D1 易帜 moodAll 涟漪）− 1（戏文微效果）
     assert.ok(Object.values(state.directions)[0]?.text.includes('灯'));
     const bad = applySceneEffects(state, PACK, { mood_all: 3 });
     assert.ok(!bad.ok);

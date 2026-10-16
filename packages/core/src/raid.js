@@ -1,6 +1,7 @@
 // 夜间袭击（内核设计 §7 R 系）。
 import { aliveChars, homeValue, bestWeapons, difficultyCfg } from './state.js';
 import { slumberGuard } from './causality.js';
+import { raidAddOf } from './mainline.js';
 
 export function resolveRaid(ctx) {
   const s = ctx.s, pack = ctx.pack, cfg = difficultyCfg(pack, s);
@@ -9,6 +10,7 @@ export function resolveRaid(ctx) {
   let p = Math.min(pack.manifest.raid.maxProb,
     pack.manifest.raid.baseProb + s.day / pack.manifest.raid.dayFactor
     + s.notoriety * pack.manifest.raid.notorietyFactor
+    + raidAddOf(s) // 涟漪（史实共振）：城里乱不乱，贼最先知道
     - (aliveChars(s).some((c) => c.guardTonight) ? pack.manifest.raid.guardDeter : 0)) * cfg.raidMul;
   // 家徒四壁减半（流民也懒得来）
   if (homeValue(s, pack) < 20) p *= 0.5;

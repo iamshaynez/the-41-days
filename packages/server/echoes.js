@@ -47,6 +47,21 @@ export function archiveOutcome(db, userId, runId, st, pack = null) {
   for (const a of st.ending?.storyline?.annals || []) {
     db.archivePut(userId, 'annal', a.ending, { ...a, day: st.day }, runId);
   }
+  // 信史墙（史实共振）：本局亲历的正史引文入馆——跨局集史源，key=步 id 天然去重合并。
+  // 档案馆集齐一幕的引文点亮一幕之印（见 web 档案馆「信史墙」）
+  if (pack?.mainline) {
+    const stepMap = Object.fromEntries((pack.mainline.steps || []).map((x) => [x.id, x]));
+    for (const m of st.mainline || []) {
+      const stp = m.stepId ? stepMap[m.stepId] : null;
+      if (stp?.cite) {
+        db.archivePut(userId, 'cite', stp.id, {
+          text: stp.cite.text, src: stp.cite.src, gloss: stp.cite.gloss || null,
+          title: stp.title, track: stp.track || null, act: stp.act || null, day: m.day,
+          seenRuns: [runId]
+        }, runId);
+      }
+    }
+  }
   // 别传通关册（CH-03）：本地记录，不攀比
   if (st.sidestory) {
     db.archivePut(userId, 'sidestory', st.sidestory.id, {

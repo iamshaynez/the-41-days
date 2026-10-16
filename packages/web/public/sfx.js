@@ -42,4 +42,19 @@ export const sfx = {
     if (!this.enabled) return;
     try { const a = ac(); noiseBurst(a, { dur: 0.07, freq: 1500, gain: 0.32 }); noiseBurst(a, { dur: 0.04, freq: 3200, gain: 0.12 }); } catch {}
   },
+  gong() {  // 露布落卷：一记哑锣，低频长衰减——史书落笔的分量
+    if (!this.enabled) return;
+    try {
+      const a = ac(); const t = a.currentTime;
+      for (const [f, g0, dur] of [[110, 0.22, 1.4], [164, 0.1, 1.0], [221, 0.05, 0.7]]) {
+        const o = a.createOscillator(); const g = a.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(g0, t + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g).connect(a.destination);
+        o.start(t); o.stop(t + dur + 0.05);
+      }
+    } catch {}
+  },
 };

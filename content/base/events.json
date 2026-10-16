@@ -4054,6 +4054,260 @@
           }
         }
       ]
+    },
+    {
+      "id": "r_rollcall",
+      "kind": "knock",
+      "weight": 9,
+      "when": {
+        "phase": "any",
+        "chance": 1,
+        "once": true,
+        "afterStep": {
+          "id": "m1_flag",
+          "withinDays": 3
+        }
+      },
+      "title": "换牌",
+      "actor": "neighbor",
+      "text": "坊正挟着一沓新门牌挨户来换，旧门册要收上去，「照新旗的规矩重造」。他站在门口等，笔尖悬着——门后那面墙上写着三个名字，抄不抄，此刻就是一道题。\n[[要|抄上去，这个家在册；漏两个，日后查出来是欺瞒]]。",
+      "options": [
+        {
+          "key": "copy",
+          "label": "照抄，一个不漏",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "flags": {
+              "roll_copied": true
+            }
+          }
+        },
+        {
+          "key": "sloppy",
+          "label": "字迹潦草些，糊弄过去",
+          "effects": {
+            "mood": {
+              "softHearted": -2,
+              "default": 1
+            },
+            "flags": {
+              "roll_sloppy": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_ashfall",
+      "kind": "internal",
+      "weight": 8,
+      "when": {
+        "chance": 1,
+        "once": true,
+        "afterStep": {
+          "id": "m3_fire",
+          "withinDays": 4
+        }
+      },
+      "title": "灰落进晒的菜里",
+      "text": "[[地|府库]]的烟散了，灰没散——晒在院里的菜干落了薄薄一层灰屑，指头一捻，黑的。烧掉的是账还是别的，没人敢问；落进嘴里的，却先要这个家自己拿主意。\n[[要|重洗费一日之力；照吃，赌的是这灰没毒]]。",
+      "options": [
+        {
+          "key": "wash",
+          "label": "全部重洗重晒",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "ap_cost": 1
+          }
+        },
+        {
+          "key": "eat",
+          "label": "拍拍灰，照吃",
+          "effects": {
+            "mood": {
+              "softHearted": -2,
+              "default": -1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_prisoners",
+      "kind": "internal",
+      "weight": 8,
+      "when": {
+        "chance": 1,
+        "once": true,
+        "afterStep": {
+          "id": "m4_yujin",
+          "withinDays": 5
+        }
+      },
+      "title": "他们去哪儿",
+      "text": "降人的队伍从坊门口过，孩子扒着门缝数了一路，数到一百就不数了。晚饭时他忽然问：他们去哪儿？\n满桌的手都停了停。[[要|照实说，他早晚会懂；说他想听的，这顿饭还能热着吃完]]。",
+      "options": [
+        {
+          "key": "honest",
+          "label": "照实说：被「接收」走了",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "knowledge": 1
+          }
+        },
+        {
+          "key": "soft",
+          "label": "说「回家了」",
+          "effects": {
+            "mood": {
+              "softHearted": -1,
+              "default": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_snowsweep",
+      "kind": "knock",
+      "weight": 9,
+      "when": {
+        "phase": "any",
+        "chance": 1,
+        "once": true,
+        "beforeStep": {
+          "id": "m21_linju",
+          "withinDays": 3
+        }
+      },
+      "title": "扫雪的早晨",
+      "actor": "neighbor",
+      "text": "里正来催：各户把巷口的雪扫净，「上头」午后要过人。为谁扫、过的是谁，他不说，只把手拢在袖里哈气。\n[[要|扫，是给新旗脸面；不扫，是给这个家留力气]]。",
+      "options": [
+        {
+          "key": "sweep",
+          "label": "去扫，扫得干干净净",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "reputation": {
+              "neighbor": 1
+            },
+            "ap_cost": 1
+          }
+        },
+        {
+          "key": "own",
+          "label": "只扫自家门前",
+          "effects": {
+            "mood": {
+              "default": 0
+            }
+          }
+        },
+        {
+          "key": "no",
+          "label": "不去，雪又不是我下的",
+          "effects": {
+            "mood": {
+              "softHearted": -1,
+              "default": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_netnight",
+      "kind": "internal",
+      "weight": 9,
+      "when": {
+        "chance": 1,
+        "once": true,
+        "afterStep": {
+          "id": "m20_zhangxiang",
+          "withinDays": 2
+        }
+      },
+      "title": "马蹄过巷",
+      "text": "章乡的网收拢了。这夜马蹄声沿坊墙外过，一更到三更，不快，也不停——像在丈量这座城。\n门后听着的人都没睡。[[要|听完，是这一家对这座城最后的守夜]]。",
+      "options": [
+        {
+          "key": "listen",
+          "label": "立在门后，听完",
+          "effects": {
+            "mood": {
+              "all": -1
+            },
+            "knowledge": 1
+          }
+        },
+        {
+          "key": "lamp",
+          "label": "点灯坐到天亮",
+          "effects": {
+            "mood": {
+              "softHearted": 1,
+              "default": 0
+            },
+            "knowledge": 1
+          }
+        },
+        {
+          "key": "sleep",
+          "label": "蒙上头，装睡",
+          "effects": {
+            "mood": {
+              "softHearted": -3,
+              "default": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r_oldtale",
+      "kind": "internal",
+      "weight": 8,
+      "when": {
+        "chance": 1,
+        "once": true,
+        "afterStep": {
+          "id": "m18_storytelling",
+          "withinDays": 3
+        }
+      },
+      "title": "门轴的油",
+      "text": "讲古日那句「门，回回从里面开」还在坊里传。有人听出了别的意思——这两日，半条巷的门轴都抹了油，夜里的[[地|橘里九号]]安静得能听见雪落。\n[[要|上不上油，是记性；记的是什么，各人心里有数]]。",
+      "options": [
+        {
+          "key": "oil",
+          "label": "给门轴也上点油",
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "knowledge": 1
+          }
+        },
+        {
+          "key": "skip",
+          "label": "觉得晦气，不去听这些",
+          "effects": {
+            "mood": {
+              "softHearted": -1,
+              "default": 0
+            }
+          }
+        }
+      ]
     }
   ],
   "broadcasts": {

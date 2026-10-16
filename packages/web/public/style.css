@@ -1489,6 +1489,11 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
   #wing .chron-dig { font-size: 13px; }
   #wing .chron-track { font-size: 11px; }
   #chronicle-box { max-height: none; }
+  /* 史实共振手机档：军心刻度与幕结随抽屉展宽，字号提一档 */
+  .chron-morale .cm-tier { font-size: 13.5px; max-width: 48%; }
+  .chron-payoff { font-size: 14px; }
+  .chron-wrap .cw-city, .chron-wrap .cw-you { font-size: 13.5px; }
+  .chron-cite-chip { font-size: 12px; padding: 4px 10px 4px 8px; }
   .wing-drawer-head {
     display: flex; align-items: center; justify-content: space-between;
     padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--rule-strong);
@@ -1656,6 +1661,62 @@ body.motion-off { scroll-behavior: auto; }
 .chron-romance { font-family: var(--font-kai); font-size: 12.5px; line-height: 1.8; color: var(--ink-3, #999); border: 1px dashed rgba(138, 109, 59, .4); border-radius: 5px; padding: 7px 10px; margin: 0 0 10px; }
 .chron-day.chron-end { border-left-color: var(--accent); }
 .chron-day.chron-end .chron-text { color: var(--ink); }
+
+/* ═══ 史实共振（0.37.0）：史卷的重量——军心刻度 · 幕结 · 史源印 · 伏笔回响 · 新笔落墨 ═══ */
+/* 卷首军心刻度：北边的军心水位——史卷每天有只有它有的信息 */
+.chron-morale { display: flex; align-items: center; gap: 9px; padding: 2px 0 10px; margin-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.chron-morale .cm-label { font-family: var(--font-carved); font-size: 10.5px; letter-spacing: .32em; color: var(--ink-3); flex: none; }
+.chron-morale .cm-track { flex: 1; height: 5px; background: var(--rule); border-radius: 3px; overflow: hidden; position: relative; }
+.chron-morale .cm-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--ink-3), var(--ink-2)); border-radius: 3px; transition: width 1.2s cubic-bezier(.2, .8, .3, 1); }
+.chron-morale .cm-tier { font-family: var(--font-kai); font-size: 12.5px; color: var(--ink-2); flex: none; max-width: 46%; text-align: right; line-height: 1.4; }
+.chron-morale.g2 .cm-track i { background: linear-gradient(90deg, #8c6d3b, var(--brass)); }
+.chron-morale.g2 .cm-tier { color: var(--brass); }
+.chron-morale.g3 .cm-track i { background: linear-gradient(90deg, #9c4a3c, var(--accent)); }
+.chron-morale.g3 .cm-tier { color: var(--accent-2); }
+
+/* 幕结行：城事×家事同页收束——祭文式居中，虚线上下夹住 */
+.chron-wrap { text-align: center; padding: 10px 6px 12px; margin: 10px 0; border-top: 1px dashed var(--rule-strong); border-bottom: 1px dashed var(--rule-strong); animation: fadeUp .8s ease both; }
+.chron-wrap .cw-kicker { display: block; font-family: var(--font-carved); font-size: 10.5px; letter-spacing: .42em; color: var(--brass); margin-bottom: 5px; }
+.chron-wrap .cw-city, .chron-wrap .cw-you { font-family: var(--font-kai); font-size: 12.5px; line-height: 1.7; color: var(--ink-3); margin: 0; }
+.chron-wrap .cw-city b, .chron-wrap .cw-you b { color: var(--ink-2); }
+
+/* 伏笔回响：锚落之日认出早前读过的闲笔——朱批一行，指名道姓 */
+.chron-payoff { font-family: var(--font-kai); font-size: 13px; line-height: 1.75; color: var(--accent-2); margin: 5px 0 1px; padding: 2px 0 2px 9px; border-left: 2px solid var(--accent); background: linear-gradient(90deg, var(--accent-wash), transparent 70%); }
+.chron-payoff b { color: var(--accent-2); letter-spacing: .06em; margin-right: .35em; }
+.chron-payoff.in-gazette { margin: 7px 0 2px; font-size: 13.5px; }
+
+/* 史源印：志书引文升格为可点之印——点开展卷读原文与白话 */
+.chron-cite-chip { display: inline-flex; align-items: center; gap: 5px; margin: 6px 0 2px; padding: 3px 9px 3px 7px; font-family: var(--font-carved); font-size: 11px; letter-spacing: .18em; color: var(--brass); background: none; border: 1px solid rgba(138, 109, 59, .55); border-radius: 3px; cursor: pointer; transition: background .25s, color .25s, box-shadow .25s; }
+.chron-cite-chip .icon { width: 13px; height: 13px; }
+.chron-cite-chip:hover, .chron-cite-chip:focus-visible { background: rgba(138, 109, 59, .12); color: var(--ink-1); box-shadow: inset 0 0 0 1px rgba(138, 109, 59, .35); }
+
+/* 新笔落墨：本日新锚步——朱线划入＋「新」字小印砸下 */
+@keyframes chronIn { 0% { opacity: 0; transform: translateY(9px); } 100% { opacity: 1; transform: none; } }
+@keyframes chronEdge { 0% { border-left-color: var(--accent); } 100% { border-left-color: var(--rule); } }
+@keyframes stampIn { 0% { opacity: 0; transform: rotate(9deg) scale(1.9); } 62% { opacity: 1; transform: rotate(6deg) scale(.94); } 100% { opacity: 1; transform: rotate(6deg) scale(1); } }
+.chron-day.chron-fresh { animation: chronIn .55s ease both, chronEdge 2.6s ease both; position: relative; }
+.chron-day.chron-fresh::after { content: '新'; position: absolute; top: 1px; right: 2px; width: 20px; height: 20px; display: grid; place-items: center; font-family: var(--font-carved); font-size: 11px; color: var(--paper); background: var(--accent); border-radius: 3px; box-shadow: 0 1px 0 var(--shadow); animation: stampIn .5s .35s cubic-bezier(.2, .8, .3, 1.4) both; }
+body.motion-off .chron-day.chron-fresh, body.motion-off .chron-day.chron-fresh::after { animation: none; }
+
+/* 舆图钮未读角标（手机抽屉）：史卷新笔落下即点亮，翻开即清 */
+#btn-wing { position: relative; }
+#btn-wing.unread::after { content: attr(data-unread); position: absolute; top: 0; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; display: grid; place-items: center; font-size: 10.5px; font-weight: 700; color: var(--paper); background: var(--accent); border-radius: 9px; box-shadow: 0 0 0 2px var(--paper); pointer-events: none; }
+
+/* 露布升级（史实共振）：入场更重——大位移＋缓收，带史源的日子右上角挂「史」字角印 */
+.gazette { animation: gazetteIn 1.05s cubic-bezier(.16, .8, .3, 1) both; position: relative; }
+@keyframes gazetteIn { 0% { opacity: 0; transform: translateY(16px) scale(.982); } 100% { opacity: 1; transform: none; } }
+.gazette.has-cite::after { content: '史'; position: absolute; top: -9px; right: 12px; width: 24px; height: 24px; display: grid; place-items: center; font-family: var(--font-carved); font-size: 13px; color: var(--brass); background: var(--paper); border: 1.5px solid var(--brass); border-radius: 4px; transform: rotate(7deg); box-shadow: 0 1px 2px var(--shadow); animation: stampIn .55s .5s cubic-bezier(.2, .8, .3, 1.4) both; }
+body.motion-off .gazette, body.motion-off .gazette.has-cite::after { animation: none; }
+
+/* 信史墙（档案馆）：碑拓卡承载《三国志》原文——黑底白文，出处右落 */
+.cites-wall { margin-top: 6px; }
+.cites-group { margin-bottom: 14px; }
+.cite-card blockquote.cite-line { font-family: var(--font-kai); font-size: 14.5px; line-height: 1.85; color: inherit; margin: 6px 0 4px; }
+.cite-card .cite-src { font-size: 11.5px; color: var(--ink-3); letter-spacing: .08em; }
+/* 史源展卷：原文居中放大、白话随行、落款淡墨 */
+.rite--cite .cite-original { font-family: var(--font-kai); font-size: 19px; line-height: 2.05; color: var(--ink); text-align: center; margin: 26px 8px 10px; padding: 0 6px; }
+.rite--cite .cite-gloss { font-family: var(--font-kai); font-size: 15px; line-height: 1.9; color: var(--ink-2); text-align: center; margin: 0 auto 8px; max-width: 34em; }
+.rite--cite .cite-note { font-size: 12.5px; color: var(--ink-3); text-align: center; letter-spacing: .08em; margin: 18px 0 6px; }
 
 /* —— 高亮标注（叙事双轴 §6）：人朱 / 地青 / 物金 / 事玄 / 决绛 / 伏暗金 / 要朱批 —— */
 .mk { padding: 0 1px; }

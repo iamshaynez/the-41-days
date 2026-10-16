@@ -38,6 +38,8 @@ const state = {
   fb: null, fbQueue: [], fbLedger: null,
   // 幕页与露布（叙事双轴排印升级）
   lastActId: null, chronShown: null,
+  // 史实共振：史卷未读账（手机抽屉角标）与已渲染到的史卷日（新条目落墨动画）
+  wingUnread: 0, chronDay: 0,
   // 季相痕迹：积雪连日、上一次雪天
   lastWKey: null, snowStreak: 0, lastSnowDay: 0
 };
@@ -154,6 +156,7 @@ function clearBook() {
   state.pendingDropcap = false; state.follow = true;
   state.fb = null; state.fbQueue = []; state.fbLedger = null;
   state.lastActId = null; state.chronShown = null;
+  state.wingUnread = 0; state.chronDay = 0; syncWingBadge();
   state.lastWKey = null; state.snowStreak = 0; state.lastSnowDay = 0;
   hideFlowPing();
   hideCharPop();
@@ -692,11 +695,14 @@ function renderNewChronicle(ch) {
 }
 function gazetteBlock(e) {
   closePara();
-  const g = el('div', 'gazette' + (e.track ? ' tr-' + e.track : ''));
+  sfx.gong(); // 史实共振：露布落卷——一记哑锣，史书落笔的分量
+  const g = el('div', 'gazette' + (e.track ? ' tr-' + e.track : '') + (e.cite ? ' has-cite' : ''));
   g.innerHTML = `<span class="gz-kicker">露布 · 第${e.day}日</span><b class="gz-title">${esc(e.title)}</b>` +
     (e.text ? `<p class="gz-text">${rich(e.text)}</p>` : '') +
     (e.cite ? `<p class="gz-cite">${esc(e.cite.text)}<span class="gz-src">——${esc(e.cite.src)}</span></p>` : '') +
     (e.echo ? `<p class="gz-echo">这一家 · ${rich(e.echo)}</p>` : '');
+  // 伏笔回响（史实共振）：露布底下认出早前读过的闲笔——朱批一行
+  for (const pf of e.payoffs || []) g.appendChild(el('p', 'chron-payoff in-gazette', `<b>${esc(pf.name)}</b>${esc(pf.line.replace(new RegExp('^' + pf.name), ''))}`));
   penNotes(g, e);
   markNouns(g);
   $('narration').appendChild(g);
@@ -1775,7 +1781,10 @@ function closeSheets() {
 function closeWing() { document.body.classList.remove('wing-open'); }
 $('btn-wing').addEventListener('click', () => {
   if (document.body.classList.contains('wing-open')) closeWing();
-  else { closeSheets(); document.body.classList.add('wing-open'); }
+  else {
+    closeSheets(); document.body.classList.add('wing-open');
+    state.wingUnread = 0; syncWingBadge(); // 史卷翻开了，未读账清零
+  }
 });
 // 抽屉头上给一只合上的手（一次性注入，窄屏 CSS 才显形）
 {
@@ -2304,6 +2313,45 @@ async function loadArchive() {
     d.innerHTML = `<span class="doc-id">${esc(ENDING_NAME[a.id] || '或然')}</span>${a.text ? `<p>${esc(a.text)}</p>` : ''}<p class="mem-meta">批注：${esc(a.note)}</p>`;
     aa.appendChild(d);
   }
+  // 信史墙（史实共振）：跨局集齐的正史引文——按幕分组，集齐一幕点亮幕印；
+  // 没读过的日子留暗格：数目可见，出处不可见（收藏馆的规矩）
+  const cw = $('cites-wall'); cw.innerHTML = '';
+  const ACT_NAME = { A1: '易帜', A2: '问讯', A3: '还军', A4: '散卒', A5: '末路' };
+  const allCited = [];
+  {
+    // 从内容包数出全部史注步（总数口径）；页面拿不到 pack——用 canonAnnals 之外的最小清单：直接以收集到的渲染
+    const seen = new Map();
+    for (const c of r.cites || []) seen.set(c.id, c);
+    for (const c of seen.values()) allCited.push(c);
+  }
+  if (!allCited.length) {
+    cw.appendChild(el('p', 'hint', '还没有一条引文入档。正史落锚的那些天——易帜、樊城围解、麦城——活下去，就去亲历它们。'));
+  } else {
+    const byAct = {};
+    for (const c of allCited) (byAct[c.act || '?'] ||= []).push(c);
+    for (const [act, list] of Object.entries(byAct).sort()) {
+      const g = el('div', 'cites-group');
+      g.appendChild(el('h4', 'wall-g-head', `${ACT_NAME[act] || act} · ${list.length} 条<span class="wall-g-count">集印中</span>`));
+      const gw = el('div', 'doc-wall');
+      for (const c of list.sort((a, b) => a.day - b.day)) {
+        const card = el('div', 'doc cite-card readable iron');
+        card.innerHTML = `<span class="doc-id">第${c.day}日 · ${esc(c.title)}</span>
+          <blockquote class="cite-line">${esc(c.text)}</blockquote>
+          <span class="cite-src">${esc(c.src)}</span><span class="read-cue">展卷</span>`;
+        card.addEventListener('click', () => openRite(`
+          <header class="dr-head rr iron">
+            <span class="doc-id">第${c.day}日 · ${esc(c.title)} · 亲历 ${Math.max(1, (c.seenRuns || []).length)} 局</span>
+            <h2 class="dr-title">${esc(c.src)}</h2>
+          </header>
+          <blockquote class="cite-original rr">${esc(c.text)}</blockquote>
+          ${c.gloss ? `<p class="cite-gloss rr">${esc(c.gloss)}</p>` : ''}
+          <p class="cite-note rr">这条引文你在第 ${c.day} 日亲历过。史书与你的日子，在这里对上了。</p>`, 'rite--cite'));
+        gw.appendChild(card);
+      }
+      g.appendChild(gw);
+      cw.appendChild(g);
+    }
+  }
   // 结局九格（重构新增）：走到的点开大典（前因后果全文），没走到的一律封存——
   // 「未开封」不泄露题名与走向（收藏馆的规矩：没挣到的不给看）
   const seenEnd = new Map();
@@ -2776,10 +2824,31 @@ function renderChronicle(ch) {
   if (!ch) { panel.hidden = true; return; }
   panel.hidden = false;
   const box = $('chronicle-box');
-  const sig = ch.entries.map((e) => `${e.day}${e.ending ? '!' : ''}${(e.text || '').length}:${(e.pens || []).length}:${(e.mirrors || []).length}${e.cite ? 'c' : ''}`).join('|');
+  const sig = ch.entries.map((e) => `${e.day}${e.ending ? '!' : ''}${(e.text || '').length}:${(e.pens || []).length}:${(e.mirrors || []).length}${e.cite ? 'c' : ''}${(e.payoffs || []).length}p${(e.echo || '').length}e`).join('|');
   quietSwap(box, sig);
+  // 未读账（史实共振）：新落定的锚步条目——手机抽屉角标点起来，翻开即清
+  const fresh = ch.entries.filter((e) => e.anchor && !e.ending && e.day > state.chronDay);
+  if (state.chronDay && fresh.length && !box.hasAttribute('data-quiet')) {
+    state.wingUnread += fresh.length; syncWingBadge();
+  }
+  const freshDay = Math.max(state.chronDay, ...ch.entries.map((e) => e.day || 0), 0);
   box.innerHTML = '';
   $('map-act').textContent = ch.currentAct ? `${ch.currentAct.title}` : '';
+  // —— 卷首军心刻度（史实共振）：史卷每天有只有它有的信息——北边的军心水位。
+  //    常驻面板头（滚动区外）：条目再长，水位抬头可见
+  let gaugeHost = panel.querySelector('.chron-morale');
+  if (ch.morale) {
+    const fill = Math.max(0, Math.min(1, ch.morale.d / ch.morale.th));
+    const grade = fill >= 1 ? 3 : fill >= 0.5 ? 2 : fill >= 0.25 ? 1 : 0;
+    if (!gaugeHost) {
+      gaugeHost = el('div', 'chron-morale');
+      panel.insertBefore(gaugeHost, box);
+    }
+    gaugeHost.className = 'chron-morale' + (grade >= 2 ? ' g' + grade : '');
+    gaugeHost.innerHTML = `<span class="cm-label">北边的军心</span>
+      <span class="cm-track" aria-hidden="true"><i style="width:${Math.round(fill * 100)}%"></i></span>
+      <b class="cm-tier">${esc(ch.morale.tier)}</b>`;
+  } else if (gaugeHost) gaugeHost.remove();
   // 幕回目定位（0.33.0）：玩家活在演义第几回的页边——史卷卷首挂一行
   if (ch.currentAct?.romance) {
     const r = el('p', 'chron-romance');
@@ -2788,10 +2857,22 @@ function renderChronicle(ch) {
   }
   if (!ch.entries.length) {
     box.appendChild(el('p', 'wing-note', '史卷未开——破晓即有一笔。'));
+    state.chronDay = freshDay;
     return;
   }
+  // 幕结行（史实共振）：过幕之后插在该幕最后一条之后——城事与家事同页收束
+  const wraps = [...(ch.actWraps || [])].sort((a, b) => a.day - b.day);
+  let wi = 0;
+  const wrapEl = (w) => {
+    const wd = el('div', 'chron-wrap');
+    wd.innerHTML = `<span class="cw-kicker">幕结 · ${esc(w.title)}</span>
+      <p class="cw-city">城 · ${esc(w.city)}</p><p class="cw-you">家 · ${esc(w.you)}</p>`;
+    return wd;
+  };
+  const flushWraps = (beforeDay) => { while (wi < wraps.length && wraps[wi].day < beforeDay) box.appendChild(wrapEl(wraps[wi++])); };
   for (const e of ch.entries) {
-    const d = el('div', 'chron-day' + (e.ending ? ' chron-end' : ''));
+    flushWraps(e.day);
+    const d = el('div', 'chron-day' + (e.ending ? ' chron-end' : '') + (e.day === freshDay && e.anchor && state.chronDay && e.day > state.chronDay ? ' chron-fresh' : ''));
     const head = el('div', 'chron-head');
     const trackBadge = e.track === 'gen' ? '<span class="chron-track gen">将军轨</span>' : (e.track === 'city' ? '<span class="chron-track city">城轨</span>' : '');
     head.innerHTML = `<span class="chron-d">第${e.day}日</span>${trackBadge}${e.ending ? '<span class="chron-flag">收束</span>' : (e.act ? `<span class="chron-act">${esc(e.act)}</span>` : '<span class="chron-act chron-dim">闲笔</span>')}`;
@@ -2801,7 +2882,18 @@ function renderChronicle(ch) {
       p.innerHTML = rich(e.text);
       d.appendChild(p);
     }
-    if (e.cite) d.appendChild(el('p', 'chron-cite', `${esc(e.cite.text)}<span>——${esc(e.cite.src)}</span>`));
+    // 史注（史实共振升格）：引文不再是脚注小字——一方可点的「史源」印，点开展卷读原文与白话
+    if (e.cite) {
+      const c = el('button', 'chron-cite-chip', `${svgUse('book')} 史源 · ${esc(e.cite.src.replace(/《三国志·|》/g, ''))}`);
+      c.type = 'button';
+      c.addEventListener('click', () => openRite(citeRiteHTML(e), 'rite--cite'));
+      d.appendChild(c);
+    }
+    // 伏笔回响（史实共振）：锚落之日，认出早前读过的闲笔——朱批一行，指名道姓
+    for (const pf of e.payoffs || []) {
+      d.appendChild(el('p', 'chron-payoff', `<b>${esc(pf.name)}</b>${esc(pf.line.replace(new RegExp('^' + pf.name), ''))}`));
+    }
+    if (e.echo) d.appendChild(el('p', 'chron-cite', `${esc(e.echo)}`));
     for (const pn of e.pens || []) {
       const p = el('p', 'chron-pen');
       p.innerHTML = `闲笔 · ${rich(pn.line)}`;
@@ -2815,5 +2907,25 @@ function renderChronicle(ch) {
     if (e.digest) d.appendChild(el('p', 'chron-dig', `我方 · ${esc(e.digest)}`));
     box.appendChild(d);
   }
+  flushWraps(1e9);
+  state.chronDay = freshDay;
   box.scrollTop = box.scrollHeight;
+}
+// 手机抽屉角标（史实共振）：史卷新笔落下，舆图钮挂未读数——翻开即清
+function syncWingBadge() {
+  const b = $('btn-wing');
+  if (!b) return;
+  if (state.wingUnread > 0) { b.dataset.unread = String(state.wingUnread); b.classList.add('unread'); }
+  else { delete b.dataset.unread; b.classList.remove('unread'); }
+}
+/** 史源展卷（史实共振）：原文＋白话＋出处——玩家读得懂《三国志》 */
+function citeRiteHTML(e) {
+  return `
+    <header class="dr-head rr">
+      <span class="doc-id">史源 · 第${e.day}日 · ${esc(e.title)}</span>
+      <h2 class="dr-title">${esc(e.cite.src)}</h2>
+    </header>
+    <blockquote class="cite-original rr">${esc(e.cite.text)}</blockquote>
+    ${e.cite.gloss ? `<p class="cite-gloss rr">${esc(e.cite.gloss)}</p>` : ''}
+    <p class="cite-note rr">史书先写下了这一天。你在这里，只是把它活了出来。</p>`;
 }
