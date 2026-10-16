@@ -1,7 +1,7 @@
 // 谋士选项的验证器（统一交互面）：LLM 出的选项必须「点得动」——
 // 形状（意图白名单）→ 可行性（feasibleIntent 只读检查）→ 禁词（正典防火墙），
 // 三关全过才许渲染。纯视图数据：不碰 state、不进事件流，点了才走输入管线。
-import { validateIntentShape, feasibleIntent, normalizeIntent, nightHomeView, locNeedProfile } from '../core/index.js';
+import { validateIntentShape, feasibleIntent, normalizeIntent, nightHomeView, locNeedProfile, locYieldLine } from '../core/index.js';
 import { LOC_ALIAS } from '../core/src/parser.js';
 
 /** 防御性截断：在标点处收尾（不放残句——线上教训：「派一个人对折他，」） */
@@ -237,7 +237,14 @@ export function cardBrief(state, pack, card) {
       return conts.length > 0 && conts.every((c) => st.searched[c.id] !== undefined);
     };
     const known = (state.knownLocs || []).filter((l) => l !== 'home' && pack.locMap[l])
-      .map((l) => pack.locMap[l].name + (pickedDry(l) ? '（已搜空——重访才有回补：隔两天再走一趟，城里可能又有了）' : '')).join('、');
+      .map((l) => {
+        // 产出标注（断粮实测：谋士把没有任何食物的北津台当找吃的去处推荐）：
+        // 每个地点写明翻不翻得出吃的——谋士的选项措辞才有据可依
+        const y = locYieldLine(pack, l);
+        const dry = pickedDry(l) ? '已搜空——重访才有回补：隔两天再走一趟，城里可能又有了' : '';
+        const inner = [y, dry].filter(Boolean).join('；');
+        return pack.locMap[l].name + (inner ? `（${inner}）` : '');
+      }).join('、');
     return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。${famineLine}夜里出门只能一个人（围城规矩：人多目标大）——「大家都出去」做不到，选一个最合适的，其余在家守或睡。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
   }
   if (card === 'night') {

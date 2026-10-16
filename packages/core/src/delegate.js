@@ -533,6 +533,23 @@ function rankedLocs(s, known, pack, needs = null) {
 }
 const blurbOf = (pack, locId) => pack.locMap[locId]?.blurb || LOC_BLURB[locId] || '';
 
+/** 产出可读性（线上实测：断粮时玩家看不出哪个方案偏向吃的）：单地点的产出线——
+ *  「翻得出吃的：糙米、肉脯」／「翻不出吃的，只有薪柴、铁件」；无容器的地点回落空串。
+ *  只说「翻得出」不说「保证拿到」——夜里的收获还看骰子，但不许让玩家瞎猜方向。 */
+export function locYieldLine(pack, locId) {
+  const loc = pack.locMap[locId]; if (!loc) return '';
+  const foods = new Set(), others = new Set();
+  for (const r of (loc.rooms || [])) for (const c of (r.containers || [])) for (const e of (c.loot || [])) {
+    if (!e.item || !pack.itemMap[e.item]) continue;
+    (FOOD_ITEMS.has(e.item) ? foods : others).add(pack.itemMap[e.item].name);
+  }
+  const f = [...foods].slice(0, 3), o = [...others].slice(0, 3);
+  if (f.length && o.length) return `翻得出吃的：${f.join('、')}；另有${o.join('、')}`;
+  if (f.length) return `翻得出吃的：${f.join('、')}`;
+  if (o.length) return `翻不出吃的，只有${o.join('、')}`;
+  return '';
+}
+
 /** 话里点名的地点（誓的判定与 planDusk 共用同一张别名表） */
 export function locOfText(state, pack, text) {
   const known = state.knownLocs || [];
@@ -578,6 +595,8 @@ export function planDusk(state, pack) {
     foodNeed: foodDays0 < 4,
     fuelNeed: winterSoon0 && (s.inventory.firewood || 0) < 6
   };
+  // 断粮临界（≤1 顿）：嘴压过诺言的档位——排序与盖章共用同一口径
+  const famineCritical = Math.floor(foodDays0) <= 1;
 
   // 外出候选：危重出不了门（startNight 会拒），排序 = 心态可出门 > 背包 > 战斗。
   // 抑郁者 50% 拒绝出门（startNight 掷骰）——方案卡不预检心情就等于让玩家点哑炮
@@ -635,21 +654,33 @@ export function planDusk(state, pack) {
     const mindWarn = scavChar && lowMind(scavChar) ? `；${scavName}情绪很低，今晚可能不肯出门` : '';
     const dirNote = dirLoc === locId && dirHit ? `践誓——「${dirHit.text.slice(0, 14)}」；` : '';
     const dryNote = freshContainersOf(s, pack, locId) === 0 ? '搜空过——重访碰回补（城里又有动静的几率）；' : '';
-    return { key, label: lines.join('，'), hint: `${dirNote}${dryNote}${blurbOf(pack, locId)}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
+    const yieldNote = locYieldLine(pack, locId) || blurbOf(pack, locId);
+    return { key, label: lines.join('，'), hint: `${dirNote}${dryNote}${yieldNote}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
   };
 
   const plans = [];
   if (scav && known.length) {
     const ranked = rankedLocs(s, known, pack, needsDusk);
+    // 断粮临界（≤1 顿）：嘴压过誓位——无食的誓地不再顶到第一冒充找吃的方案
+    // （线上实测：0 顿排第一的是「去北津台」，北津台容器里没有任何食物）。
+    const critical = famineCritical;
+    const locFood = (l) => (locProfiles(pack)[l]?.food || 0) > 0;
     if (dirLoc) { // 念头点名的地方排第一（不在常规排序里也照排——念头优先于habit）
       const i = ranked.indexOf(dirLoc);
       if (i >= 0) ranked.splice(i, 1);
-      ranked.unshift(dirLoc);
+      if (!critical || locFood(dirLoc)) ranked.unshift(dirLoc);
+      else ranked.push(dirLoc); // 断粮临界：誓地沉底候选——但保底一席见下面
+    }
+    if (critical) { // 富食地点整体提级（稳定排序：组内保持需求感知序）
+      ranked.sort((a, b) => (Number(locFood(b)) - Number(locFood(a))) || 0);
     }
     plans.push(mkPlan('a', scav.id, ranked[0]));
     const second = ranked[1] || ranked[0];
     const altScav = fit[1] || scav;
     if (second) plans.push(mkPlan('b', altScav.id, second));
+    // 誓地保底一席（闭合纪律）：断粮把誓地压出前二时，它仍要作为方案出现——
+    // 答应过的话看得见兑现口，玩家自己决定嘴和诺言哪个先
+    if (dirLoc && ![ranked[0], second].includes(dirLoc)) plans.push(mkPlan('v', scav.id, dirLoc));
   }
   // 都不出门：安排守夜（防御始终是玩家的真实选项）
   {
@@ -658,13 +689,14 @@ export function planDusk(state, pack) {
     for (const c of alive) others[c.id] = (guard && c.id === guard.id) ? 'guard' : 'sleep';
     plans.push({
       key: 'stay', label: `今晚都不出门${guard ? `，${guard.name}守夜` : ''}`,
-      hint: '安全，但吃的不会自己长出来',
+      hint: famineCritical ? '安全，但吃的不会自己长出来——明早还能去挖野菜保底' : '安全，但吃的不会自己长出来',
       intent: { type: 'dusk_assign', scavenger: null, location: null, gear: [], others }
     });
   }
   if (needsDusk.foodNeed) {
     const meals1 = Math.floor(['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0) / Math.max(1, alive.length));
-    for (const p of plans) if (p.intent.scavenger && p.intent.location) p.hint = `家里只剩约 ${meals1} 顿——这趟先为嘴；` + p.hint;
+    // 「先为嘴」只盖在真能带吃的回来的方案上——无食地点盖这章就是让玩家点哑炮
+    for (const p of plans) if (p.intent.scavenger && p.intent.location && (locProfiles(pack)[p.intent.location]?.food || 0) > 0) p.hint = `家里只剩约 ${meals1} 顿——这趟先为嘴；` + p.hint;
   }
   return { plans };
 }
