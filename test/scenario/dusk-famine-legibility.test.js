@@ -7,8 +7,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRun, PACK } from '../helpers.js';
-import { planDusk } from '../../packages/core/src/delegate.js';
+import { planDusk, dawnProblems } from '../../packages/core/src/delegate.js';
 import { cardBrief } from '../../packages/server/options.js';
+import { tickDirections } from '../../packages/core/src/causality.js';
+import { Ctx } from '../../packages/core/index.js';
 
 const ROSTER = ['bron', 'marta', 'katya'];
 const famineDusk = (seed = 710) => {
@@ -31,14 +33,13 @@ describe('断粮诚实性：嘴压过誓位', () => {
     assert.doesNotMatch(plans.find((p) => p.intent.location === 'beacon')?.hint || '', /先为嘴/, '北津台方案不得盖「先为嘴」的章——它带不回吃的');
   });
 
-  test('誓地保底一席：断粮压过誓位时，北津台方案仍出现在卡上（闭合纪律）', () => {
+  test('断粮时誓地方案彻底退卡：闭合机会不存在就不占卡位（晨报「未践」仍挂着）', () => {
     const s = famineDusk();
     s.directions = { d1: { id: 'd1', text: '天黑前登北津台看看', kind: 'vow', target: 'beacon', day: 20, lastDay: 20, alive: true, watered: 0 } };
     const plans = planDusk(s, PACK).plans;
-    const beaconPlan = plans.find((p) => p.intent.location === 'beacon');
-    assert.ok(beaconPlan, '誓指向的地点必须仍在方案之列——答应过的话看得见兑现口');
-    assert.match(beaconPlan.hint, /践誓/, '誓地方案 hint 点明践誓');
-    assert.match(beaconPlan.hint, /翻不出吃的/, '北津台 hint 要写明翻不出吃的（只有柴铁）');
+    assert.ok(!plans.some((p) => p.intent.location === 'beacon'), '断粮 0 顿：带不回吃的的誓地不占卡位——选了也没用就别一直出现');
+    const line = dawnProblems(s, PACK).find((p) => p.key === 'vow_d1');
+    assert.ok(line && /未践/.test(line.text), '晨报「未践」一行仍在——诺言没消失，只是不占今晚的牌');
   });
 
   test('非危急缺口（还有 3 顿）：誓仍排第一——嘴没到压过诺言的地步（不回归）', () => {
@@ -71,5 +72,45 @@ describe('产出可读性：方案与谋士简报都写明偏什么', () => {
     const s = famineDusk();
     const stay = planDusk(s, PACK).plans.find((p) => p.key === 'stay');
     assert.match(stay.hint, /野菜/, `留守方案要交代保底出路（${stay.hint}）`);
+  });
+});
+
+describe('誓的自处：没人提的话头自己凉（世界闭合，不是玩家改约）', () => {
+  const vowState = (lastDay, day) => {
+    const s = newRun({ seed: 720, roster: ROSTER }).state;
+    s.day = day;
+    s.directions = { d1: { id: 'd1', text: '天黑前登北津台看看', kind: 'vow', target: 'beacon', subject: 'bron', day: lastDay, lastDay, alive: true, watered: 0 } };
+    return s;
+  };
+
+  test('七天没人再提 → 誓自己凉：alive 落 false、vow_faded 落账、晨报不再挂', () => {
+    const s = vowState(10, 17); // lastDay 10，今天 17：整七天没人提
+    const facts = [];
+    tickDirections(new Ctx(s, PACK, [], facts));
+    assert.equal(s.directions.d1.alive, false, '七天没人提，誓自处——不是玩家去改约');
+    assert.ok(facts.some((f) => f.k === 'vow_faded'), 'vow_faded 事实落账（叙事要交代话头凉了）');
+    assert.ok(!dawnProblems(s, PACK).some((p) => p.key === 'vow_d1'), '晨报不再挂未践');
+  });
+
+  test('再提就续命：lastDay 被浇水更新 → 不凉', () => {
+    const s = vowState(15, 17); // 两天前提过
+    tickDirections(new Ctx(s, PACK, [], []));
+    assert.equal(s.directions.d1.alive, true, '还有人提，话头就活着');
+  });
+
+  test('凉了的誓不丢账：directions 条目还在（终局列传读全量——反复提过的照样念「说过几遍」）', () => {
+    const s = vowState(10, 17);
+    s.directions.d1.watered = 2; // 说过三遍
+    tickDirections(new Ctx(s, PACK, [], []));
+    assert.ok(s.directions.d1 && s.directions.d1.alive === false, '誓凉了');
+    assert.equal(s.directions.d1.watered, 2, '条目与浇水账保留——道德重量在终局收');
+  });
+
+  test('临期提示：搁了五天没人提，晨报的未践行说「快凉了」', () => {
+    const s = vowState(10, 15); // 搁五天
+    const line = dawnProblems(s, PACK).find((p) => p.key === 'vow_d1');
+    assert.ok(line && /凉/.test(line.text), `临期要预告（${line?.text}）`);
+    const fresh = vowState(14, 15); // 昨天刚提
+    assert.ok(!/凉/.test(dawnProblems(fresh, PACK).find((p) => p.key === 'vow_d1')?.text || ''), '常提的不预告');
   });
 });

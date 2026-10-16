@@ -362,10 +362,13 @@ export function dawnProblems(state, pack) {
   if (s.war?.telegraphed) chronic('war_soon', 0, '炮声稀了——懂行的人说，可能快了。');
   // 线的状态行（回响节拍器）：长线常驻一行——游戏替玩家记住，扫一眼就通电
   out.push(...threadsStateLines(s, pack));
-  // 誓的状态行（念头演化）：未践的誓占一行「未践·第N天」——债在晨报上挂着
+  // 誓的状态行（念头演化）：未践的誓占一行「未践·第N天」——债在晨报上挂着。
+  // 临期预告（搁五天没人提）：话头要凉了——玩家要么再提续命，要么任它自处
   for (const d of Object.values(s.directions || {})) {
     if (d.kind !== 'vow' || !d.alive) continue;
-    out.push({ sev: 0, key: 'vow_' + d.id, text: `未践·第${s.day - d.day}天——「${(d.text || '').slice(0, 14)}」（黄昏选带「践誓」的方案即兑现）` });
+    const stale = s.day - (d.lastDay || d.day);
+    const cool = stale >= 5 ? '——再没人提，这话头就要凉了' : '';
+    out.push({ sev: 0, key: 'vow_' + d.id, text: `未践·第${s.day - d.day}天——「${(d.text || '').slice(0, 14)}」（黄昏选带「践誓」的方案即兑现）${cool}` });
   }
   return out.sort((a, b) => b.sev - a.sev);
 }
@@ -668,8 +671,10 @@ export function planDusk(state, pack) {
     if (dirLoc) { // 念头点名的地方排第一（不在常规排序里也照排——念头优先于habit）
       const i = ranked.indexOf(dirLoc);
       if (i >= 0) ranked.splice(i, 1);
-      if (!critical || locFood(dirLoc)) ranked.unshift(dirLoc);
-      else ranked.push(dirLoc); // 断粮临界：誓地沉底候选——但保底一席见下面
+      // 断粮临界且誓地带不回吃的：誓彻底退卡——选了也没用的选项不占牌位。
+      // 诺言没有消失（晨报「未践」挂着），缓过来就回卡；玩家坚持要践，说出口即派。
+      if (critical && !locFood(dirLoc)) { /* 退卡：不入候选 */ }
+      else ranked.unshift(dirLoc);
     }
     if (critical) { // 富食地点整体提级（稳定排序：组内保持需求感知序）
       ranked.sort((a, b) => (Number(locFood(b)) - Number(locFood(a))) || 0);
@@ -678,9 +683,6 @@ export function planDusk(state, pack) {
     const second = ranked[1] || ranked[0];
     const altScav = fit[1] || scav;
     if (second) plans.push(mkPlan('b', altScav.id, second));
-    // 誓地保底一席（闭合纪律）：断粮把誓地压出前二时，它仍要作为方案出现——
-    // 答应过的话看得见兑现口，玩家自己决定嘴和诺言哪个先
-    if (dirLoc && ![ranked[0], second].includes(dirLoc)) plans.push(mkPlan('v', scav.id, dirLoc));
   }
   // 都不出门：安排守夜（防御始终是玩家的真实选项）
   {
