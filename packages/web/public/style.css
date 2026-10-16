@@ -920,6 +920,7 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 .g-harm .g-track i { background: var(--accent); }
 
 /* ——— 档案馆 ——— */
+.m-ver { margin: 2px 0 14px; font-size: 11px; color: var(--ink-3); letter-spacing: .08em; font-family: var(--font-mono); }
 .archive-head { animation: fadeUp .6s ease both; }
 .layer-state {
   border: 1px solid var(--rule); background: var(--paper-hi); background-image: var(--grain);
