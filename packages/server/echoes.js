@@ -40,8 +40,9 @@ export function archiveOutcome(db, userId, runId, st, pack = null) {
     fallen: st.chars.filter((c) => !c.alive).map((c) => c.name),
     threeThings: st.ending?.threeThings || [], docs: st.docsSeen, knowledge: st.knowledge,
     storyline: st.ending?.storyline || null, memoir: st.ending?.memoir || null,
-    // 池回声：这一世没去成的（落选在前、失约在后）——下一世补缺与旧梦风闻的原料
-    ...(pack ? { missedLocs: missedPoolLocs(st, pack) } : {})
+    // 池回声：这一世没去成的（落选在前、失约在后）——下一世补缺与旧梦风闻的原料。
+    // 别传局没有江陵的池——它的 run_memory 不许把主线没去过的城门记成"错过的"
+    ...(pack && !st.sidestory ? { missedLocs: missedPoolLocs(st, pack) } : {})
   }, runId);
   // 史册格·野史栏（EPI-06）：或然/叠加结局的一页野史入馆
   for (const a of st.ending?.storyline?.annals || []) {
@@ -77,9 +78,10 @@ export function archiveOutcome(db, userId, runId, st, pack = null) {
     const w = db.archiveAll(userId).find((e) => e.kind === 'wish' && e.data.status === 'active');
     if (w) db.archivePut(userId, 'wish', w.key, { ...w.data, status: 'fulfilled', fulfilledRun: runId }, w.first_run_id);
   }
-  // 遗愿生成：角色死亡且非全灭，且没有在办遗愿 → 一张（同时至多一张在办）
+  // 遗愿生成：角色死亡且非全灭，且没有在办遗愿 → 一张（同时至多一张在办）。
+  // 旁传角色不入江陵的死信库——廖母的信不该出现在驿亭（她从没到过这座城）
   if ((st.ending?.type || 'wiped') !== 'wiped') {
-    const fallen = st.chars.filter((c) => !c.alive);
+    const fallen = st.chars.filter((c) => !c.alive && !c.sideOnly);
     const activeWish = db.archiveAll(userId).find((e) => e.kind === 'wish' && e.data.status === 'active');
     if (fallen.length && !activeWish) {
       const c = fallen[0];

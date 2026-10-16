@@ -4,19 +4,19 @@ export { loadPack, loadPrompt, DEFAULT_PACK_DIR } from './src/content.js';
 export { normalizeProposal } from './src/ge.js';
 export { REJECT_TEXT, rejectText } from './src/rejects.js';
 export {
-  createRun, newChar, moodLevel, apMaxOf, combatModOf, aliveChars, charById, homeValue, bestWeapons,
+  createRun, newChar, moodLevel, apMaxOf, combatModOf, aliveChars, charById, homeValue, bestWeapons, homeOf,
   MOOD_LEVELS, HUNGER_NAMES, HARM_NAMES, SICK_NAMES, FATIGUE_NAMES, difficultyCfg,
   DEFAULT_POLICY, policyOf
 } from './src/state.js';
 export { Ctx } from './src/ctx.js';
 export {
-  tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents
+  tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents, drawDuskEvents
 } from './src/vitals.js';
 export { applyDayAction, DAY_ACTIONS, lootContainer, findDoc, docAvailable } from './src/dayActions.js';
 export { startNight, applyNightAction, endNightReturn } from './src/night.js';
 export { resolveRaid } from './src/raid.js';
 export { genFrankoStock, sellPrice, executeTrade } from './src/trade.js';
-export { chooseEventOption, buildEnding, optionAvailable, optionCostOk, optionWhy, eventOptionsView } from './src/events.js';
+export { chooseEventOption, buildEnding, optionAvailable, optionCostOk, optionWhy, eventOptionsView, pickSideEnding } from './src/events.js';
 export { resolveInput, beginRun, validateIntentShape } from './src/resolve.js';
 export { fold } from './src/fold.js';
 export { parseDirect, normalizeIntent } from './src/parser.js';

@@ -327,7 +327,7 @@ export function advanceDay(ctx) {
     s.franko = null;
     ctx.fact('franko_left', {});
   }
-  if (s.day >= s.frankoNextDay) {
+  if (!s.sidestory && s.day >= s.frankoNextDay) { // 别传无船牙（鲁舟自己的船上不该有第二个鲁舟）
     s.frankoNextDay = s.day + ctx.rng.range(ctx.pack.manifest.franko.cadence[0], ctx.pack.manifest.franko.cadence[1]);
     const stock = genFrankoStock(ctx);
     s.franko = { merchant: 'franko', stock };
@@ -354,6 +354,7 @@ export function drawMorningEvents(ctx) {
   for (const loc of s.locationsCache || []) { /* noop 占位防旧档 */ }
   for (const loc of ctx.pack.locations) {
     if (loc.home || s.knownLocs.includes(loc.id)) continue;
+    if ((loc.side || null) !== (s.sidestory?.id || null)) continue; // 别传只认自家场；江陵的门在别传里不开
     if (unlockMet(s, ctx.pack, loc)) {
       s.knownLocs.push(loc.id);
       ctx.emit('LOC_KNOWN', { loc: loc.id });
@@ -385,8 +386,11 @@ export function drawMorningEvents(ctx) {
   for (const card of cards.filter((c) => c.kind === 'timeline')) {
     if ((card.side || null) !== (s.sidestory?.id || null)) continue; // 别传卡只进别传局，主线亦然
     const [lo, hi] = card.when.dayWindow || [];
+    if (card.when.at === 'dusk') continue; // 黄昏卡走 drawDuskEvents
     if (s.firedOnce[card.id]) continue; // firedOnce 的语义就是"发过一次"——不论从哪条路径烧的
-    if (card.when.requiresFlag && !s.eventFlags[card.when.requiresFlag]) continue;
+    if (!flagGateOk(s, card.when)) continue;
+    if (card.when.requiresChar && !charById(s, card.when.requiresChar)) continue; // 人不在，他的那一页就翻过去
+    if (card.when.requiresChars && !card.when.requiresChars.every((id) => charById(s, id))) continue;
     if (!stepGateOk(s, ctx.pack, card.when)) continue; // 主线门控（史实共振）：锚前期待窗/锚后余波窗
     if (lo !== undefined && (s.day < lo || s.day > hi)) continue;
     if (s.activeEvent) break; // 一次一张
@@ -410,7 +414,12 @@ export function drawMorningEvents(ctx) {
       return;
     }
   }
-  // 随机外部/内部卡
+  drawRandomPool(ctx);
+}
+
+/** 随机外部/内部卡（V-02：55%）——晨抽的尾段；别传的黄昏在没有暮卡时也从这里抽一张 */
+export function drawRandomPool(ctx) {
+  const s = ctx.s, cards = ctx.pack.cards;
   if (!ctx.rng.chance(0.55)) return;
   const eligible = cards.filter((c) => {
     if (c.kind !== 'knock' && c.kind !== 'internal') return false;
@@ -423,7 +432,7 @@ export function drawMorningEvents(ctx) {
     if (s.eventCooldowns[c.id] && s.day < s.eventCooldowns[c.id]) return false;
     if (w.requiresChar && !charById(s, w.requiresChar)) return false;
     if (w.requiresChars && !w.requiresChars.every((id) => charById(s, id))) return false; // 对子卡：两人同局才触发（REL-01）
-    if (w.requiresFlag && !s.eventFlags[w.requiresFlag]) return false;
+    if (!flagGateOk(s, w)) return false;
     if (w.requiresDoc && !s.docsSeen.includes(w.requiresDoc)) return false;
     if (w.requiresDocs && !w.requiresDocs.every((d) => s.docsSeen.includes(d))) return false;
     if (w.requiresAnyDoc && !w.requiresAnyDoc.some((d) => s.docsSeen.includes(d))) return false;
@@ -447,6 +456,43 @@ export function drawMorningEvents(ctx) {
   s.eventCooldowns[card.id] = s.day + (card.when?.cooldown || 8);
   ctx.emit('FLAG', { key: 'eventCooldowns', val: structuredClone(s.eventCooldowns) });
   fireEventCard(ctx, card.id);
+}
+
+/** 旗标门（时间轴与随机池共用）：requiresFlag 全要 / requiresNotFlag 全不要 / requiresAnyFlag 有一个即可 */
+function flagGateOk(s, w = {}) {
+  const F = s.eventFlags || {};
+  if (w.requiresFlag && !F[w.requiresFlag]) return false;
+  if (w.requiresFlags && !w.requiresFlags.every((f) => F[f])) return false;
+  if (w.requiresNotFlag && F[w.requiresNotFlag]) return false;
+  if (w.requiresNotFlags && w.requiresNotFlags.some((f) => F[f])) return false;
+  if (w.requiresAnyFlag && !w.requiresAnyFlag.some((f) => F[f])) return false;
+  return true;
+}
+
+/** 黄昏发卡（别传专用）：when.at='dusk' 的时间轴卡在窗口内的黄昏必发一次——
+ *  一天两拍（晨决断 + 暮余波），短局才配得上"页页都值钱"。主线无此类卡，行为不变。 */
+export function drawDuskEvents(ctx) {
+  const s = ctx.s;
+  if (!s.sidestory || s.over || s.activeEvent) return;
+  if (s.duskDrawnDay === s.day) return; // 每日至多一次（补发与直发同账，防连环池卡）
+  s.duskDrawnDay = s.day;
+  ctx.emit('FLAG', { key: 'duskDrawnDay', val: s.day });
+  for (const card of ctx.pack.cards) {
+    if (card.kind !== 'timeline' || card.when?.at !== 'dusk') continue;
+    if ((card.side || null) !== s.sidestory.id) continue;
+    if (s.firedOnce[card.id]) continue;
+    const [lo, hi] = card.when.dayWindow || [];
+    if (lo !== undefined && (s.day < lo || s.day > hi)) continue;
+    if (!flagGateOk(s, card.when)) continue;
+    if (card.when.requiresChar && !charById(s, card.when.requiresChar)) continue;
+    if (card.when.requiresChars && !card.when.requiresChars.every((id) => charById(s, id))) continue;
+    s.firedOnce[card.id] = true;
+    ctx.emit('FLAG', { key: 'firedOnce', val: structuredClone(s.firedOnce) });
+    fireEventCard(ctx, card.id);
+    break;
+  }
+  // 没有暮卡的黄昏：别传的随机池（叩门/屋内）在这里出场——晨位已被日卡占满
+  if (!s.activeEvent) drawRandomPool(ctx);
 }
 
 /** C-2 随机池资格（纯函数，测试直查）：同卡一局至多两回 */

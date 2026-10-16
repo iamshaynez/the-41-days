@@ -15,6 +15,7 @@ export function optionAvailable(ctx, option) {
   if (req.anyItem && !req.anyItem.some((i) => ctx.hasItem(i))) return false;
   if (req.doc && !s.docsSeen.includes(req.doc)) return false; // 文档门槛（濠鼠活证：先读过勘验才问得出口）
   if (req.flag && !s.eventFlags[req.flag]) return false;
+  if (req.char && !charById(s, req.char)) return false; // 人在才有这条路（别传：教给陈六——陈六得活着）
   return true;
 }
 export function optionCostOk(ctx, option) {
@@ -31,6 +32,7 @@ export function optionWhy(s, pack, option) {
   if (req.anyItem && !req.anyItem.some((i) => (s.inventory[i] || 0) >= 1)) return `家里没有${req.anyItem.map(iname).join('、')}中的任何一样`;
   if (req.doc && !s.docsSeen.includes(req.doc)) return `得先读到${pack.docMap?.[req.doc]?.title || '那份纸'}`;
   if (req.flag && !s.eventFlags[req.flag]) return '还差一件事没发生';
+  if (req.char && !s.chars.some((c) => c.id === req.char && c.alive)) return `${pack.charMap?.[req.char]?.name || '那个人'}不在了`;
   for (const cst of option.cost || []) {
     if ((s.inventory[cst.item] || 0) < (cst.n || 1)) return `缺${iname(cst.item)}×${(cst.n || 1) - (s.inventory[cst.item] || 0)}`;
   }
@@ -111,6 +113,9 @@ export function chooseEventOption(ctx, optionKey) {
 export function fireEventCard(ctx, cardId, extra = {}) {
   const s = ctx.s;
   const card = ctx.pack.cardMap[cardId] || s.geCards?.[cardId];
+  // 演员绑定（card.as）：这张卡是谁的事，伤与检定就落在谁身上（别传日卡用；
+  // extra.actorId 显式指定时以 extra 为准）
+  if (card?.as && !extra.actorId && charById(s, card.as)) extra = { actorId: card.as, ...extra };
   if (card?.beat) {
     ctx.emit('EVENT_FIRED', { cardId: card.id, beat: true });
     ctx.fact('event', { cardId: card.id, title: card.title });
@@ -221,6 +226,9 @@ function applyEffects(ctx, card, option, ev) {  const s = ctx.s, e = option.effe
   if (e.wound && ev.actorId) {
     const c = charById(s, ev.actorId); if (c) ctx.setWound(c, c.wound + e.wound, `《${card.title}》`);
   }
+  if (e.sick && ev.actorId) { // 病的效果通道（别传日卡：发热是真的病，得治、得歇，不然会要命）
+    const c = charById(s, ev.actorId); if (c) ctx.setSick(c, Math.min(3, c.sick + e.sick), `《${card.title}》`);
+  }
   // riskCheck（GE-03 白名单：一次检定，伤上限 1）
   if (option.riskCheck) {
     const rc = option.riskCheck;
@@ -262,6 +270,25 @@ const DEED_TIERS = {
   help: { good: 1, weight: 3 },
   donate: { good: 1, weight: 4 }
 };
+/** 别传结局变体匹配（纯函数，测试直查）：旗标全要/全不要/任一/计数 + 生死 + 全灭，
+ *  按数组顺序取第一个命中——内容把最具体的写前面。全灭是内容显式写的（wiped:true），
+ *  不再让"母亲在你背上睡着了"背着一具尸体上史册。 */
+export function pickSideEnding(def, s) {
+  const alive = new Set(s.chars.filter((c) => c.alive).map((c) => c.id));
+  const wiped = s.chars.length > 0 && alive.size === 0;
+  const F = s.eventFlags || {};
+  return (def.ending?.variants || []).find((v) => {
+    if (v.wiped !== undefined && !!v.wiped !== wiped) return false;
+    if ((v.whenFlags || []).some((f) => !F[f])) return false;
+    if ((v.whenNotFlags || []).some((f) => F[f])) return false;
+    if (v.whenAnyFlags && !v.whenAnyFlags.some((f) => F[f])) return false;
+    if (v.whenFlagsGte && (v.whenFlagsGte.flags || []).filter((f) => F[f]).length < (v.whenFlagsGte.gte ?? 1)) return false;
+    if ((v.whenAlive || []).some((id) => !alive.has(id))) return false;
+    if ((v.whenDead || []).some((id) => alive.has(id))) return false;
+    return true;
+  }) || null;
+}
+
 export function buildEnding(state, pack) {
   const s = state;
   const alive = s.chars.filter((c) => c.alive);
@@ -331,6 +358,7 @@ export function buildEnding(state, pack) {
     }
   }
   const epById = Object.fromEntries(story.epilogues.map((e) => [e.id, e]));
+  const sideDef = s.sidestory ? pack.sideMap[s.sidestory.id] : null;
   const chars = [...alive, ...dead].map((c) => {
     const ep = epById[c.id] || {};
     const ep2 = ep.epithet ? `——${ep.epithet}` : '';
@@ -342,7 +370,15 @@ export function buildEnding(state, pack) {
       ? `第 ${done.fulfilledDay} 天，那句「${(done.text || '').slice(0, 12)}」落了地——放下了。`
       : owe ? `你说过${(owe.watered || 0) + 1}遍「${(owe.text || '').slice(0, 12)}」。最后那遍之后，${c.name}不再数了。`
       : '';
-    const fate = (ep.direction === 'fallen'
+    // 别传的落款用自己的话（樊城役夫的墙上不写橘里）：per-char 覆盖 > 通版 > 主线兜底
+    const sideFate = () => {
+      const ft = (sideDef.fates || {})[c.id] || {};
+      const tmpl = c.alive ? (ft.alive ?? sideDef.fates?.survived) : (ft.fallen ?? sideDef.fates?.fallen);
+      if (tmpl) return tmpl.replaceAll('{{name}}', c.name).replaceAll('{{day}}', deathsDay(s, c.id)) + ep2;
+      return (c.alive ? `活下来了。就是活下来了。在这个年头，这四个字已经够写一整页${ep2}。`
+        : `没能撑过去。第 ${deathsDay(s, c.id)} 天。${ep2}`) + (vowLine ? vowLine : '');
+    };
+    const fate = sideDef ? sideFate() : (ep.direction === 'fallen'
       ? `没能撑过去。第 ${deathsDay(s, c.id)} 天，橘里的墙上多了一个名字${ep2}。`
       : ep.direction === 'haunted' ? `活下来了，但有些夜晚会突然惊醒，手先于他摸向不存在的刀${ep2}。`
       : ep.direction === 'honored' ? `活下来了。战争结束后很久，还有人敲他家的门——为了道谢，不是为了讨债${ep2}。`
@@ -370,12 +406,21 @@ export function buildEnding(state, pack) {
     drama.push({ day: e.day, text, w: e.weight });
   }
   const three = drama.sort((a, b) => b.w - a.w || b.day - a.day).slice(0, 3);
-  // 别传结局（长线体验-v0.2 §3.4）：按旗标选变体，史书体/批注进史册格
+  // 别传结局（长线体验-v0.2 §3.4）：变体按旗标/生死如实选——结局文案不认人死活、
+  // 不认你实际做了什么，是别传第一版最大的伤（弯了三次仍写"没有弯过"）。
   if (s.sidestory) {
     const def = pack.sideMap[s.sidestory.id];
-    const variant = (def.ending.variants || []).find((v) => (v.whenFlags || []).every((f) => s.eventFlags[f]));
-    const chosen = variant || def.ending.default;
-    const sideStory = { ...story, title: `${def.title} · ${chosen.title}`, annals: [{ text: chosen.text, note: chosen.note, ending: 'side_' + def.id }] };
+    const chosen = pickSideEnding(def, s) || def.ending.default;
+    // 尾句（ending.tails）：横切修饰——教没教鼓语、账怎么记，拼在所选变体后面
+    const F = s.eventFlags || {};
+    const tailTxt = (def.ending.tails || [])
+      .filter((t) => (t.whenFlags || []).every((f) => F[f]) && (t.whenNotFlags || []).every((f) => !F[f]))
+      .map((t) => t.text).join('');
+    const sideStory = {
+      ...story,
+      title: `${def.title} · ${chosen.title || def.ending.title}`,
+      annals: [{ text: chosen.text + tailTxt, note: chosen.note, ending: 'side_' + def.id }]
+    };
     const ending = {
       type: 'sidestory',
       day: s.day,

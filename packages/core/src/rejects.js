@@ -28,6 +28,7 @@ export const REJECT_TEXT = {
   NO_CARD: '眼前没有这张卡',
   NO_CHAR: '没有这个人',
   NO_EVENT: '眼前没有待决的事',
+  EVENT_PENDING: '眼前这件事还没答——先把它答了',
   NO_ITEM: '手头没有那个东西',
   NO_MERCHANT: '商人不在门口',
   NO_NEED: '还用不上',

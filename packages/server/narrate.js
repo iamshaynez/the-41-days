@@ -108,10 +108,24 @@ export function worldBrief(state, pack) {
   // A-1 主语钉死（二周目实测：夜访叙事里商人鲁舟频频顶替夜访者——8+ 处）：
   // 夜已收工后叙事多发生在晨间，靠 lastScavenger 把"昨夜谁出门"写进世界简报
   const lastScav = state.lastScavenger ? (charById(state, state.lastScavenger)?.name || null) : null;
+  const side = state.sidestory ? pack.sideMap?.[state.sidestory.id] : null;
   const castTxt = lastScav
-    ? `【人物分工·铁律】昨夜出门夜访的是${lastScav}，夜访段落的唯一主语；鲁舟是渡口商人，只在自己的摊上做买卖，从不替这个家出门、搜刮、办事。`
+    ? (side
+      ? `【人物分工·铁律】昨夜出门的是${lastScav}，夜访段落的唯一主语。`
+      : `【人物分工·铁律】昨夜出门夜访的是${lastScav}，夜访段落的唯一主语；鲁舟是渡口商人，只在自己的摊上做买卖，从不替这个家出门、搜刮、办事。`)
     : '';
-  return `第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${forkTxt}${night}${castTxt}${sealNote}${dirTxt}`;
+  // 别传场景铁律（长线体验 §3.4"换眼睛"）：裁判与叙事者先被告知这局不在橘里——
+  // 船上/医棚/樊城头没有南市、没有船牙、没有江陵主线的人名；物件与称呼按场景来
+  const sideTxt = side ? sideSceneBrief(side, state) : '';
+  return `${sideTxt}第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${forkTxt}${night}${castTxt}${sealNote}${dirTxt}`;
+}
+
+/** 别传场景简报：内容侧 scene.where/rules 写什么，裁判和叙事者就守什么 */
+export function sideSceneBrief(side, state) {
+  const names = state.chars.filter((c) => c.alive).map((c) => `${c.name}（${c.role || ''}）`).join('、');
+  const sc = side.scene || {};
+  const homeName = side.home?.name ? `"家"指的是${side.home.name}；` : '';
+  return `【别传铁律·最高优先】本局是独立短局《${side.title}》，不是江陵橘里的主线。场景：${sc.where || side.intro || ''}${homeName}在场的人只有：${names}。${sc.rules || ''}不得出现橘里九号、南市、水门渡、船牙鲁舟、素徽、逄灶等江陵主线的地名人名（场景说明里点名允许的除外）；拒绝玩家越界愿望时，用本场景里的物件和人说话。\n`;
 }
 
 /** 模板变体选条（文案丰满批次一）：模板值可为字符串或数组——数组按
@@ -152,7 +166,12 @@ export function renderDirect(state, facts, pack) {
 function directFactLine(f, t, name, state, pack, prevKey = null) {
   const lines = [];
   switch (f.k) {
-      case 'run_started': lines.push(`第 1 天。${t.dawn.header.replace('{{day}}', 1).replace('{{weather}}', '围城第 9 天')}——你们住进了橘里九号。${f.chars}，三个名字写在了门后的墙上。`); break;
+      case 'run_started':
+        if (state.sidestory) { // 别传开场：场景句由内容定（intro 已在前端念过，这里只落第一天）
+          const sd = pack.sideMap?.[state.sidestory.id];
+          lines.push(`第 1 天。${sd?.home?.name ? `${sd.home.name}。` : ''}${f.chars}。${sd?.scene?.opening || ''}`);
+        } else lines.push(`第 1 天。${t.dawn.header.replace('{{day}}', 1).replace('{{weather}}', '围城第 9 天')}——你们住进了橘里九号。${f.chars}，三个名字写在了门后的墙上。`);
+        break;
       case 'prologue_start': lines.push('在这一切之前——降卒进城的那天。'); break;
       case 'prologue_beat': lines.push(`——${f.title}——`); break;
       case 'prologue_end': lines.push('序章读完。从今天起，每一天都是你们的了。'); break;
@@ -241,7 +260,12 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'winter_start': lines.push('冬天来了。水在桶里结成整块的沉默。'); break;
       case 'winter_end': lines.push('天气松动了些。'); break;
       case 'war_telegraph': lines.push(t.war.telegraph); break;
-      case 'run_ended': lines.push(t.war[f.type] || '没有人再从橘里九号走出来。'); break;
+      case 'run_ended':
+        if (f.type === 'sidestory') { // 别传收束：念结局页（史书体 + 批注），不是橘里的落幕行
+          const an = state.ending?.storyline?.annals?.[0];
+          lines.push(an ? `${state.ending.title || ''}。${an.text}${an.note ? `（${an.note}）` : ''}` : '这一局讲完了。');
+        } else lines.push(t.war[f.type] || '没有人再从橘里九号走出来。');
+        break;
       case 'option_unavailable': lines.push(f.why ? `（做不到——${f.why}。）` : '（做不到——条件不够。）'); break;
       // —— v2 管家与决策点 ——
       case 'auto_day_start': lines.push('他们没有等你一一吩咐。新的一天，各忙各的去了。'); break;
