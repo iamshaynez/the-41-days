@@ -77,6 +77,27 @@ describe('直读解析器（LLM 离线同构）', () => {
     assert.ok(p.clarify, '给出人话引导');
   });
 
+  test('夜里的求生话有路由（实测：晚上了说出去找吃的，无声失败）：夜访中改方针，在家过夜给明话', () => {
+    const { state } = newRun({ seed: 5, roster: ['bron', 'katya', 'marta'] });
+    let s = step(state, [{ type: 'advance' }]).state;
+    s.knownLocs.push('market');
+    s = step(s, [{ type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: {} }]).state;
+    if (s.phase === 'night' && s.night && !s.night.home) {
+      const p = parseDirect(s, PACK, '出去找吃的');
+      const it = p.intents[0];
+      assert.equal(it?.type, 'night_directive', '夜访中：找吃的 → 改方针（还在路上，方向可以改）');
+      assert.match(it?.text || '', /找吃的/, '方针保留玩家原话');
+    }
+    // 在家过夜：不能mid-night再出门——但要说明白，不许无声
+    const home = structuredClone(s);
+    if (home.phase === 'night') {
+      home.night = { home: true };
+      const p2 = parseDirect(home, PACK, '出去找吃的');
+      assert.ok(p2.clarify || p2.intents.length, '在家夜：至少给一句明话（出门是黄昏定的事）');
+      assert.ok(!p2.intents.length, '不凭空造夜间出门');
+    }
+  });
+
   test('挖野菜直达：白话保底活路（挖野菜/刨野菜/剥树皮 → forage）', () => {
     const { state } = newRun({ roster: ['bron'] });
     const p = parseDirect(state, PACK, '去城根挖野菜');
