@@ -1913,7 +1913,7 @@ function closeSheets() {
   closeWing();
   document.body.classList.remove('overlay-open');
 }
-// 舆图/史卷抽屉（移动端）：窄屏下侧栏让位给书页，点「舆图」从底部拉出
+// 史卷抽屉（移动端）：窄屏下侧栏让位给书页，点「史卷」从底部拉出（舆图窄屏不展示）
 function closeWing() { document.body.classList.remove('wing-open'); }
 $('btn-wing').addEventListener('click', () => {
   if (document.body.classList.contains('wing-open')) closeWing();
@@ -1925,7 +1925,7 @@ $('btn-wing').addEventListener('click', () => {
 // 抽屉头上给一只合上的手（一次性注入，窄屏 CSS 才显形）
 {
   const head = el('div', 'wing-drawer-head');
-  head.innerHTML = `<span class="kicker">舆图 · 史卷</span><button class="sheet-x" type="button" aria-label="合上">${svgUse('close')}</button>`;
+  head.innerHTML = `<span class="kicker">史卷 · 天下大事</span><button class="sheet-x" type="button" aria-label="合上">${svgUse('close')}</button>`;
   head.querySelector('.sheet-x').addEventListener('click', closeWing);
   $('wing').prepend(head);
 }
