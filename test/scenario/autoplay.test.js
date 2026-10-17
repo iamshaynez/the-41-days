@@ -44,13 +44,16 @@ function playByChoices(s, maxDays = 15) {
     let g = 0;
     while (s.phase === 'night' && s.night && !s.night.home && g++ < 14) {
       if (answerEvent()) continue;
-      const r = step([{ type: 'auto_night' }]);
-      const fork = r.facts.find((f) => f.k === 'night_fork');
-      if (fork && s.phase === 'night' && s.night && !s.night.home && !s.activeEvent) {
+      step([{ type: 'auto_night' }]);
+      // 岔路以「当前状态」为准（与线上 UI 同口径：nightView.fork 现算现渲染）——
+      // 夜野之后，点选项的自动续走也可能撞出新岔路（战斗声招来巡逻），
+      // 只盯 auto_night 那一步的 facts 会漏看，夜就卡在没人点的岔路上
+      const pending = (!s.activeEvent && s.night && !s.night.home)
+        ? planNightStep(s, pack, {}) : null;
+      if (pending?.stop?.options?.length) {
         log.forks++;
-        const st = planNightStep(s, pack, {});
-        assert.ok(st?.stop?.options?.length, '岔路必须有选项');
-        const opt = st.stop.options.find((o) => o.label.includes('不打扰') || o.label.includes('再摸黑')) || st.stop.options[0];
+        assert.ok(pending.stop.options.length, '岔路必须有选项');
+        const opt = pending.stop.options.find((o) => o.label.includes('不打扰') || o.label.includes('再摸黑')) || pending.stop.options[0];
         step(opt.intents);
       }
     }

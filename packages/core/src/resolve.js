@@ -627,10 +627,11 @@ function runDirectiveNight(ctx, rejects, stance) {
 function pickForkOptionByStance(options, stance) {
   const PRIORITY = {
     // 谨慎 =「见人就绕」：遇人先绕开（ignore）接着翻；绕不开（敌意无绕行项）才撤；
-    // 火柴见底、有人警觉也是先撤——撤退仍然排在硬撑（push_on）前面
-    cautious: ['ignore', 'retreat', 'push_on', 'dialogue', 'attack', 'backstab'],
-    normal: ['dialogue', 'ignore', 'retreat', 'push_on', 'attack', 'backstab'],
-    bold: ['backstab', 'attack', 'push_on', 'dialogue', 'ignore', 'retreat']
+    // 火柴见底、有人警觉也是先撤——撤退仍然排在硬撑（push_on）前面。
+    // 夜野：巡逻火把——谨慎先躲（hide），大胆先动手（attack@patrol），挖坟（dig）照胆量排
+    cautious: ['ignore', 'hide', 'bribe', 'retreat', 'push_on', 'dialogue', 'attack', 'backstab', 'dig'],
+    normal: ['dialogue', 'hide', 'ignore', 'bribe', 'retreat', 'push_on', 'dig', 'attack', 'backstab'],
+    bold: ['backstab', 'attack', 'dig', 'hide', 'push_on', 'dialogue', 'ignore', 'bribe', 'retreat']
   };
   const rank = (o) => {
     let best = 99;
