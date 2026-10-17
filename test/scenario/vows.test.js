@@ -47,13 +47,15 @@ describe('誓：立、践、赖账', () => {
     s = step(s, [{ type: 'advance' }]).state;
     s = step(s, [{ type: 'direction', subject: 'marta', text: '让辛夷去医棚看看药' }]).state;
     const marta = ch(s, 'marta');
-    const moodBefore = marta.moodPts;
     s.inventory.knife = 1; s.knownLocs.push('hospital');
     const r = step(s, [{ type: 'dusk_assign', scavenger: 'marta', location: 'hospital', gear: [], others: {} }]);
     const v = Object.values(r.state.directions).find((d) => d.kind === 'vow');
     assert.ok(v && v.alive === false && v.fulfilledDay, '到地即践');
     assert.ok(r.facts.some((f) => f.k === 'vow_fulfilled'), '践约事实落账');
-    assert.ok(ch(r.state, 'marta').moodPts > moodBefore || !ch(r.state, 'marta').alive, '当事人心情 +1');
+    // 心境断言走事件账不走净值：夜野起，地点有自己的夜况（医棚的「伤兵夜啼」会另记 -1）——
+    // 誓约的 +1 必须真实发生，但不许拿它抹平夜况的代价
+    assert.ok(r.events.some((e) => e.t === 'MOOD_DELTA' && e.d?.char === 'marta' && e.d?.reason === '誓约落地' && e.d?.delta > 0), '当事人因践誓得 +1（MOOD_DELTA 记账）');
+    assert.ok(marta.alive, '辛夷还活着（夜况心情不该崩人）');
   });
 
   test('赖账进列传：未践+反复提 → 终局卷念你说过几遍；践了 → 放下了', () => {

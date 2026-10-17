@@ -516,6 +516,15 @@ function freshContainersOf(s, pack, locId) {
   return conts.filter((c) => st.searched[c.id] === undefined).length;
 }
 
+/** 地点容器总数 / 最早搜过的日子（回补卡的年轮：越久没走，城里长回来的指望越大） */
+function contCountOf(pack, locId) {
+  return (pack.locMap[locId]?.rooms || []).flatMap((r) => r.containers || []).length;
+}
+function oldestSearchedOf(s, locId) {
+  const days = Object.values(s.locState?.[locId]?.searched || {}).filter((d) => typeof d === 'number');
+  return days.length ? Math.min(...days) : 9999;
+}
+
 function rankedLocs(s, known, pack, needs = null) {
   // 排序看得见状态（实测：固定排序把两个红方案都排在搜空的地点上，玩家没有出路）：
   // ①没翻过的容器多的优先（真有货）；②全空的按最久未访排（回补只在重访时掷骰——
@@ -559,14 +568,21 @@ export function locYieldLine(pack, locId) {
   return '';
 }
 
-/** 话里点名的地点（誓的判定与 planDusk 共用同一张别名表） */
+/** 话里点名的地点（誓的判定与 planDusk 共用同一张别名表）——
+ *  池浮出的野地不在静态表里：地名单别/内容包 aliases 一并认（与直读 findLoc 同口径） */
 export function locOfText(state, pack, text) {
   const known = state.knownLocs || [];
   let best = null, bestAt = Infinity;
-  for (const [alias, id] of Object.entries(LOC_ALIAS)) {
-    if (id === 'home' || !known.includes(id)) continue;
-    const at = Math.min(...[text.indexOf(alias), text.indexOf(pack.locMap[id]?.name || '\u0000')].filter((i) => i >= 0));
-    if (at >= 0 && at < bestAt) { best = id; bestAt = at; }
+  for (const l of known) {
+    if (l === 'home') continue;
+    const loc = pack.locMap[l];
+    if (!loc) continue;
+    const keys = [loc.name, ...(loc.aliases || [])];
+    for (const [alias, id] of Object.entries(LOC_ALIAS)) if (id === l) keys.push(alias);
+    for (const k of keys) {
+      const at = text.indexOf(k);
+      if (at >= 0 && at < bestAt) { best = l; bestAt = at; }
+    }
   }
   return best;
 }
@@ -620,12 +636,20 @@ export function planDusk(state, pack) {
     return rest[0] || null;
   };
   const gearOf = (locId) => {
+    const loc = pack.locMap[locId] || {};
     const gear = [];
-    if (has(s, 'crowbar')) gear.push('crowbar');
-    const risky = (pack.locMap[locId]?.threat || 0) >= 2;
+    const doors = new Set((loc.rooms || []).map((r) => r.door).filter((d) => d && d !== 'open'));
+    const contTypes = new Set((loc.rooms || []).flatMap((r) => (r.containers || []).map((c) => c.type)));
+    // 门口与箱上的锁：撬棍两用（门也开箱也开），开锁器安静——有条件都带上
+    if ((doors.has('locked') || contTypes.has('locked')) && has(s, 'crowbar')) gear.push('crowbar');
+    if (doors.has('locked') && has(s, 'lockpick')) gear.push('lockpick');
+    if ((doors.has('rubble') || contTypes.has('buried')) && has(s, 'shovel')) gear.push('shovel');
+    if (doors.has('bars') && has(s, 'saw')) gear.push('saw');
+    // 风险随威胁：带刀去险地，斧头是最后的刀
+    const risky = (loc.threat || 0) >= 2;
     if (risky && has(s, 'knife')) gear.push('knife');
     else if (risky && has(s, 'axe')) gear.push('axe');
-    return gear;
+    return [...new Set(gear)];
   };
   // —— 念头提级（v3 命运导演）：活念头点名的地方/家什，方案卡照着走 ——
   // 世界记着玩家种下的方向（direction），管家也要记着：晨报挂着「种下的念头」，
@@ -633,15 +657,7 @@ export function planDusk(state, pack) {
   const aliveDirs = Object.values(s.directions || {}).filter((d) => d.alive);
   // 玩家说地方用短名（南市/医棚/宅区），与直读解析器同一张别名表——念头的措辞就是玩家的话。
   // 一句话可能点名两处（「去大族宅区……天黑前回府库里社」）：取最早提及的那个当目的地
-  const locMentioned = (text) => {
-    let best = null, bestAt = Infinity;
-    for (const [alias, id] of Object.entries(LOC_ALIAS)) {
-      if (id === 'home' || !known.includes(id)) continue;
-      const at = Math.min(...[text.indexOf(alias), text.indexOf(pack.locMap[id].name)].filter((i) => i >= 0));
-      if (at >= 0 && at < bestAt) { best = id; bestAt = at; }
-    }
-    return best;
-  };
+  const locMentioned = (text) => locOfText(s, pack, text);
   const dirHit = aliveDirs.find((d) => d.kind === 'vow' && d.target) || null; // 只有誓提级——杂念史种不掺和
   const dirLoc = dirHit ? dirHit.target : null;
   const NIGHT_TOOLS = ['lockpick', 'crowbar', 'shovel', 'saw', 'axe', 'knife'];
@@ -672,7 +688,7 @@ export function planDusk(state, pack) {
     if (!guardSet) { const g0 = rest[0]; if (g0) { others[g0.id] = 'guard'; } }
     return others;
   };
-  const mkPlan = (key, scavId, locId) => {
+  const mkPlan = (key, scavId, locId, tagNote = '') => {
     const gear = gearOf(locId);
     if (dirLoc === locId) for (const g of dirGear) if (!gear.includes(g)) gear.push(g); // 照念头带家什
     const others = assignRoles([scavId]);
@@ -692,7 +708,7 @@ export function planDusk(state, pack) {
     const dirNote = dirLoc === locId && dirHit ? `践誓——「${dirHit.text.slice(0, 14)}」；` : '';
     const dryNote = freshContainersOf(s, pack, locId) === 0 ? '搜空过——重访碰回补（城里又有动静的几率）；' : '';
     const yieldNote = locYieldLine(pack, locId) || blurbOf(pack, locId);
-    return { key, label: lines.join('，'), hint: `${dirNote}${dryNote}${yieldNote}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
+    return { key, label: lines.join('，'), hint: `${tagNote}${dirNote}${dryNote}${yieldNote}${mindWarn}`, intent: { type: 'dusk_assign', scavenger: scavId, location: locId, gear, others } };
   };
 
   const plans = [];
@@ -713,10 +729,35 @@ export function planDusk(state, pack) {
     if (critical) { // 富食地点整体提级（稳定排序：组内保持需求感知序）
       ranked.sort((a, b) => (Number(locFood(b)) - Number(locFood(a))) || 0);
     }
+    // —— 四卡（夜野）：稳（按需）/ 新（轮换·最久没走）/ 补（回补期望）/ 誓 ——
+    // 旧两卡时代 40 局模拟只到访 5 地：排序偏爱「有货+富食」的南市，全城其余 11 地零到访。
+    // 牌面就是玩家的视野——四卡让没走过的城浮上来，轮换卡用 lastVisitDay 说「该回去看看了」。
+    const used = new Set();
     plans.push(mkPlan('a', scav.id, ranked[0]));
-    const second = ranked[1] || ranked[0];
+    used.add(ranked[0]);
     const altScav = fit[1] || scav;
-    if (second) plans.push(mkPlan('b', altScav.id, second));
+    // 新·轮换：没去过的优先（ newest door ）；去过的按最久未访排——同一张脸看三天，谁都会腻
+    const lastVisit = (l) => s.locState?.[l]?.lastVisitDay ?? -1;
+    const neverWent = (l) => !s.locState?.[l];
+    const rotation = ranked.filter((l) => !used.has(l))
+      .sort((a, b) => (Number(neverWent(b)) - Number(neverWent(a))) || (lastVisit(a) - lastVisit(b)));
+    const rotPick = critical ? rotation.find((l) => locFood(l)) : rotation[0];
+    if (rotPick) {
+      const tag = neverWent(rotPick) ? '头一回走这门——城比牌面大；' : `${s.day - lastVisit(rotPick)} 天没走了——该回去看看；`;
+      plans.push(mkPlan('b', altScav.id, rotPick, tag));
+      used.add(rotPick);
+    }
+    // 补·回补：全搜空的城里最久没去的（回补只在重访掷骰）——补给线卡，搜空不等于死城
+    const refillCand = ranked.filter((l) => !used.has(l) && freshContainersOf(s, pack, l) === 0 && contCountOf(pack, l) > 0)
+      .sort((a, b) => (oldestSearchedOf(s, a) - oldestSearchedOf(s, b)));
+    if (refillCand[0] && plans.filter((p) => p.intent.scavenger).length < 3) {
+      plans.push(mkPlan('c', scav.id, refillCand[0], '回补线——城里兴许又长出动静；'));
+      used.add(refillCand[0]);
+    }
+    // 誓：活誓点名之地还没上牌——单开一卡（黄昏是践誓的时刻，不与轮换抢位）
+    if (dirLoc && !used.has(dirLoc) && (!critical || locFood(dirLoc)) && plans.filter((p) => p.intent.scavenger).length < 4) {
+      plans.push(mkPlan('d', scav.id, dirLoc));
+    }
   }
   // 都不出门：夜岗全员分工（防御始终是玩家的真实选项）
   {
@@ -768,6 +809,17 @@ export function planNightStep(state, pack, opts = {}) {
   const approach = opts.approach || pol.nightApproach || 'normal';
   const gear = n.gear || [];
 
+  // —— 岔路 0：巡夜人的火把（夜野）——躲与给是活路，打是赌 ——
+  if (n.patrol) {
+    const options = [
+      { label: `躲进暗处，等火把过去`, intents: [{ type: 'night', action: 'hide' }, { type: 'auto_night' }] },
+      { label: `撤，今晚到此为止`, intents: [{ type: 'night', action: 'retreat' }] }
+    ];
+    const bribeable = (n.pack || []).filter((x) => !(n.gear || []).includes(x));
+    if (bribeable.length) options.splice(1, 0, { label: `交出一件东西打发`, intents: [{ type: 'night', action: 'bribe' }, { type: 'auto_night' }] });
+    if (gear.length) options.splice(1, 0, { label: `动手`, intents: [{ type: 'night', action: 'attack', target: 'patrol' }] });
+    return { stop: { kind: 'patrol', text: `火把循着方才的动静过来了。`, options } };
+  }
   // —— 岔路 1：NPC（道德与安全的决断永远归玩家） ——
   const npcHere = (loc.npcs || []).find((x) => (!x.room || x.room === n.room) && !st.npcState[x.id]);
   if (npcHere) {
@@ -798,7 +850,17 @@ export function planNightStep(state, pack, opts = {}) {
 
   // —— 常规：先搜当前房间 ——
   const conts = room.containers || [];
-  const openCont = conts.find((ct) => !st.searched[ct.id] && (ct.type !== 'locked' || st.searched[ct.id + ':open']));
+  // 黑暗屋子先看一圈（夜野）：看过的屋失手减半——谨慎的人进屋先动眼睛再动手
+  const env = n.env || null;
+  if (env && env.miss > 0 && !n.observed[room.id] && approach !== 'bold') {
+    return { intent: { type: 'night', action: 'observe' } };
+  }
+  // 埋着的容器：有铲挖了再搜（谨慎徒手不挖——三格带响不值）；大胆徒手也挖
+  const buriedCont = conts.find((ct) => ct.type === 'buried' && !st.searched[ct.id] && !st.searched[ct.id + ':open']);
+  if (buriedCont && (gear.includes('shovel') || approach === 'bold')) {
+    return { intent: { type: 'night', action: 'dig', target: buriedCont.id } };
+  }
+  const openCont = conts.find((ct) => !st.searched[ct.id] && ct.type !== 'buried' && (ct.type !== 'locked' || st.searched[ct.id + ':open']));
   if (openCont) return { intent: { type: 'night', action: 'search', target: openCont.id } };
   // 上锁容器：谨慎不碰（撬有声响），常规有撬棍就撬，大胆都撬
   const lockedCont = conts.find((ct) => !st.searched[ct.id] && ct.type === 'locked' && !st.searched[ct.id + ':open']);
@@ -806,7 +868,9 @@ export function planNightStep(state, pack, opts = {}) {
     return { intent: { type: 'night', action: 'open', target: lockedCont.id } };
   }
   // —— 换房间：向未搜尽的方向走 ——
-  const roomLeft = (r) => (r.containers || []).some((ct) => !st.searched[ct.id]);
+  // 埋着的容器算不算「还有货」：带铲或够胆才算——否则管家会把人领进挖不动的坟地打转
+  const canDig = gear.includes('shovel') || approach === 'bold';
+  const roomLeft = (r) => (r.containers || []).some((ct) => !st.searched[ct.id] && (ct.type !== 'buried' || canDig));
   const tryDoor = (dest) => {
     if (!dest) return null;
     const d = dest.door;

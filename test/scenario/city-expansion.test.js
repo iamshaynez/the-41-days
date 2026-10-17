@@ -7,6 +7,7 @@ import { mapView } from '../../packages/core/index.js';
 
 const NEW_LOCS = ['fishing', 'dockyard', 'jiying', 'baling', 'camp', 'shahead', 'zhangtai', 'garden'];
 const OLD_LOCS = ['market', 'church', 'hospital', 'villas', 'post', 'frontline', 'sewer', 'beacon'];
+const WILD_LOCS = ['xieshui', 'guanlin', 'luanfen', 'feichuan', 'mifang']; // 夜野：城外五野地（wilds 池挑二）
 
 /** 标记「夜访过此地」（startNight 建档、收工落 firstVisit=false 的等价态） */
 function visited(state, id) {
@@ -51,18 +52,18 @@ describe('城市扩展 · 周目地点池', () => {
     assert.ok(r.state.phase !== 'night' || r.state.night?.home, '落选地点的夜访必须被拦下');
   });
 
-  test('一周目去不全城：十六地里至多十四地上图', () => {
+  test('一周目去不全城：二十一地里至多十六地上图（夜野加五野地，wilds 池挑二）', () => {
     for (const seed of [3, 17, 41, 77, 2026]) {
       const s = newRun({ seed }).state;
       // 万事俱备的极限局：全旗标、全文档、全走遍、拖到 D60
-      for (const l of [...OLD_LOCS, ...NEW_LOCS]) visited(s, l);
+      for (const l of [...OLD_LOCS, ...NEW_LOCS, ...WILD_LOCS]) visited(s, l);
       s.docsSeen.push('#064', '#065');
       s.day = 60;
       for (const p of PACK.manifest.locationPools) for (const cond of [null]) s.eventFlags['any'] = true;
       s.eventFlags.sewer_intel = true; s.eventFlags.crossing_heard = true;
       const mv = mapView(s, PACK);
       const visible = mv.places.filter((p) => p.state !== 'unknown' && p.id !== 'home');
-      assert.ok(visible.length <= 14, `种子 ${seed}：可见 ${visible.length} 地，越过了池的裁剪`);
+      assert.ok(visible.length <= 16, `种子 ${seed}：可见 ${visible.length} 地，越过了池的裁剪`);
       for (const p of PACK.manifest.locationPools) {
         const shown = p.members.filter((id) => visible.some((v) => v.id === id));
         assert.equal(shown.length, p.pick, `种子 ${seed} 池 ${p.group}：只该浮出 ${p.pick} 地`);

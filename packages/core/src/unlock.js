@@ -18,10 +18,12 @@ export function condMet(s, cond = {}) {
   return true;
 }
 
-/** 本局入池了吗：无池组的地点恒真；有池组的只认 locPool 里的那一个 */
+/** 本局入池了吗：无池组的地点恒真；有池组的只认 locPool 里的那些（单值旧档与数组新档都认） */
 export function locInPool(s, pack, id) {
   for (const p of pack.manifest.locationPools || []) {
-    if (p.members.includes(id)) return s.locPool?.[p.group] === id;
+    if (!p.members.includes(id)) continue;
+    const picked = s.locPool?.[p.group];
+    return Array.isArray(picked) ? picked.includes(id) : picked === id;
   }
   return true;
 }
@@ -43,15 +45,18 @@ export function heardMet(s, pack, loc) {
 
 /** 开局掷池：每组抽 pick 个。派生种子（异或组名哈希），不耗主 rng cursor——
  *  回放与既有属性测试的随机流一寸不动。
+ *  pick=1 的组保持单值（旧档兼容）；pick>1 的组是数组（夜野 wilds 一局浮两野地）。
  *  池回声：上一世错过的成员（echoes.missedLocs）确定性补位——缘分回来，换什么种子都回来。 */
 export function pickLocPools(seed, manifest, echoes = null) {
   const missed = echoes?.missedLocs || [];
   const out = {};
   for (const p of manifest.locationPools || []) {
-    const echoPick = missed.find((id) => p.members.includes(id));
-    if (echoPick) { out[p.group] = echoPick; continue; }
+    const pick = Math.max(1, p.pick || 1);
     const rng = new Rng(seed ^ hashStr('pool:' + p.group));
-    out[p.group] = p.members[rng.int(p.members.length)];
+    const chosen = missed.filter((id) => p.members.includes(id)).slice(0, pick);
+    const rest = p.members.filter((m) => !chosen.includes(m));
+    while (chosen.length < pick && rest.length) chosen.push(rest.splice(rng.int(rest.length), 1)[0]);
+    out[p.group] = pick === 1 ? chosen[0] : chosen;
   }
   return out;
 }
@@ -63,11 +68,15 @@ export function missedPoolLocs(st, pack) {
   if (!st?.locPool) return [];
   const out = [];
   for (const p of pack.manifest.locationPools || []) {
-    const picked = st.locPool[p.group];
-    if (!picked || !p.members.includes(picked)) continue; // 池数据不完整（老档/手改）不记账
-    for (const m of p.members) if (m !== picked) out.push(m);            // 落选之憾
-    const st2 = st.locState?.[picked];
-    if (!st2 || st2.firstVisit !== false) out.push(picked);              // 失约之地
+    const pickedVal = st.locPool[p.group];
+    if (!pickedVal) continue;
+    const picked = Array.isArray(pickedVal) ? pickedVal : [pickedVal];
+    if (!picked.every((x) => p.members.includes(x))) continue; // 池数据不完整（老档/手改）不记账
+    for (const m of p.members) if (!picked.includes(m)) out.push(m);   // 落选之憾
+    for (const x of picked) {
+      const st2 = st.locState?.[x];
+      if (!st2 || st2.firstVisit !== false) out.push(x);               // 失约之地
+    }
   }
   return out;
 }

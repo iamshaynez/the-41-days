@@ -251,6 +251,17 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'night_no': lines.push(f.msg ? `（${f.msg}）` : '……'); break;
       case 'night_unlock': lines.push(f.quiet ? '锁簧轻轻让开了。' : '撬棍闷响一声，锁开了。'); break;
       case 'night_noise_alert': lines.push(t.night.noise); break;
+      // —— 夜野：夜况与遭遇的直读行 ——
+      case 'night_cond': lines.push(`今夜${f.name}——${f.text}${f.patrol ? '（这地方，动静大了招火把）' : ''}`); break;
+      case 'patrol_coming': lines.push('火把的光顺着方才的动静逼过来。得拿主意了。'); break;
+      case 'patrol_evaded': lines.push('屏住呼吸贴在暗处。火把停了停，往另一头去了。'); break;
+      case 'patrol_hide_fail': lines.push('藏得急了，衣角还露在光里——被看见了。'); break;
+      case 'patrol_bribed': lines.push(`${f.item}递了出去。火把晃了晃，退回黑暗里。`); break;
+      case 'patrol_down': lines.push('火把落在地上，滚了两圈，灭了。'); break;
+      case 'night_dig': lines.push(f.with === 'shovel' ? `铲子下去，${f.name}见了天。` : `徒手刨开浮土——${f.name}露出来，指甲缝全是泥。`); break;
+      case 'search_miss_dark': lines.push(`${f.name}摸黑翻了个遍——什么也没有。看不清的地方，手比眼睛先认输。`); break;
+      case 'wet_slip': lines.push('水汽漫上来，翻找的每一下都比平时费力。'); break;
+      case 'cold_night_end': lines.push('这一夜冷得狠——从骨头缝里带回来的倦，比背回来的东西沉。'); break;
       case 'lockpick_broke': lines.push('拨针断在锁眼里。'); break;
       case 'night_drop': lines.push(`背不动了，${pack.itemMap[f.item]?.name || f.item}被留在了原地。`); break;
       case 'night_end': lines.push(f.reason === 'abort' ? `${name(f.char)}连夜退了出去。今晚就到这。` : `天边泛灰，${name(f.char)}往回走。背回来了 ${f.carried} 件东西。`); break;

@@ -189,11 +189,24 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     }
   }
   const MARKS = new Set(['treasure', 'danger', 'story', 'trade', 'food', 'med']);
+  // 夜野（夜访规则白名单）：内核只认这些键——内容写歪了启动即报，不许静默吞
+  const NR_KEYS = new Set(['slots', 'noiseMul', 'patrol', 'miss', 'wet', 'cold', 'refillMul', 'moodOnEnter', 'lootBias']);
+  const FX_KEYS = new Set(['slots', 'noiseMul', 'patrol', 'miss', 'wet', 'cold', 'lootBias', 'mood']);
+  const CONT_TYPES = new Set(['open', 'locked', 'hidden', 'buried']);
   for (const l of allLocs) {
     if (l.mark && !MARKS.has(l.mark)) errs.push(`地点 ${l.id} 的 mark ${l.mark} 不在图例`);
     if (l.pool && ![...(manifest.locationPools || [])].some((p) => p.group === l.pool && p.members.includes(l.id))) {
       errs.push(`地点 ${l.id} 自称属于池 ${l.pool}，池不认`);
     }
+    for (const k of Object.keys(l.nightRules || {})) if (!NR_KEYS.has(k)) errs.push(`地点 ${l.id} 的 nightRules.${k} 不在白名单`);
+    for (const k of Object.keys(l.nightRules?.lootBias || {})) needItem(k, `地点 ${l.id}.nightRules.lootBias`);
+    for (const cond of l.nightTable || []) {
+      if (!cond.id || !cond.name || !cond.text) errs.push(`地点 ${l.id} 的夜况 ${cond.id || '(无名)'} 缺 id/name/text`);
+      for (const k of Object.keys(cond.fx || {})) if (!FX_KEYS.has(k)) errs.push(`地点 ${l.id} 的夜况 ${cond.id} fx.${k} 不在白名单`);
+      for (const k of Object.keys(cond.fx?.lootBias || {})) needItem(k, `地点 ${l.id} 夜况 ${cond.id}.lootBias`);
+      if ((cond.fx?.mood || 0) < -2 || (cond.fx?.mood || 0) > 2) errs.push(`地点 ${l.id} 夜况 ${cond.id} 的 mood 越界（-2~2，夜况不是心情泵）`);
+    }
+    for (const r of l.rooms || []) for (const c of r.containers || []) if (c.type && !CONT_TYPES.has(c.type)) errs.push(`地点 ${l.id} 容器 ${c.id} 的 type ${c.type} 不认识`);
     for (const cond of [l.requires, l.heardWhen]) {
       for (const v of [...(cond?.visitedAny || []), ...(cond?.visitedAll || [])]) {
         if (!locMap[v]) errs.push(`地点 ${l.id} 的依赖地点 ${v} 不存在`);

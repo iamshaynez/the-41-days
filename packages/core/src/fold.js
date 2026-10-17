@@ -54,7 +54,10 @@ function apply(s, ev) {
     }
     case 'NIGHT_ENDED': {
       if (!d.home) {
-        if (s.night && !s.night.home && s.locState[d.loc]) s.locState[d.loc].firstVisit = false;
+        if (s.night && !s.night.home && s.locState[d.loc]) {
+          s.locState[d.loc].firstVisit = false;
+          if (d.lastVisitDay !== undefined) s.locState[d.loc].lastVisitDay = d.lastVisitDay;
+        }
         for (const g of d.gear || []) s.inventory[g] = (s.inventory[g] || 0) + 1;
       }
       s.night = null; s.phase = 'dawn';
@@ -84,7 +87,7 @@ function apply(s, ev) {
     case 'NIGHT_PATCH': {
       if (s.night && !s.night.home) {
         const patch = {};
-        for (const k of ['room', 'slots', 'noise', 'packSlots', 'lowSlotsAck', 'atFork', 'micro']) if (d[k] !== undefined) patch[k] = d[k];
+        for (const k of ['room', 'slots', 'noise', 'packSlots', 'lowSlotsAck', 'atFork', 'micro', 'patrol']) if (d[k] !== undefined) patch[k] = d[k];
         for (const k of ['pack', 'observed', 'unlocked', 'cleared', 'sawed']) if (d[k] !== undefined) patch[k] = clone(d[k]);
         if (d.directive !== undefined) patch.directive = clone(d.directive);
         Object.assign(s.night, patch);

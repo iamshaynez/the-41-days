@@ -7,7 +7,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRun, step, PACK } from '../helpers.js';
 import { planNightStep, planDusk } from '../../packages/core/src/delegate.js';
-import { validateOptions, cardBrief } from '../../packages/server/options.js';
+import { validateOptions, cardBrief, nightMenu } from '../../packages/server/options.js';
 import { describeIntent } from '../../packages/server/narrate.js';
 
 /** 造一个停在岔路的微操夜（frontline 有警惕的巡逻兵，seed 93 与 night-flow 同源） */
@@ -257,5 +257,19 @@ describe('内核行为锚定：岔路等的是答案，戏文不替玩家答', (
       r.facts.some((f) => f.k === 'night_fork') || r.state.phase !== 'night' || !r.state.night,
       '同批输入里夜要接着走（不弹回同一张卡）'
     );
+  });
+});
+
+describe('夜野 · 夜况上卡面（谋士与玩家同一份读数）', () => {
+  test('nightMenu 写明今夜夜况与地形，巡逻在旁有警示行', () => {
+    const { state } = newRun({ seed: 96, roster: ['anton', 'marta', 'bron'] });
+    let s = step(state, [{ type: 'advance' }]).state;
+    s = step(s, [{ type: 'dusk_assign', scavenger: 'bron', location: 'market', gear: [], others: { anton: 'sleep', marta: 'sleep' } }]).state;
+    assert.ok(s.night && !s.night.home, '夜访在途');
+    const menu = nightMenu(s, PACK);
+    if (s.night.cond) assert.ok(menu.includes('今夜夜况'), `夜况要上菜单（${s.night.cond.name}）`);
+    s.night.patrol = { from: 1 };
+    const menu2 = nightMenu(s, PACK);
+    assert.ok(menu2.includes('火把'), '巡逻逼近要有警示行（躲/交东西/动手/撤）');
   });
 });

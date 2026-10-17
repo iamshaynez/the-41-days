@@ -195,9 +195,23 @@ export function nightMenu(state, pack) {
   const room = loc.rooms[idx];
   const home = nightHomeView(state);
   const lines = [`当前房间：${room.name}（${room.id}）`];
+  // 夜况与环境（夜野）：这一夜为什么和上一夜不一样——谋士措辞要有据
+  if (n.cond) lines.push(`今夜夜况：${n.cond.name}——${n.cond.text}`);
+  const envBits = [];
+  if (n.env) {
+    if (n.env.slots) envBits.push(n.env.slots > 0 ? `路熟省火柴（+${n.env.slots}）` : `路远费火柴（${n.env.slots}）`);
+    if (n.env.noiseMul !== undefined && n.env.noiseMul < 0.9) envBits.push('声响被掩住');
+    if (n.env.noiseMul !== undefined && n.env.noiseMul > 1.1) envBits.push('声响传得远');
+    if (n.env.patrol > 0) envBits.push('动静大了招火把');
+    if (n.env.miss > 0) envBits.push(n.observed?.[room.id] ? '屋里看过一圈，摸黑失手少' : '没看过的屋子摸黑会失手（先 observe）');
+    if (n.env.wet > 0) envBits.push('水汽重，翻找多耗火柴');
+    if (n.env.cold) envBits.push('寒地——熬到收工会多一分倦');
+  }
+  if (envBits.length) lines.push(`地形：${envBits.join('；')}`);
+  if (n.patrol) lines.push('⚠ 火把循着方才的动静过来了（hide 躲 / bribe 交东西 / attack 动手 / retreat 撤）');
   if (home.guard || home.asleep.length) lines.push(`家里（不可干预，供措辞）：${home.guard ? `${home.guard}守门` : '没人守夜'}${home.asleep.length ? `，${home.asleep.join('、')}在睡` : ''}`);
   const conts = (room.containers || []).filter((c) => !st.searched[c.id]);
-  if (conts.length) lines.push(`本屋可搜容器（search@id）：${conts.map((c) => `${c.id}${c.type === 'locked' ? '（上锁，先 open@' + c.id + '）' : ''}`).join('、')}`);
+  if (conts.length) lines.push(`本屋可搜容器（search@id${conts.some((c) => c.type === 'buried') ? '；埋着的先 dig@' : ''}${conts.some((c) => c.type === 'locked') ? '；上锁的先 open@' : ''}）：${conts.map((c) => `${c.id}${c.type === 'locked' ? '（上锁）' : c.type === 'buried' ? '（埋着）' : ''}`).join('、')}`);
   const moves = [loc.rooms[idx - 1], loc.rooms[idx + 1]].filter(Boolean);
   if (moves.length) lines.push(`可去房间（move@id${moves.some((r) => r.door && r.door !== 'open') ? '，有的有门：locked 需 open@、rubble 需 clear@、bars 需 bars@' : ''}）：${moves.map((r) => `${r.name}(${r.id}${r.door && r.door !== 'open' ? ' 门:' + r.door : ''})`).join('、')}`);
   const npcs = (loc.npcs || []).filter((x) => !st.npcState[x.id]);
@@ -259,7 +273,9 @@ export function cardBrief(state, pack, card) {
     const loc = pack.locMap[state.night?.locId];
     const who = state.chars.find((c) => c.id === state.night?.charId && c.alive);
     const solo = who ? `今晚在外的只有 ${who.name}（${who.id}）一人——其余队友都在家里，不许出现在选项里。` : '';
-    return `深夜，${who ? `${who.name}独行` : '有人独行'}，夜访${loc?.name || ''}，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}（有人听见了）` : ''}。${solo}\n出的是**整夜方针**：一句话定方向（只拿吃的、见人绕行 / 探明虚实就回 / 放手干，值钱都拿走）。内核会按方针自己走完整夜——遇人绕不绕、锁撬不撬、手动不动，都由方针与骰子决定，不会逐件请示玩家。每个选项的 intents 只需一个：{"type":"night_directive","stance":"cautious|normal|bold","text":"方针原话"}。谨慎=不出声见人就撤；照常=看情况；放手=敢动手敢背刺。\n\n【这一夜的现场（供措辞用，不必落到具体目标）】\n${nightMenu(state, pack)}\n\n${idTable(state, pack, { night: true })}`;
+    const condLine = state.night?.cond ? `今夜${state.night.cond.name}：${state.night.cond.text} ` : '';
+    const patrolLine = state.night?.patrol ? '火把在逼近——这一夜多了一道要过的坎。' : '';
+    return `深夜，${who ? `${who.name}独行` : '有人独行'}，夜访${loc?.name || ''}，剩余火柴 ${state.night?.slots} 根${state.night?.noise ? `，声响 ${state.night.noise}（有人听见了）` : ''}。${condLine}${patrolLine}${solo}\n出的是**整夜方针**：一句话定方向（只拿吃的、见人绕行 / 探明虚实就回 / 放手干，值钱都拿走）。内核会按方针自己走完整夜——遇人绕不绕、锁撬不撬、手动不动，都由方针与骰子决定，不会逐件请示玩家。每个选项的 intents 只需一个：{"type":"night_directive","stance":"cautious|normal|bold","text":"方针原话"}。谨慎=不出声见人就撤；照常=看情况；放手=敢动手敢背刺。\n\n【这一夜的现场（供措辞用，不必落到具体目标）】\n${nightMenu(state, pack)}\n\n${idTable(state, pack, { night: true })}`;
   }
   // day：今日卡
   const openVows = Object.values(state.directions || {}).filter((d) => d.kind === 'vow' && d.alive).map((d) => `「${d.text.slice(0, 14)}」`).join('、');
