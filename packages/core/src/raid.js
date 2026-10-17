@@ -7,11 +7,17 @@ export function resolveRaid(ctx) {
   const s = ctx.s, pack = ctx.pack, cfg = difficultyCfg(pack, s);
   if (s.assistTonight) return; // 协防邻居夜：袭击转向（事件卡已结算）
   if (!aliveChars(s).length) return; // 无人则无夜
+  const guardIds = aliveChars(s).filter((c) => c.guardTonight);
+  // 通缉犯守门反而藏（wanted：画像在城墙上贴着，他不照面）；习性威慑（石大查门闩）
+  const guardDeter = pack.manifest.raid.guardDeter
+    * (guardIds.length ? Math.max(0.4, 1 - 0.5 * guardIds.filter((g) => pack.autonomy?.kits?.[g.id]?.guardShy).length / Math.max(1, guardIds.length)) : 1)
+    + (s.habitDeter || 0);
   let p = Math.min(pack.manifest.raid.maxProb,
     pack.manifest.raid.baseProb + s.day / pack.manifest.raid.dayFactor
     + s.notoriety * pack.manifest.raid.notorietyFactor
     + raidAddOf(s) // 涟漪（史实共振）：城里乱不乱，贼最先知道
-    - (aliveChars(s).some((c) => c.guardTonight) ? pack.manifest.raid.guardDeter : 0)) * cfg.raidMul;
+    + 0.03 * (s.nightWork?.length || 0) // 夜作的灯：贼也看得见
+    - (guardIds.length ? guardDeter : 0)) * cfg.raidMul;
   // 家徒四壁减半（流民也懒得来）
   if (homeValue(s, pack) < 20) p *= 0.5;
   // 别传衰减：短局一两人的家（船/窝棚/歇处）不是贼的账本——压力来自卡，不来自门。
@@ -26,6 +32,7 @@ export function resolveRaid(ctx) {
     return;
   }
   ctx.nightRaided = true; // 破晓疲劳结算读它：真遇袭的夜，守卫无觉可打（安静夜睡椅相抵）
+  ctx.setFlag('lastRaidDay', s.day); // 重心（守家）与石大的暗面读它
   // 夜窃变体（15%）：无声，晨报发现
   const quiet = ctx.rng.chance(0.15);
   // 威胁与防御（R-03：家产值 = 库存总值/10，再按 /50 折算——家当越多越招贼）

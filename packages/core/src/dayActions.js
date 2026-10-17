@@ -3,9 +3,9 @@
 import { aliveChars, charById, moodLevel, difficultyCfg, combatModOf, homeOf } from './state.js';
 import { recordCausal, pairStage } from './causality.js';
 
-export const DAY_ACTIONS = ['eat', 'cook', 'craft', 'build', 'treat', 'talk', 'guard', 'sleep', 'rest', 'listen_radio', 'search_home', 'open_room', 'chop', 'repair', 'read', 'play_piano', 'comfort_soup', 'forage'];
+export const DAY_ACTIONS = ['eat', 'cook', 'craft', 'build', 'treat', 'talk', 'guard', 'sleep', 'rest', 'listen_radio', 'search_home', 'open_room', 'chop', 'repair', 'read', 'play_piano', 'comfort_soup', 'forage', 'prep_night', 'errand', 'teach', 'mend_cloth', 'cure_meat', 'breach'];
 
-export const AP_COST = { forage: 1, eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2, rest: 0, listen_radio: 1, search_home: 1, open_room: 1, chop: 1, repair: 1, read: 1, play_piano: 1, comfort_soup: 1 };
+export const AP_COST = { forage: 1, eat: 0, cook: 1, treat: 1, talk: 1, guard: 0, sleep: 2, rest: 0, listen_radio: 1, search_home: 1, open_room: 1, chop: 1, repair: 1, read: 1, play_piano: 1, comfort_soup: 1, prep_night: 1, errand: 1, teach: 1, mend_cloth: 1, cure_meat: 1, breach: 2 };
 
 export function applyDayAction(ctx, intent) {
   const s = ctx.s, pack = ctx.pack;
@@ -40,6 +40,97 @@ export function applyDayAction(ctx, intent) {
       ctx.emit('GUARD_SET', { char: c.id }); ctx.fact('guard', { char: c.id });
       return { ok: true };
     case 'sleep': ctx.setFatigue(c, c.fatigue - 1, '打了个盹'); ctx.spendAp(c, 2); ctx.fact('nap', { char: c.id }); return { ok: true };
+    case 'prep_night': {
+      // 备夜（居家与四问）：白天的手艺变成晚上的探索空间——火折子多备一截，撬棍磨快一分
+      if ((s.nightPrep || 0) >= 2) { ctx.fact('no_need', {}); return { ok: false, reason: 'NO_NEED' }; }
+      if (!ctx.hasItem('parts', 1)) { ctx.fact('no_material', { item: 'parts' }); return { ok: false, reason: 'NO_ITEM' }; }
+      ctx.takeItem('parts', 1, '备夜');
+      s.nightPrep = (s.nightPrep || 0) + 1;
+      ctx.emit('FLAG', { key: 'nightPrep', val: s.nightPrep });
+      ctx.spendAp(c, 1);
+      ctx.fact('prep_night', { char: c.id, to: s.nightPrep });
+      return { ok: true };
+    }
+    case 'errand': {
+      // 白日奔（驿卒的腿）：唯一能白天出门的动作——跑一趟，带回风声或一点东西
+      if (!c.traits?.sprint) { ctx.fact('need_trait', { trait: '跑得快' }); return { ok: false, reason: 'NEED_TRAIT' }; }
+      const locs = s.knownLocs.filter((l) => l !== 'home' && ctx.pack.locMap[l]);
+      if (!locs.length) { ctx.fact('no_target', {}); return { ok: false, reason: 'NO_TARGET' }; }
+      const loc = ctx.pack.locMap[locs[0]];
+      ctx.spendAp(c, 1);
+      ctx.setFatigue(c, c.fatigue + 1, '跑了一趟');
+      const dry = s.locState?.[loc.id] && (loc.rooms || []).flatMap((r) => r.containers || []).length > 0
+        && (loc.rooms || []).flatMap((r) => r.containers || []).every((ct) => s.locState[loc.id].searched[ct.id] !== undefined);
+      const windLines = [...(s.windLines || [])];
+      windLines.push(`${loc.name}${dry ? '翻空了——过两日再去，城里兴许又有了' : '有人进出，看不出虚实'}（${c.name}白天跑了一趟）`);
+      s.windLines = windLines;
+      ctx.emit('FLAG', { key: 'windLines', val: windLines });
+      if (ctx.rng.chance(0.5)) ctx.addItem(loc.mark === 'food' || loc.mark === 'med' ? 'raw' : 'parts', 1, '跑腿捎回');
+      ctx.fact('errand', { char: c.id, loc: loc.name });
+      return { ok: true };
+    }
+    case 'teach': {
+      // 授业（居家与四问·学徒）：有手艺的人教，学生三课习得——跟谁学，长成谁
+      const TEACHABLE = ['cook', 'healer', 'bookkeep', 'ledgerEye', 'stealthy', 'craftAdv', 'negotiate', 'sprint', 'radioFix'];
+      const VALS = { stealthy: 1, negotiate: 0.1, craftAdv: true };
+      const NAMES = { cook: '掌勺', healer: '认药下针', bookkeep: '记账', ledgerEye: '认封检署', stealthy: '走夜路不出声', craftAdv: '手上的巧劲', negotiate: '讨价还价', sprint: '撒腿就跑', radioFix: '听鼓辨信' };
+      const student = aliveChars(s).find((x) => (x.student || x.traits?.growth) && x.id !== c.id);
+      if (!student) { ctx.fact('no_target', {}); return { ok: false, reason: 'NO_TARGET' }; }
+      const trait = TEACHABLE.find((t) => c.traits?.[t] && !student.traits?.[t]);
+      if (!trait) { ctx.fact('no_need', {}); return { ok: false, reason: 'NO_NEED' }; }
+      ctx.spendAp(c, 1);
+      const ap0 = s.apprentice || {};
+      const cur = ap0[student.id] && ap0[student.id].trait === trait ? { ...ap0[student.id] } : { trait, lessons: 0 };
+      cur.lessons += 1;
+      s.apprentice = { ...ap0, [student.id]: cur };
+      ctx.emit('FLAG', { key: 'apprentice', val: structuredClone(s.apprentice) });
+      if (cur.lessons >= 3) {
+        const traits = { ...student.traits, [trait]: VALS[trait] !== undefined ? VALS[trait] : true };
+        student.traits = traits;
+        ctx.emit('CHAR_FLAG', { char: student.id, key: 'traits', val: structuredClone(traits) });
+        ctx.fact('apprentice_done', { char: student.id, trait, line: `三课满了。${student.name}学会了${NAMES[trait]}——${c.name}教的。` });
+      } else {
+        ctx.fact('teach', { char: c.id, student: student.id, trait, lessons: cur.lessons });
+      }
+      return { ok: true };
+    }
+    case 'mend_cloth': {
+      // 缝补裹创布（医者·工作台）：伤病经济不再全凭捡和买——慢，但家里做得出来
+      if (!c.traits?.healer) { ctx.fact('need_trait', { trait: '懂医' }); return { ok: false, reason: 'NEED_TRAIT' }; }
+      if (!s.facilities.workbench) { ctx.fact('need_facility', { facility: '工作台' }); return { ok: false, reason: 'NEED_FACILITY' }; }
+      if (c.mendedToday === s.day) { ctx.fact('done_today', {}); return { ok: false, reason: 'DONE_TODAY' }; }
+      if (!ctx.hasItem('parts', 2) || !ctx.hasItem('water', 1)) { ctx.fact('no_material', { item: 'parts' }); return { ok: false, reason: 'NO_ITEM' }; }
+      ctx.takeItem('parts', 2, '缝布'); ctx.takeItem('water', 1, '缝布');
+      ctx.addItem('bandage', 1, '缝布');
+      c.mendedToday = s.day;
+      ctx.emit('CHAR_FLAG', { char: c.id, key: 'mendedToday', val: s.day });
+      ctx.spendAp(c, 1);
+      ctx.fact('mend_cloth', { char: c.id });
+      return { ok: true };
+    }
+    case 'cure_meat': {
+      // 腌肉（有灶即可）：易坏的肉换成耐放的粮——家里开始有"储备"这件事
+      if (!s.facilities.stove) { ctx.fact('need_facility', { facility: '炉灶' }); return { ok: false, reason: 'NEED_FACILITY' }; }
+      if (!ctx.hasItem('meat', 1) || !ctx.hasItem('firewood', 1)) { ctx.fact('no_material', { item: 'meat' }); return { ok: false, reason: 'NO_ITEM' }; }
+      ctx.takeItem('meat', 1, '腌肉'); ctx.takeItem('firewood', 1, '腌肉');
+      ctx.addItem('canned', 1, '腌肉');
+      ctx.spendAp(c, 1);
+      ctx.fact('cure_meat', { char: c.id });
+      return { ok: true };
+    }
+    case 'breach': {
+      // 破门（火铺卒的肩膀）：锁着的房间不用撬棍——门挡的是风，挡不住他
+      if (!c.traits?.breach) { ctx.fact('need_trait', { trait: '那副肩膀' }); return { ok: false, reason: 'NEED_TRAIT' }; }
+      const home = homeOf(ctx.pack, s);
+      const room = (home.rooms || []).find((r) => !s.house.opened[r.id] && r.door === 'locked')
+        || (home.rooms || []).find((r) => !s.house.opened[r.id]);
+      if (!room) { ctx.fact('nothing_to_search', {}); return { ok: false, reason: 'NOTHING' }; }
+      s.house.opened[room.id] = true;
+      ctx.emit('HOUSE_OPENED', { room: room.id });
+      ctx.fact('open_room', { room: room.name, by: '肩膀' });
+      ctx.spendAp(c, 2);
+      return { ok: true };
+    }
     case 'forage': {
       // 保底活路（设计北极星：想活总有办法——饿不死人，但体面地活着难）：
       // 无条件可挖，产最低效口粮（两蔬一锅）。心情代价只收「从体面跌落」那一次——
@@ -97,13 +188,16 @@ function actCook(ctx, c) {
   const batch = s.facilities.stove_eco ? 4 : 2;
   const freeFire = (s.facilities.stoveFireLeft || 0) > 0;
   const needFuel = !c.traits?.cook && !freeFire;
-  if (needFuel && !ctx.hasItem('firewood', 1) && !ctx.hasItem('book') && !ctx.hasItem('wood', 1)) { ctx.fact('no_fuel', {}); return { ok: false, reason: 'NO_ITEM' }; }
+  const spare = (i, n = 1) => (s.inventory[i] || 0) - (s.reserve?.[i] || 0) >= n; // 逄灶留的烽火柴不进灶
+  // 文简的规矩：管家与自主做饭绕开字纸；玩家亲手点这把火，是越过他的选择——账照记（P-03）
+  const bookFuelOk = ctx.hasItem('book') && !(s.noBookFuel && ctx.delegated);
+  if (needFuel && !spare('firewood', 1) && !bookFuelOk && !spare('wood', 1)) { ctx.fact('no_fuel', {}); return { ok: false, reason: 'NO_ITEM' }; }
   if (freeFire) {
     s.facilities.stoveFireLeft -= 1;
     ctx.emit('FACILITY_STATE', { facility: 'stoveFireLeft', to: s.facilities.stoveFireLeft });
   } else if (needFuel) {
-    if (ctx.hasItem('firewood', 1)) ctx.takeItem('firewood', 1, '烹饪');
-    else if (ctx.hasItem('book', 1)) {
+    if (spare('firewood', 1)) ctx.takeItem('firewood', 1, '烹饪');
+    else if (bookFuelOk) {
       ctx.takeItem('book', 1, '烧书做饭');
       recordCausal(ctx, 'burn_book', { note: '烧书做饭' }); // P-03：安东的坚持在此被点燃
     }

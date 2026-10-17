@@ -117,7 +117,9 @@ export function worldBrief(state, pack) {
   // 别传场景铁律（长线体验 §3.4"换眼睛"）：裁判与叙事者先被告知这局不在橘里——
   // 船上/医棚/樊城头没有南市、没有船牙、没有江陵主线的人名；物件与称呼按场景来
   const sideTxt = side ? sideSceneBrief(side, state) : '';
-  return `${sideTxt}第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${forkTxt}${night}${castTxt}${sealNote}${dirTxt}`;
+  const focusTxt = side ? '' : (state.focus && state.focus.key !== 'steady' ? `【今日重心】${{ mouth: '稳嘴', care: '养人', gear: '备器', guard: '守家', read: '读城' }[state.focus.key] || ''}${state.focus.alt ? `（另一头也悬着）` : ''}。` : '');
+  const windTxt = (state.windLines || []).length && state.phase === 'dusk' ? `【黄昏风声】${state.windLines.join('；')}。` : '';
+  return `${sideTxt}${focusTxt}${windTxt}第${state.day}天/${weatherName[state.weather]}/${state.phase === 'day' ? '白天' : state.phase === 'dusk' ? '黄昏' : state.phase === 'night' ? '深夜' : '破晓'}${state.winterActive ? '/冬季' : ''}。队伍：${chars}。库存：${inv}。已知地点：${locs}。${polTxt}${state.franko ? '船牙鲁舟在门外的渡口边摆摊。' : ''}${ev}${forkTxt}${night}${castTxt}${sealNote}${dirTxt}`;
 }
 
 /** 别传场景简报：内容侧 scene.where/rules 写什么，裁判和叙事者就守什么 */
@@ -221,6 +223,24 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'act_question': lines.push(`——${{ A1: '第一', A2: '第二', A3: '第三', A4: '第四', A5: '第五' }[f.act] || ''}幕问：${f.q}`); break;
       case 'act_wrap': lines.push(`——${{ A1: '第一', A2: '第二', A3: '第三', A4: '第四', A5: '第五' }[f.act] || ''}幕 · 收——\n这一幕，你做了：${f.you}。\n城里：${f.city}。\n悬而未决：${f.open}。`); break;
       case 'franko_left': lines.push(t.franko.leave); break;
+      // —— 居家与四问：重心/自主/坡/暗面/夜岗 ——
+      case 'focus_set': lines.push(f.line); break;
+      case 'home_first': lines.push(f.line); break;
+      case 'routine_done': lines.push(f.line); break;
+      case 'pair_done': lines.push(f.line); break;
+      case 'arc_stage': lines.push(f.line); break;
+      case 'stress_leak': lines.push(f.line); break;
+      case 'funeral': lines.push(f.line); break;
+      case 'apprentice_done': lines.push(f.line); break;
+      case 'idle_ap': lines.push(`${name(f.char)}今天闲了半天——家里没有他的活。`); break;
+      case 'teach': lines.push(`${name(f.char)}教了一课（第 ${f.lessons} 课）。`); break;
+      case 'prep_night': lines.push(`${name(f.char)}把火折子多备了一截，撬棍磨快了一分——今晚出门的人能多走几步。`); break;
+      case 'prep_used': lines.push(`白天备下的火折子用上了（多 ${f.n} 段光景）。`); break;
+      case 'mend_cloth': lines.push(`${name(f.char)}就着工作台缝了一卷裹创布——煮过两遍，能用。`); break;
+      case 'cure_meat': lines.push(`${name(f.char)}把肉腌了——搁得住的粮，才是这个家的底气。`); break;
+      case 'errand': lines.push(`${name(f.char)}白天去${f.loc}跑了一趟，天黑前回来的。`); break;
+      case 'nightwork': lines.push(`${name(f.char)}点着灯干了半夜活${f.did ? '——灶是热的' : ''}。`); break;
+      case 'nurse_night': lines.push(`${name(f.char)}守了${name(f.patient)}一夜，天亮才合眼。`); break;
       case 'trade_done': lines.push(t.trade.deal); break;
       case 'trade_reject': lines.push(t.trade.reject); break;
       case 'trade_no_stock': lines.push('鲁舟摊摊手：没这个货。'); break;
@@ -283,7 +303,12 @@ function directFactLine(f, t, name, state, pack, prevKey = null) {
       case 'self_reliant': lines.push(`要用的${f.what || '家什'}家里没有——${f.how || '现做了一副'}，接着干。`); break;
       case 'dusk_swap': lines.push(`${name(f.from)}今晚不肯动身——话没说完，${name(f.to)}已经把行囊接了过去。`); break;
       case 'phase_dialect': lines.push(f.to === 'overnight' ? '话音落进夜里——今晚先合眼，天亮再说。' : '话音落下的时辰不对，可日子认这笔账——眼下能做的，这就张罗。'); break;
-      case 'forage': lines.push(f.winter ? '冻土里刨出半把菜根——指甲缝都是泥。能咽，就是咽得委屈。' : '城根的野菜连根刨了。苦，但今晚锅是热的。'); break;
+      case 'forage': {
+        const sideWord = state.sidestory ? pack.sideMap?.[state.sidestory.id]?.scene?.forageWord : null;
+        lines.push(f.winter ? '冻土里刨出半把菜根——指甲缝都是泥。能咽，就是咽得委屈。'
+          : sideWord ? `${sideWord}——苦，但今晚锅是热的。` : '城根的野菜连根刨了。苦，但今晚锅是热的。');
+        break;
+      }
       case 'night_rob': lines.push(`从${f.npc}身上搜出来的东西摆在地上——都是他活着时背着的东西。`); break;
       case 'night_directive_set': lines.push(`今夜的方针定了：${f.text}（${{ cautious: '谨慎', normal: '照常', bold: '放手' }[f.stance] || '照常'}）。接下来的一夜，他自己走。`); break;
       case 'night_choice': lines.push(`按方针，他选了：${f.label}。`); break;

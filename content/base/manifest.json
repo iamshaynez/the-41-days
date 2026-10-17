@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "semver": "0.39.0",
+  "semver": "0.40.0",
   "name": "第 41 天 · 江陵",
   "coreVersion": ">=0.1.0",
   "files": [
@@ -17,7 +17,9 @@
     "mainline.json",
     "historia.json",
     "ensemble.json",
-    "quickstart.json"
+    "quickstart.json",
+    "sidestories.json",
+    "autonomy.json"
   ],
   "prompts": [
     "referee.md",

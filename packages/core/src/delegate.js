@@ -114,7 +114,7 @@ export function feasibleIntent(state, pack, intent) {
       return !!intent.give && !!intent.get;
     }
     case 'direction': return typeof intent.text === 'string' && !!intent.text.trim() && intent.text.length <= 60;
-    case 'policy': return typeof intent.key === 'string' && ['feeding', 'rationing', 'nightApproach', 'overviewDays'].includes(intent.key);
+    case 'policy': return typeof intent.key === 'string' && ['feeding', 'rationing', 'nightApproach', 'overviewDays', 'homePriority'].includes(intent.key);
     case 'auto_day': return s.phase === 'day';
     case 'auto_night': return s.phase === 'night' && !!s.night && !s.night.home;
     case 'night_directive': return s.phase === 'night' && !!s.night && !s.night.home;
@@ -142,6 +142,11 @@ export function charDigest(pack, id) {
    策略旋钮（state.policy）：rationing 省粮 / feeding 开关 / nightApproach 影响黄昏方案。 */
 export function planDay(state, pack) {
   const s = state, pol = policyOf(s);
+  // 重心（居家与四问·破晓判断题）：同一张必需清单，顺序跟着重心走
+  const focus = s.focus?.key || 'steady';
+  const mouths = Math.max(1, aliveChars(s).length);
+  const cookCap = focus === 'mouth' ? 6 : 4;
+  const restFatigue = focus === 'care' ? 1 : 2;
   const intents = [];
   const busy = new Set();
   const free = (pred = () => true) => aliveChars(s).find((c) => c.ap > 0 && !busy.has(c.id) && pred(c));
@@ -186,9 +191,10 @@ export function planDay(state, pack) {
       use(healer2.id);
     }
   }
-  // —— 卧床：重伤/重病养伤；力竭的人也该有一日卧床（F 系：夜里安睡 + 白日卧床才追得回来）——
+  // —— 卧床：重伤/重病养伤；力竭的人也该有一日卧床（F 系：夜里安睡 + 白日卧床才追得回来）。
+  //    重心=养人时疲劳一档就卧（把人当目的，不是工具）
   for (const c of aliveChars(s)) {
-    if ((c.wound >= 2 || c.sick >= 2 || c.fatigue >= 2) && !c.bedRest) intents.push(delegated({ type: 'act', actor: c.id, action: 'rest' }));
+    if ((c.wound >= 2 || c.sick >= 2 || c.fatigue >= restFatigue) && !c.bedRest) intents.push(delegated({ type: 'act', actor: c.id, action: 'rest' }));
   }
   // —— 燃料与工具的常识规划（玩家的职责是道德与取舍，不是背链路——管家替这个家记着）：
   //    柴见底之前补：有斧劈家具；没斧而铁砧在手且料齐就先造斧；入冬在即连
@@ -231,10 +237,11 @@ export function planDay(state, pack) {
       const winterSoon = s.winterActive || s.day >= s.winterStart - 4;
       let target = null;
       if (!s.facilities.stove && canAfford('stove')) target = 'stove';
+      else if ((s.facilities.bed || 0) < Math.min(2, aliveChars(s).length) && canAfford('bed')) target = 'bed'; // 床先于门：夜里睡地板，白天就没有——慢性力竭是一切计划的地基
       else if (s.doorLevel < 1 && canAfford('door')) target = 'door';
       else if (winterSoon && !s.facilities.heater && canAfford('heater')) target = 'heater';
       else if (!s.facilities.trap && canAfford('trap')) target = 'trap';
-      else if ((s.facilities.bed || 0) < 2 && canAfford('bed')) target = 'bed';
+      else if ((s.facilities.bed || 0) < 3 && canAfford('bed')) target = 'bed';
       else if (!s.facilities.stove_eco && has(s, 'wood', 4) && has(s, 'parts', 8)) target = 'stove_eco';
       else if (!s.facilities.heater_iron && has(s, 'comp', 5)) target = 'heater_iron';
       else if (!s.facilities.garden && has(s, 'comp', 6)) target = 'garden';
@@ -246,7 +253,7 @@ export function planDay(state, pack) {
     // 燃料估算：厨子省柴，余火白赚；其余情况每锅一份可燃物
     let estFuel = (s.inventory.firewood || 0) + (s.inventory.book || 0) + (s.inventory.wood || 0) + (s.facilities.stoveFireLeft || 0);
     let guard = 0;
-    while ((est.raw > 0 || est.meat > 0 || est.veg >= 2) && s.facilities.stove && est.meal < 4 && guard++ < 4) {
+    while ((est.raw > 0 || est.meat > 0 || est.veg >= 2) && s.facilities.stove && est.meal < cookCap && guard++ < 6) {
       const cook = free((c) => c.traits?.cook) || free();
       if (!cook) break;
       if (!cook.traits?.cook && estFuel <= 0) break; // 没柴了，锅是冷的
@@ -263,7 +270,7 @@ export function planDay(state, pack) {
   {
     const foodNow = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0);
     const mouths2 = aliveChars(s).length;
-    if (foodNow / Math.max(1, mouths2) < 1) {
+    if (foodNow / Math.max(1, mouths2) < (focus === 'mouth' ? 1.5 : 1)) {
       let g2 = 0;
       while (g2++ < Math.min(2, mouths2)) {
         const digger = free((c) => c.ap >= 1);
@@ -604,7 +611,7 @@ export function planDusk(state, pack) {
   // 抑郁者 50% 拒绝出门（startNight 掷骰）——方案卡不预检心情就等于让玩家点哑炮
   const lowMind = (c) => ['depressed', 'breakdown'].includes(moodLevel(c.moodPts).key);
   const fit = alive.filter((c) => c.wound < 3 && c.sick < 3)
-    .sort((a, b) => (Number(lowMind(a)) - Number(lowMind(b))) || (b.backpack - a.backpack) || ((b.combat || 0) - (a.combat || 0)));
+    .sort((a, b) => (Number(lowMind(a)) - Number(lowMind(b))) || (Number(a.fatigue > 0) - Number(b.fatigue > 0)) || (b.backpack - a.backpack) || ((b.combat || 0) - (a.combat || 0)));
   const scav = fit[0] || null;
   const guardOf = (excludeId) => {
     // 疲劳感知排班：力竭的人不该再值夜（F-05 落地后守夜代价更清楚——连值会熬垮人）
@@ -641,16 +648,44 @@ export function planDusk(state, pack) {
   const dirGear = aliveDirs
     .flatMap((d) => NIGHT_TOOLS.filter((id) => d.text.includes(pack.itemMap[id]?.name || '\u0000')))
     .filter((id) => has(s, id));
+  // 夜岗分配（居家与四问·赌注题）：睡/守/看护/夜作——每人一个岗，夜作每夜至多一人
+  const patient = alive.find((c) => c.sick >= 1 || c.wound >= 1) || null;
+  const canNurse = alive.some((c) => c.traits?.healer && (has(s, 'bandage') || has(s, 'meds') || has(s, 'herbmed')));
+  const canWork = (c) => (s.facilities.stove && (has(s, 'raw') || has(s, 'meat') || has(s, 'veg', 2)))
+    || (s.facilities.workbench && (has(s, 'herb', 3) || (has(s, 'comp', 1) && !has(s, 'lockpick'))))
+    || (c.traits?.healer && s.facilities.workbench && has(s, 'parts', 2) && has(s, 'water', 1))
+    || (has(s, 'book') && !c.readToday);
+  const assignRoles = (excludeIds = []) => {
+    const others = {};
+    let workerDone = false, guardSet = false;
+    const rest = alive.filter((c) => !excludeIds.includes(c.id))
+      .sort((a, b) => (Number(a.fatigue > 0) - Number(b.fatigue > 0)) || ((b.combat || 0) - (a.combat || 0)));
+    // 谁守夜：kit 里立过军令状的优先（石大总抢守夜岗，把床让人）
+    const vol = rest.find((c) => pack.autonomy?.kits?.[c.id]?.nightRole === 'guard' && c.fatigue < 1);
+    for (const c of rest) {
+      if (vol && c.id === vol.id && !guardSet) { others[c.id] = 'guard'; guardSet = true; continue; }
+      if (!guardSet && c.fatigue < 1 && (c.combat || 0) >= 1) { others[c.id] = 'guard'; guardSet = true; continue; }
+      if (canNurse && patient && c.traits?.healer && c.id !== patient.id) { others[c.id] = 'nurse'; continue; }
+      if (!workerDone && canWork(c) && c.fatigue < 1) { others[c.id] = 'work'; workerDone = true; continue; }
+      others[c.id] = 'sleep';
+    }
+    if (!guardSet) { const g0 = rest[0]; if (g0) { others[g0.id] = 'guard'; } }
+    return others;
+  };
   const mkPlan = (key, scavId, locId) => {
     const gear = gearOf(locId);
     if (dirLoc === locId) for (const g of dirGear) if (!gear.includes(g)) gear.push(g); // 照念头带家什
-    const guard = guardOf(scavId);
-    const others = {};
-    for (const c of alive) others[c.id] = (guard && c.id === guard.id) ? 'guard' : 'sleep';
+    const others = assignRoles([scavId]);
+    const guard = Object.entries(others).find(([, v]) => v === 'guard')?.[0];
+    const guardName = guard ? s.chars.find((c) => c.id === guard)?.name : null;
+    const extra = Object.entries(others).filter(([id, v]) => v === 'nurse' || v === 'work')
+      .map(([id, v]) => `${s.chars.find((c) => c.id === id)?.name}${v === 'nurse' ? '看护病人' : '夜作'}`);
     const scavName = s.chars.find((c) => c.id === scavId)?.name;
     const lines = [`${scavName}去${pack.locMap[locId].name}`];
     if (gear.length) lines.push(`带${gear.map((g) => itemName(pack, g)).join('、')}`);
-    lines.push(guard ? `${guard.name}守夜` : '其余人都睡');
+    if (guardName) lines.push(`${guardName}守夜`);
+    if (extra.length) lines.push(extra.join('，'));
+    if (!guardName && !extra.length) lines.push('其余人都睡');
     // 情绪风险前置：抑郁者今晚可能不肯动身（50%）——玩家点卡之前就该看见
     const scavChar = s.chars.find((c) => c.id === scavId);
     const mindWarn = scavChar && lowMind(scavChar) ? `；${scavName}情绪很低，今晚可能不肯出门` : '';
@@ -683,16 +718,30 @@ export function planDusk(state, pack) {
     const altScav = fit[1] || scav;
     if (second) plans.push(mkPlan('b', altScav.id, second));
   }
-  // 都不出门：安排守夜（防御始终是玩家的真实选项）
+  // 都不出门：夜岗全员分工（防御始终是玩家的真实选项）
   {
-    const guard = guardOf(null);
-    const others = {};
-    for (const c of alive) others[c.id] = (guard && c.id === guard.id) ? 'guard' : 'sleep';
+    const others = assignRoles([]);
+    const guardName = Object.entries(others).find(([, v]) => v === 'guard')?.[0];
+    const gName = guardName ? s.chars.find((c) => c.id === guardName)?.name : null;
+    const roles = Object.entries(others).filter(([, v]) => v !== 'sleep')
+      .map(([id, v]) => `${s.chars.find((c) => c.id === id)?.name}${v === 'guard' ? '守' : v === 'nurse' ? '看护' : '夜作'}`).join('，');
+    const wind = (s.windLines || []).length ? `风声：${(s.windLines || []).join('；')}。` : '';
     plans.push({
-      key: 'stay', label: `今晚都不出门${guard ? `，${guard.name}守夜` : ''}`,
-      hint: famineCritical ? '安全，但吃的不会自己长出来——明早还能去挖野菜保底' : '安全，但吃的不会自己长出来',
+      key: 'stay', label: `今晚都不出门${roles ? `——${roles}` : ''}`,
+      hint: `${famineCritical ? '安全，但吃的不会自己长出来——明早还能去挖野菜保底' : '安全，但吃的不会自己长出来'}${wind}`,
       intent: { type: 'dusk_assign', scavenger: null, location: null, gear: [], others }
     });
+  }
+  // 需求驱动排序（居家与四问·赌注题）：粮柴都够三天、无断粮、重心不在守家——留守置顶。
+  // 夜夜出门的旧默认是力竭螺旋的根：这座城不值得天天赌
+  {
+    const foodDays = ['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0) / Math.max(1, alive.length);
+    const fuelOk = !needsDusk.fuelNeed;
+    const calm = !famineCritical && !dirLoc && ((foodDays >= 3 && fuelOk) || (s.focus?.key || '') === 'guard'); // 活着的誓永远排在「不出门」前面
+    if (calm) {
+      const stay = plans.splice(plans.findIndex((p) => p.key === 'stay'), 1)[0];
+      if (stay) plans.unshift(stay);
+    }
   }
   if (needsDusk.foodNeed) {
     const meals1 = Math.floor(['meal', 'canned', 'raw', 'meat', 'veg'].reduce((a, i) => a + (s.inventory[i] || 0), 0) / Math.max(1, alive.length));
@@ -905,7 +954,7 @@ export function suggests(state, pack) {
     if (foodTotal <= 2) {
       const diggers = aliveChars(s).filter((c) => c.ap >= 1 && !c.bedRest).slice(0, 2);
       if (diggers.length) out.push({
-        label: `去城根挖野菜（保底的口粮，苦但饿不死——${diggers.map((c) => c.name).join('、')}去）`,
+        label: `去${s.sidestory ? (pack.sideMap?.[s.sidestory.id]?.scene?.forageWord || '城根') : '城根'}挖野菜（保底的口粮，苦但饿不死——${diggers.map((c) => c.name).join('、')}去）`,
         intents: [...diggers.map((c) => ({ type: 'act', actor: c.id, action: 'forage' })), close]
       });
     }

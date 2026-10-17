@@ -138,7 +138,9 @@ describe('心情 M-01~M-10/M-14', () => {
   test('M-14 崩溃链三晨内未安抚 → 离队或自伤；+4 安抚逆转', () => {
     let ended = 0;
     for (let seed = 1; seed <= 30; seed++) {
-      const { state } = newRun({ seed, roster: ['bron', 'marta'] });
+      // 单人局：0.40.0 起屋里有人会自主去陪崩溃者（这是设计，不是 bug）——
+      // 本例验证的是「三晨无人安抚」的下场，所以家里只留他一个
+      const { state } = newRun({ seed, roster: ['bron'] });
       const b = ch(state, 'bron');
       b.moodPts = -15; b.breakdown = { stage: 1 }; b.soothed = 0;
       let s = state;
@@ -146,7 +148,7 @@ describe('心情 M-01~M-10/M-14', () => {
       if (!ch(s, 'bron').alive || ch(s, 'bron').wound >= 2) ended++;
     }
     assert.ok(ended >= 28, `崩溃三晨结局 ${ended}/30`);
-    const { state } = newRun({ roster: ['bron', 'marta'] });
+    const { state } = newRun({ roster: ['bron'] });
     const b = ch(state, 'bron');
     b.moodPts = -15; b.breakdown = { stage: 1 }; b.soothed = 4;
     const s = skipDayAtHome(state);

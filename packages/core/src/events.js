@@ -345,6 +345,17 @@ export function buildEnding(state, pack) {
       futures: pack.mainline?.futures?.[s.war.endingType] || [],
       tracks
     };
+    // 坡线（居家与四问）：这个家自己长出来的事——大柯的棺、文简的日录、素徽的三弦——落到落幕行
+    {
+      const nameOf = (id) => s.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || id;
+      const homeLines = [...(s.homeLines || [])];
+      for (const [id, a] of Object.entries(s.arcs || {})) {
+        const done = pack.autonomy?.kits?.[id]?.arc?.stages?.[a.stage - 1]?.doneLine;
+        if (a.stage >= 3 && done) homeLines.push(done.replaceAll('{{name}}', nameOf(id)));
+      }
+      story.homeLines = homeLines;
+      if (homeLines.length) story.codex.lines = [...story.codex.lines, ...homeLines.slice(-3)];
+    }
     // 尾句（小说层·反转回收）：最后一夜的门、纸的去处——玩家 41 天的选择在此回声
     {
       const F = s.eventFlags || {};
