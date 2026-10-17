@@ -1980,3 +1980,131 @@ body.mapbig-open { overflow: hidden; }
 
 /* 选单行注脚（环境声行的说明小字） */
 .m-note { font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
+
+/* ——— 终卷仪式（体验批次·终卷）：等待卡 / 轴上界碑 / 分幕弹窗 ——— */
+
+/* ① 等待卡：合卷的 10~20 秒要看得见「史官在写」——界碑 + 研墨 + 流墨 */
+.finale-wait {
+  margin: 34px auto 24px; max-width: 36em; text-align: center;
+  padding: 26px 22px 20px;
+  border-top: 1px solid var(--gold-hi); border-bottom: 1px solid var(--gold-hi);
+  background: linear-gradient(180deg, rgba(212, 175, 55, .05), transparent 55%);
+  animation: fadeUp .9s ease both;
+}
+.fw-stele { display: flex; flex-direction: column; gap: 10px; }
+.fw-day { font-size: 12px; letter-spacing: .42em; text-indent: .42em; color: var(--accent); }
+.fw-title { font-family: var(--font-li); font-size: 26px; letter-spacing: .5em; text-indent: .5em; color: var(--brass); text-shadow: 0 2px 0 rgba(0, 0, 0, .55); }
+/* 研墨：三点墨在石上转——不急不缓的一炷香 */
+.fw-grind { display: flex; justify-content: center; gap: 14px; margin: 20px 0 12px; }
+.fw-grind i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--ink);
+  opacity: .25; animation: fwGrind 2.4s ease-in-out infinite;
+}
+.fw-grind i:nth-child(2) { animation-delay: .3s; }
+.fw-grind i:nth-child(3) { animation-delay: .6s; }
+@keyframes fwGrind { 0%, 100% { opacity: .18; transform: translateY(0) scale(1); } 50% { opacity: .85; transform: translateY(-4px) scale(1.15); } }
+.fw-line { font-size: 12.5px; color: var(--ink-3); letter-spacing: .12em; }
+.fw-ink {
+  margin-top: 14px; min-height: 1.6em; max-height: 5.2em; overflow: hidden;
+  font-family: var(--font-kai); font-size: 12.5px; line-height: 1.8; text-align: left;
+  color: var(--ink-3); opacity: .8;
+  mask-image: linear-gradient(180deg, transparent, #000 32%);
+}
+/* ② 轴上界碑：主轴的完结记号（终卷正文住在弹窗里，书页不淹） */
+.finale-mark {
+  margin: 40px auto 30px; max-width: 30em; text-align: center; padding: 30px 20px 24px;
+  border-top: 1px solid var(--gold-hi); border-bottom: 1px solid var(--gold-hi);
+  animation: fadeUp 1s ease both;
+}
+.fm-title { font-family: var(--font-li); font-size: 30px; letter-spacing: .6em; text-indent: .6em; color: var(--brass); text-shadow: 0 2px 0 rgba(0, 0, 0, .55); margin-bottom: 12px; }
+.fm-line { font-size: 12.5px; color: var(--ink-3); letter-spacing: .1em; margin-bottom: 16px; }
+
+/* ③ 终卷舞台：暗场托纸——这一屏值得截图保存 */
+.finale-stage {
+  position: fixed; inset: 0; z-index: 78; display: flex; flex-direction: column; align-items: center;
+  background:
+    radial-gradient(120% 90% at 50% 8%, rgba(212, 175, 55, .07), transparent 46%),
+    radial-gradient(140% 110% at 50% 50%, rgba(10, 14, 17, .92), rgba(5, 7, 9, .97));
+  backdrop-filter: blur(2px);
+  animation: fwStageIn .8s ease both;
+}
+@keyframes fwStageIn { from { opacity: 0; } to { opacity: 1; } }
+.finale-stage .rite-x { position: absolute; top: 16px; right: 18px; z-index: 3; }
+/* 幕进度的烛芯：走过的幕亮着 */
+.finale-progress { display: flex; gap: 9px; margin: 20px 0 10px; z-index: 2; }
+.finale-progress span {
+  width: 22px; height: 3px; background: var(--rule); border-radius: 2px;
+  transition: background .5s ease, box-shadow .5s ease;
+}
+.finale-progress span.on { background: var(--brass); box-shadow: 0 0 8px rgba(212, 175, 55, .55); }
+/* 纸卷：木框金线承纸，与展卷同宗但更宽更静 */
+.finale-scroll {
+  width: min(760px, calc(100vw - 28px)); flex: 0 1 auto; max-height: min(72dvh, 900px);
+  overflow-y: auto; overscroll-behavior: contain; position: relative; padding: 2px;
+  background: var(--wood);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  filter: drop-shadow(0 20px 52px rgba(0, 0, 0, .72));
+  animation: fwScrollIn .9s .12s cubic-bezier(.22, .75, .25, 1) both;
+}
+@keyframes fwScrollIn { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
+.finale-body {
+  background: var(--grain), linear-gradient(180deg, var(--paper-hi), var(--paper));
+  box-shadow: inset 0 0 0 1px var(--gold-hi);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  padding: 44px 52px 40px; min-height: 220px;
+}
+/* 幕（fact）：每幕一块，内部 frow 分行显影 */
+.fact { animation: fadeUp .6s ease both; }
+.fact .frow { margin: 0 0 22px; }
+.fr-head { text-align: center; margin: 6px 0 30px; }
+.fr-bigtitle {
+  font-family: var(--font-li); color: var(--brass); text-shadow: 0 2px 0 rgba(0, 0, 0, .55);
+  font-size: clamp(30px, 6vw, 40px); letter-spacing: .55em; text-indent: .55em; font-weight: 700;
+}
+.fr-sub { margin-top: 12px; font-size: 12px; letter-spacing: .34em; text-indent: .34em; color: var(--accent); }
+/* 下一幕：纸卷下的烛照木钮——读完了才伸手，常驻但克制 */
+.finale-next {
+  margin: 16px 0 26px; z-index: 2; min-width: 158px;
+  padding: 11px 30px; cursor: pointer;
+  font-family: var(--font-kai); font-size: 15px; letter-spacing: .3em; text-indent: .3em;
+  color: var(--lapis-ink); background: linear-gradient(180deg, var(--tan-hi), var(--tan));
+  border: 1px solid rgba(0, 0, 0, .4); border-radius: 3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 3px 10px rgba(0, 0, 0, .5);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+.finale-next:hover { transform: translateY(-1px); filter: brightness(1.05); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 5px 14px rgba(0, 0, 0, .55); }
+.finale-next:active { transform: translateY(0); }
+/* 末幕的朱印：合卷一盖，这一局就定了 */
+.finale-seal {
+  margin: 30px auto 4px; width: 96px; padding: 10px 6px;
+  border-radius: 5px; background: var(--accent); color: #f3e9d4;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-family: var(--font-seal); letter-spacing: .1em;
+  box-shadow: inset 0 0 0 2px rgba(243, 233, 212, .5), inset 0 0 16px rgba(0, 0, 0, .3), 2px 3px 0 var(--shadow);
+  transform: rotate(8deg); opacity: .92; pointer-events: none;
+  animation: sealIn 1.1s .9s ease both;
+}
+.finale-seal span:first-child { font-size: 24px; }
+.finale-seal span:last-child { font-size: 11px; }
+@media (prefers-reduced-motion: reduce) {
+  .finale-wait, .finale-mark, .finale-stage, .finale-scroll, .fact { animation: none; }
+  .fw-grind i { animation: none; opacity: .5; }
+  .finale-seal { animation: none; }
+}
+@media (max-width: 640px) {
+  .finale-body { padding: 30px 20px 26px; }
+  .finale-scroll { max-height: 64dvh; }
+}
+/* 终卷细节收口：留赠表单入乡随俗（暗面下拉与输入），纸卷滚动条不着白 */
+.finale-scroll::-webkit-scrollbar { width: 8px; }
+.finale-scroll::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, .28); border-radius: 4px; }
+.finale-scroll::-webkit-scrollbar-track { background: transparent; }
+.finale-body .capsule-form select,
+.finale-body .capsule-form input {
+  background: var(--paper-lo); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: 3px;
+  padding: 7px 10px; font-family: var(--font-kai); font-size: 13.5px;
+}
+.finale-body .capsule-form select:focus,
+.finale-body .capsule-form input:focus { outline: 1px solid var(--gold-hi); }
+.finale-body .capsule-form select option { background: var(--paper-lo); color: var(--ink); }
