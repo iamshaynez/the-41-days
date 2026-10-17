@@ -163,6 +163,13 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     }
   }
 
+  /** 终局卷名（与客户端 END_TITLE 同源的单表；别传取剧情线题名）——
+   *  finalizing 事件先送，等待仪式的界碑要写得出这一局叫什么 */
+  function finaleTitle(st) {
+    if (st.ending?.type === 'sidestory') return st.ending.storyline?.title || '别传';
+    return { ceasefire: '第四十一天', maicheng: '麦城得脱', pyrrhic: '惨　胜', alt_both: '另一种三国', contract_end: '交割日', lighthouse: '还　师', join_table: '出江陵记', hostage: '槛　车', wiped: '无人幸免' }[st.ending?.type] || '无人幸免';
+  }
+
   /**
    * 终局 finalize（EPI-02）：文学复盘三链路——
    * LLM 回忆录 → N-02 事实校验（memoirLint）→ 失败回退直读模板。之后落库 + 入档。
@@ -737,6 +744,9 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
         }
         if (result.state.over) {
           geDirector.drop(id);
+          // 终局先行（体验批次·终卷）：合卷要 10~20 秒（回忆录+列传两程 LLM）——
+          // 先把「完结」与卷名送到书页，客户端立刻起等待仪式；不该让玩家以为卡死了
+          send('finalizing', { day: result.state.day, title: finaleTitle(result.state) });
           await finalizeEndedRun(s.userId, id, result.state, run.mode === 'llm' ? gw : null, (d) => send('memoir-delta', { d }));
         } else {
           // C 层导演（GE）：注入昨日预取 + 预取明日（离线即整层关闭）
