@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { VERBS } from './causality.js';
+import { DAY_ACTIONS } from './dayActions.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_PACK_DIR = join(here, '..', '..', '..', 'content', 'base');
@@ -45,6 +46,9 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
   try {
     side = readJson(dir, 'sidestories.json');
   } catch { /* 无别传包 */ }
+  // 居家与四问（可选文件）：重心文案、通用日课阶梯、十二人自主包、双人、闲笔
+  let autonomy = null;
+  try { autonomy = readJson(dir, 'autonomy.json'); } catch { /* 无自主包：角色不长自己的事 */ }
   // 快局预设（可选文件，长线体验 §4.1）：D21 中盘切片的家底
   let quickstart = null;
   try { quickstart = readJson(dir, 'quickstart.json'); } catch { /* 无快局预设 */ }
@@ -219,6 +223,37 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     if (w.requiresFacility && !rj.facilities.some((f) => f.id === w.requiresFacility)) errs.push(`事件 ${c.id} 引用未知设施 ${w.requiresFacility}`);
   }
 
+  // 自主包校验：人名、动作、物品、对象都要标得出
+  if (autonomy) {
+    const checkItem = (it, where) => {
+      if (it.do) {
+        const [action] = String(it.do).split(':');
+        if (!DAY_ACTIONS.includes(action)) errs.push(`自主包 ${where} 的 do=${it.do} 不是白天动作`);
+      }
+      for (const k of Object.keys(it.effects?.items || {})) needItem(k, `自主包 ${where}.items`);
+      for (const c of [...(it.cost || []), ...(it.effects?.cost || [])]) needItem(c.item, `自主包 ${where}.cost`);
+      for (const k of Object.keys(it.when?.item || {})) needItem(k, `自主包 ${where}.when.item`);
+      for (const k of [].concat(it.when?.noItem || [])) needItem(k, `自主包 ${where}.when.noItem`);
+      if (it.effects?.heard && !locMap[it.effects.heard]) errs.push(`自主包 ${where} 风闻地点 ${it.effects.heard} 不存在`);
+      for (const k of Object.keys(it.effects?.facility || {})) if (!rj.facilities.some((f) => f.id === k)) errs.push(`自主包 ${where} 设施 ${k} 不存在`);
+      if (!it.id && !where.startsWith('ladder')) errs.push(`自主包 ${where} 缺 id`);
+    };
+    for (const [cid, kit] of Object.entries(autonomy.kits || {})) {
+      if (!charMap[cid]) errs.push(`自主包引用未知角色 ${cid}`);
+      for (const it of kit.trade || []) checkItem(it, `${cid}.trade.${it.id}`);
+      for (const it of kit.leisure || []) checkItem(it, `${cid}.leisure.${it.id}`);
+      for (const it of kit.habits || []) checkItem(it, `${cid}.habits.${it.id}`);
+      for (const st of kit.arc?.stages || []) checkItem({ ...st, id: 'stage' }, `${cid}.arc`);
+      if (kit.stress) checkItem({ ...kit.stress, id: 'stress' }, `${cid}.stress`);
+    }
+    for (const p of autonomy.pairs || []) {
+      if (!charMap[p.a] || !charMap[p.b]) errs.push(`双人自主 ${p.id} 引用未知角色 ${p.a}/${p.b}`);
+      checkItem(p, `pairs.${p.id}`);
+    }
+    for (const v of autonomy.vignettes?.items || []) checkItem(v, `vignettes.${v.id}`);
+    for (const [id, it] of Object.entries(autonomy.ladder?.items || {})) checkItem({ id, ...it }, `ladder.${id}`);
+  }
+
   if (errs.length) throw new Error('内容包校验失败：\n' + errs.join('\n'));
 
   return {
@@ -229,7 +264,7 @@ export function loadPack(dir = DEFAULT_PACK_DIR) {
     events: ej, cards: allCards, cardMap, broadcasts: ej.broadcasts,
     docs: dj.docs, docMap, layerGates: dj.layerGates, canonAnnals: dj.canonAnnals || [], narrations, kpis,
     sidestories: side.stories || [], sideMap: Object.fromEntries((side.stories || []).map((s) => [s.id, s])),
-    ge, ensembleTemplates, quickstart, threads, relations,
+    ge, ensembleTemplates, quickstart, threads, relations, autonomy,
     seals: sj.seals || [], sealMap,
     prelude, map, mainline, historia
   };

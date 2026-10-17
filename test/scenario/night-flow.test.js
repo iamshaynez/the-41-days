@@ -100,11 +100,12 @@ describe('念头进方案卡：世界记着，管家也记着', () => {
     assert.equal(plans.plans[0].intent.location, 'villas', '首选方案应照念头去大族宅区');
     assert.ok(plans.plans[0].intent.gear.includes('crowbar'), '应带上铁撬');
     assert.ok(/誓|惦记/.test(plans.plans[0].hint), `hint 应注明这是照着誓走：${plans.plans[0].hint}`);
-    // 对照：没种念头时，首选仍是常规排序（南市在前）
+    // 对照：没种念头时，出门方案仍是常规排序（南市在前）。
+    // 0.40.0 起粮柴够三天的黄昏会把「留守」置顶为首选项（居家与四问·赌注题）——
+    // 出门方案的相对次序不受影响：富粮的南市（食物份额 67%）压过里社（62%）
     const control = planDusk(state, PACK);
-    // 常规排序＝状态+需求感知：开局存粮 <4 天（foodNeed），富粮的南市（食物份额 67%）
-    // 压过 threat 0 但只有 62% 的里社——「找吃的」语境下这正是该去的地方
-    assert.equal(control.plans[0].intent.location, 'market', '无念头时按需排序：粮浅时富粮的南市在前');
+    const firstOut = control.plans.find((p) => p.intent.scavenger && p.intent.location);
+    assert.equal(firstOut.intent.location, 'market', '无念头时按需排序：粮浅时富粮的南市在出门方案之首');
   });
 
   test('念头点名的人手（大柯式托付）：不出现在默认三人局的方案里也不报错', () => {

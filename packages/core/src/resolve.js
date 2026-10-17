@@ -10,6 +10,7 @@ import { resolveRaid } from './raid.js';
 import { executeTrade } from './trade.js';
 import { chooseEventOption, optionAvailable, optionCostOk, fireEventCard } from './events.js';
 import { tickHunger, tickHealth, tickFatigue, tickTemperature, tickMood, tickProduction, tickWar, advanceDay, drawMorningEvents, drawDuskEvents, assignNightBeds } from './vitals.js';
+import { autonomyClose, tickFocus, dawnReset, arcTick, stressLeak, funeralCheck } from './autonomy.js';
 import { tickAutonomous, tickDirections, bumpPairArc } from './causality.js';
 import { evaluateSeals } from './seals.js';
 import { buildEnding } from './events.js';
@@ -263,6 +264,8 @@ function applyOne(ctx, intent) {
       if (s.phase !== 'dusk') return { ok: false, reason: 'NOT_DUSK' };
       if (s.sidestory && s.activeEvent && !s.activeEvent.duskFate) return { ok: false, reason: 'EVENT_PENDING' };
       const { plans } = planDusk(s, ctx.pack);
+      // dusk_auto 是「派人出门张罗」的显式指令：照出门方案走。
+      // 「今晚都不出门」是玩家的另一句话（dusk_assign留守/方案卡首项）——留守置顶只改默认牌面与托管（takeTurnDelegate 用 plans[0]）
       const plan = plans.find((p) => p.intent.scavenger && p.intent.location) || plans[0];
       if (!plan) return { ok: false, reason: 'NOT_DUSK' };
       const i = { ...plan.intent };
@@ -490,6 +493,8 @@ export function beginRun(state, pack, { prologue = false } = {}) {
 function toDusk(ctx, { force = false } = {}) {
   const s = ctx.s;
   if (s.phase !== 'day' && !force) return; // 概述日收卷时 phase 尚在 night/dawn——内部直落黄昏
+  // 白天收尾（居家与四问）：管家张罗完，剩下的人自己干活——趁相位还在白天，走同一动作管线
+  autonomyClose(ctx);
   s.phase = 'dusk';
   s.night = null;
   ctx.emit('PHASE', { to: 'dusk' });
@@ -522,6 +527,11 @@ function toDawn(ctx) {
   mainlineTick(ctx);      // 大事轴日步：破晓选步＋闲笔＋投影（叙事双轴 §4.3）
   ensembleTick(ctx);      // 堂屋（人物血肉计划 PR2）：主线日必评史＋随机场，内核先裁决结局拍
   tickDawnLedgers(ctx);   // 晨报衰减账/知晓度里程碑账（批次二 C-3/体验9；FLAG 镜像可回放）
+  dawnReset(ctx);         // 居家日账：习性威慑/风声/夜作计数翻篇
+  tickFocus(ctx);         // 破晓·判断题：重心由内核从晨报警情里算，晨报一句话交代
+  arcTick(ctx);           // 坡：把人放在家里，他自己会长出来的事（三段）
+  stressLeak(ctx);        // 暗面漏出：饥饿/低落到线，人物的不体面变成行为
+  funeralCheck(ctx);      // 大柯的棺：料齐人走，下葬
   // 概述日（长线体验 §4.4）：平淡日一句话收卷——白天整段交给管家，直落黄昏。
   // 只在事件/状态突变处停下问玩家；玩家可用规矩（overviewDays=false）关掉。
   if (overviewDecision(ctx).fire) { collapseDay(ctx); return; }
@@ -538,6 +548,8 @@ function toDawn(ctx) {
 function collapseDay(ctx) {
   const s = ctx.s;
   const start = ctx.facts.length;
+  s.phase = 'day'; // 修复：此前相位停在 night/dawn，管家的全天计划被 NOT_DAY 静默吞掉（没人吃饭、没人翻家）
+  ctx.emit('PHASE', { to: 'day', overview: true });
   ctx.delegated = true;
   for (const it of planDay(s, ctx.pack)) applyOne(ctx, it); // 概述日不求有功：规划落空就落空，不出噪音
   ctx.delegated = false;

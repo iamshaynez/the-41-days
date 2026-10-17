@@ -36,3 +36,4 @@ export { bumpPairArc } from './src/causality.js';
 export { mapView } from './src/map.js';
 export { locVisited, condMet, locInPool, unlockMet, heardMet, echoHeard, pickLocPools, missedPoolLocs } from './src/unlock.js';
 export { parseMarkers, stripMarkers, markerRegistry, validateTextMarkers } from './src/markers.js';
+export { focusOf, condOk, pickTarget, applyKitEffects, autonomyClose, arcTick, stressLeak, tickFocus, homeTracks, homeArcLines, FOCUS_KEYS } from './src/autonomy.js';

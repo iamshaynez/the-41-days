@@ -343,8 +343,9 @@ describe('游戏主流程（LLM 模式 + SSE，按用户隔离）', () => {
     if (patch.phase === 'day') { evs = await postIntents([{ type: 'advance' }]); patch = evs.find((e) => e.ev === 'state-patch').data.state; }
     assert.equal(patch.phase, 'dusk');
     assert.ok(patch.duskView?.plans?.length >= 2, '黄昏方案卡应有得选');
-    // 点第一方案 → 深夜
-    evs = await postIntents([patch.duskView.plans[0].intent]);
+    // 点出门方案 → 深夜（0.40.0 起粮柴够的黄昏首选项是留守，留守直落天亮——本例要夜访流）
+    const outPlan = patch.duskView.plans.find((p) => p.intent.scavenger && p.intent.location) || patch.duskView.plans[0];
+    evs = await postIntents([outPlan.intent]);
     patch = evs.find((e) => e.ev === 'state-patch').data.state;
     assert.equal(patch.phase, 'night');
     // 夜间自动流：岔路停问 → 点选项；事件卡 → 选项；否则继续

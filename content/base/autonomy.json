@@ -1,0 +1,1875 @@
+{
+  "$comment": "居家与四问（docs/居家与四问-v0.1.md）：重心文案由内核生成；ladder=通用日课（按重心排序的兜底自主）；kits=十二人自主包（trade 本行 / habits 习性 / arc 坡 / stress 暗面漏出 / nightRole 夜岗偏好）；pairs=关系弧长出的双人自主；vignettes=闲笔池（每天一件偶然的事）。状态变更全走效果白名单，FLAG/CHAR_FLAG 镜像可回放。",
+  "ladder": {
+    "default": [
+      "treat_any",
+      "care_talk",
+      "craft_herbmed",
+      "mend_cloth",
+      "chop",
+      "search_home",
+      "craft_lockpick",
+      "cure_meat",
+      "prep_night",
+      "read",
+      "radio",
+      "nap"
+    ],
+    "byFocus": {
+      "mouth": [
+        "chop",
+        "search_home",
+        "cure_meat",
+        "craft_lockpick",
+        "prep_night",
+        "treat_any",
+        "care_talk",
+        "craft_herbmed",
+        "mend_cloth",
+        "read",
+        "radio",
+        "nap"
+      ],
+      "care": [
+        "care_talk",
+        "treat_any",
+        "mend_cloth",
+        "craft_herbmed",
+        "nap",
+        "read",
+        "radio",
+        "search_home",
+        "chop",
+        "prep_night",
+        "craft_lockpick",
+        "cure_meat"
+      ],
+      "gear": [
+        "prep_night",
+        "chop",
+        "craft_lockpick",
+        "craft_herbmed",
+        "mend_cloth",
+        "search_home",
+        "cure_meat",
+        "treat_any",
+        "care_talk",
+        "read",
+        "radio",
+        "nap"
+      ],
+      "guard": [
+        "prep_night",
+        "chop",
+        "search_home",
+        "treat_any",
+        "care_talk",
+        "craft_lockpick",
+        "read",
+        "radio",
+        "nap",
+        "craft_herbmed",
+        "mend_cloth",
+        "cure_meat"
+      ],
+      "read": [
+        "read",
+        "radio",
+        "care_talk",
+        "search_home",
+        "chop",
+        "nap",
+        "prep_night",
+        "craft_lockpick",
+        "craft_herbmed",
+        "mend_cloth",
+        "cure_meat",
+        "treat_any"
+      ],
+      "steady": [
+        "read",
+        "radio",
+        "care_talk",
+        "search_home",
+        "chop",
+        "nap",
+        "prep_night",
+        "craft_lockpick",
+        "craft_herbmed",
+        "mend_cloth",
+        "cure_meat",
+        "treat_any"
+      ]
+    },
+    "items": {
+      "nap": {
+        "id": "ladder_nap",
+        "line": "{{name}}打了个盹——先把昨夜的觉还一点。",
+        "weight": 4,
+        "once": "day",
+        "do": "sleep",
+        "when": {
+          "selfFatigueGte": 1,
+          "selfApGte": 2
+        }
+      },
+      "care_talk": {
+        "id": "ladder_care_talk",
+        "line": "{{name}}挪到{{other}}边上坐下。没说什么有用的话，就是坐着。",
+        "weight": 6,
+        "once": "day",
+        "when": {
+          "anyoneLowMood": true,
+          "selfMoodGte": 0
+        },
+        "effects": {
+          "mood": {
+            "other": 1
+          }
+        },
+        "target": "lowestMood"
+      },
+      "treat_any": {
+        "id": "ladder_treat_any",
+        "line": "{{name}}给{{other}}换了药。手很稳。",
+        "weight": 7,
+        "once": "day",
+        "do": "treat",
+        "when": {
+          "anyoneWounded": true,
+          "item": {
+            "bandage": 1
+          }
+        },
+        "target": "wounded"
+      },
+      "craft_herbmed": {
+        "id": "ladder_craft_herbmed",
+        "line": "{{name}}把三把草药捣成一份汤药。",
+        "weight": 5,
+        "once": "day",
+        "do": "craft:make_herbmed",
+        "when": {
+          "facility": "workbench",
+          "item": {
+            "herb": 3
+          }
+        }
+      },
+      "craft_lockpick": {
+        "id": "ladder_craft_lockpick",
+        "line": "{{name}}用细铁丝拨了一根拨针出来。",
+        "weight": 3,
+        "once": "day",
+        "do": "craft:make_lockpick",
+        "when": {
+          "facility": "workbench",
+          "item": {
+            "comp": 1
+          },
+          "noItem": [
+            "lockpick"
+          ]
+        }
+      },
+      "chop": {
+        "id": "ladder_chop",
+        "line": "{{name}}把一张旧家具劈成了柴。劈柴的声音很闷，隔着墙听不见。",
+        "weight": 4,
+        "once": "day",
+        "do": "chop",
+        "when": {
+          "item": {
+            "axe": 1
+          }
+        }
+      },
+      "search_home": {
+        "id": "ladder_search_home",
+        "line": "{{name}}把家里没翻过的角落又翻了一遍。",
+        "weight": 2,
+        "once": "day",
+        "do": "search_home",
+        "when": {
+          "homeLeftover": true
+        }
+      },
+      "read": {
+        "id": "ladder_read",
+        "line": "{{name}}读了一阵书。简上没有战争。",
+        "weight": 3,
+        "once": "day",
+        "do": "read",
+        "when": {
+          "item": {
+            "book": 1
+          }
+        }
+      },
+      "radio": {
+        "id": "ladder_radio",
+        "line": "{{name}}听了半刻更鼓。城里今天的动静，鼓都记着。",
+        "weight": 3,
+        "once": "day",
+        "do": "listen_radio",
+        "when": {
+          "facility": "radio"
+        }
+      },
+      "mend_cloth": {
+        "id": "ladder_mend_cloth",
+        "line": "{{name}}就着工作台缝了一卷裹创布——煮过两遍，能用。",
+        "weight": 5,
+        "once": "day",
+        "do": "mend_cloth",
+        "when": {
+          "selfTrait": "healer",
+          "facility": "workbench",
+          "item": {
+            "parts": 2
+          }
+        }
+      },
+      "cure_meat": {
+        "id": "ladder_cure_meat",
+        "line": "{{name}}把肉腌了。搁得住的粮，才是这个家的底气。",
+        "weight": 4,
+        "once": "day",
+        "do": "cure_meat",
+        "when": {
+          "facility": "stove",
+          "item": {
+            "meat": 1
+          }
+        }
+      },
+      "prep_night": {
+        "id": "ladder_prep_night",
+        "line": "{{name}}把火折子多备了一截，撬棍磨快了一分——今晚出门的人能多走几步。",
+        "weight": 3,
+        "once": "day",
+        "when": {
+          "item": {
+            "parts": 1
+          }
+        },
+        "effects": {
+          "nightPrep": 1
+        },
+        "cost": [
+          {
+            "item": "parts",
+            "n": 1
+          }
+        ]
+      }
+    }
+  },
+  "kits": {
+    "anton": {
+      "trade": [
+        {
+          "id": "anton_teach",
+          "line": "文简把简册摊开，教{{other}}认今天这三个字。教了一辈子书，手还是这个手。",
+          "weight": 7,
+          "once": "day",
+          "do": "teach",
+          "target": "student"
+        },
+        {
+          "id": "anton_tale",
+          "line": "文简讲古。讲的是围城之前的事——有人听着听着松了肩膀。",
+          "weight": 4,
+          "once": "run",
+          "when": {
+            "dayEvery": 3
+          },
+          "effects": {
+            "mood": {
+              "all": 1
+            },
+            "knowledge": 1
+          }
+        }
+      ],
+      "habits": [
+        {
+          "id": "anton_no_burn",
+          "line": "文简把简册摞到自己铺头。灶再冷，字纸不进火——这是他的规矩，没人劝得动。",
+          "silent": true,
+          "once": "day",
+          "effects": {
+            "noBookFuel": true
+          }
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "dayGte": 10
+            },
+            "line": "文简的《围城日录》写成第一卷。字很挤，纸很省。",
+            "effects": {
+              "items": {
+                "book": 1
+              },
+              "memoirLine": "文简的日录第一卷写成了——围城第十天，他记的全是小事。"
+            }
+          },
+          {
+            "when": {
+              "dayGte": 20
+            },
+            "line": "日录第二卷。这一卷开始记人：谁笑过，谁夜里咳嗽。",
+            "effects": {
+              "items": {
+                "book": 1
+              },
+              "knowledge": 1,
+              "memoirLine": "日录第二卷记的全是人。后来回忆录的骨，就是这两卷。"
+            }
+          },
+          {
+            "when": {
+              "dayGte": 30
+            },
+            "line": "日录第三卷。他开始誊「还在的人的名字」——一笔一笔，像在跟谁对账。",
+            "effects": {
+              "items": {
+                "book": 1
+              },
+              "mood": {
+                "all": 1
+              },
+              "memoirLine": "第三卷誊的是还在的人的名字。名册他誊过一次，三十七个名字；这一次，他一个都不想再誊。"
+            },
+            "doneLine": "文简的日录三卷齐了。橘里的墙上后来多了一行小字：账不是这么算的——账是，他们还在。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "foodPerMouthLt": 1
+        },
+        "chance": 0.5,
+        "cooldown": 4,
+        "effects": {
+          "mood": {
+            "all": -1
+          }
+        },
+        "line": "文简的账越记越细。谁多吃了一口，他记下了——没说，但都记下了。"
+      }
+    },
+    "marta": {
+      "trade": [
+        {
+          "id": "marta_grind",
+          "line": "{{name}}用药臼把草药捣成汤药——她的药臼不认工作台。",
+          "weight": 7,
+          "once": "day",
+          "effects": {
+            "items": {
+              "herbmed": 1
+            }
+          },
+          "cost": [
+            {
+              "item": "herb",
+              "n": 3
+            }
+          ]
+        },
+        {
+          "id": "marta_clinic",
+          "line": "有邻居来叩门讨药。{{name}}包了一剂给他，没问来路。",
+          "weight": 4,
+          "once": "day",
+          "when": {
+            "item": {
+              "meds": 2
+            },
+            "rand": 0.25
+          },
+          "effects": {
+            "items": {
+              "meds": -1
+            },
+            "reputation": {
+              "hospital": 1
+            }
+          }
+        }
+      ],
+      "habits": [
+        {
+          "id": "marta_order",
+          "line": "{{name}}把榻重新排了序。先来后到，不问来路——规矩立在明处，谁都看得见。",
+          "silent": false,
+          "once": "run"
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "item": {
+                "parts": 8,
+                "comp": 6
+              }
+            },
+            "line": "{{name}}在檐下开出一片药圃。土是深的，她挑过。",
+            "effects": {
+              "facility": {
+                "garden": 1
+              }
+            },
+            "cost": [
+              {
+                "item": "parts",
+                "n": 8
+              },
+              {
+                "item": "comp",
+                "n": 6
+              }
+            ]
+          },
+          {
+            "when": {
+              "facility": "garden",
+              "dayGte": 5
+            },
+            "line": "药圃头一茬收了。晒在檐下的草药，一挂一挂。",
+            "effects": {
+              "items": {
+                "herb": 2
+              }
+            }
+          },
+          {
+            "when": {
+              "facility": "garden",
+              "dayGte": 12
+            },
+            "line": "{{name}}开始在簿上记名字——每治好一个人，记一个。字很小，很多。",
+            "effects": {
+              "knowledge": 1,
+              "memoirLine": "辛夷的簿上记满了名字。每治好一个人，记一个——她不允许自己忘。"
+            },
+            "doneLine": "药圃三熟，名字满簿。这座城欠她的，她一笔都没讨。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "foodPerMouthLt": 1,
+          "anyoneSick": true
+        },
+        "chance": 0.4,
+        "cooldown": 4,
+        "effects": {
+          "flags": {}
+        },
+        "line": "药只够家里的人了。{{name}}站在门帘后面，听着外面的脚步声走远——先来后到，这四个字她说不出口。"
+      }
+    },
+    "bron": {
+      "trade": [
+        {
+          "id": "bron_bolt",
+          "line": "{{name}}又给门加了一道闩。没人叫他做。他做完拍了两下，像拍一个人的肩膀。",
+          "weight": 7,
+          "once": "day",
+          "when": {
+            "doorLt": 3,
+            "item": {
+              "parts": 1
+            }
+          },
+          "effects": {
+            "door": 1
+          },
+          "cost": [
+            {
+              "item": "parts",
+              "n": 1
+            }
+          ]
+        },
+        {
+          "id": "bron_breach",
+          "line": "{{name}}肩膀抵着门框，一寸一寸地拱——锁着的房间开了，撬棍没用上。",
+          "weight": 5,
+          "once": "day",
+          "do": "breach"
+        }
+      ],
+      "habits": [
+        {
+          "id": "bron_locks",
+          "line": "{{name}}睡前把每道门闩都查了一遍。这是他的活，从进门那天起就是。",
+          "silent": true,
+          "once": "day",
+          "effects": {
+            "raidDeter": 0.05
+          }
+        }
+      ],
+      "nightRole": "guard",
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "dayGte": 5
+            },
+            "line": "门结实了。{{name}}夜里查门闩的脚步，成了这个家的更鼓。",
+            "effects": {
+              "memoirLine": "石大查门闩的脚步，成了橘里九号的更鼓。"
+            }
+          },
+          {
+            "when": {
+              "doorGte": 2
+            },
+            "line": "{{name}}开始顺手钉邻居家那扇歪门。没人谢他，他也没等谁谢。",
+            "effects": {
+              "reputation": {
+                "neighbor": 1
+              }
+            }
+          },
+          {
+            "when": {
+              "doorGte": 3
+            },
+            "line": "三道门都齐了。{{name}}站在门厅听完一遍夜，才去睡——他查的从来不是门，是当年那扇没推开的。",
+            "effects": {
+              "mood": {
+                "all": 1
+              },
+              "memoirLine": "门三道，闩七根。石大守的从来不是门——是那扇没推开的门。"
+            },
+            "doneLine": "门齐了。后来的人只知道这门结实，不知道它为什么结实。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "deathRecent": 1
+        },
+        "cooldown": 99,
+        "effects": {
+          "fatigue": {
+            "self": 1
+          }
+        },
+        "line": "{{name}}一夜一夜地守。他不谈那场火，也不谈这个——守着，就是他全部的话。"
+      }
+    },
+    "katya": {
+      "trade": [
+        {
+          "id": "katya_verify",
+          "line": "{{name}}把家里的纸一张张核对过——名字、日期、谁说的。核完的纸角上有个小小的勾。",
+          "weight": 6,
+          "once": "day",
+          "when": {
+            "docsGte": 1,
+            "dayEvery": 2,
+            "knowledgeLt": 12
+          },
+          "effects": {
+            "knowledge": 1
+          }
+        }
+      ],
+      "habits": [
+        {
+          "id": "katya_seek",
+          "line": "{{name}}把家里的角落翻了一遍。他要找的不是这个——手停了一下，又翻。",
+          "silent": false,
+          "once": "day",
+          "when": {
+            "selfMoodLte": -3,
+            "noItem": [
+              "coffee",
+              "cigs"
+            ],
+            "homeLeftover": true
+          },
+          "do": "search_home"
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "docsGte": 3
+            },
+            "line": "{{name}}开始誊榜——官榜贴出来的话，和他核对的对不上。他把对不上的地方抄下来。",
+            "effects": {
+              "wind": "白简在核官榜——榜上的话和纸对不上的，他都抄下来了。"
+            }
+          },
+          {
+            "when": {
+              "docsGte": 6,
+              "knowledgeGte": 4
+            },
+            "line": "誊了半本。{{name}}把誊本包了皮——学徒的本分，是把字抄对。",
+            "effects": {
+              "knowledge": 1
+            }
+          },
+          {
+            "when": {
+              "docsGte": 9
+            },
+            "line": "誊本成了册。{{name}}知道该去哪儿找没被誊过的那张纸了。",
+            "effects": {
+              "wind": "白简的册子指了个方向——火线上那样的纸，得往有火气的地方翻。",
+              "memoirLine": "白简的纠榜誊成了册。榜上每一个含糊的字，都被他钉死在册子里。"
+            },
+            "doneLine": "纠榜成册。后来那本册子替很多人对上了他们生前没等到的话。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "fuelLt": 1,
+          "item": {
+            "book": 1
+          }
+        },
+        "chance": 0.5,
+        "cooldown": 99,
+        "effects": {
+          "mood": {
+            "self": -2
+          },
+          "memoirLine": "家里烧书那天，白简把最薄的一册揣进了怀里。"
+        },
+        "line": "家里要用书当柴了。{{name}}把最薄的一册揣进怀里，转过身去装没听见。"
+      }
+    },
+    "pavel": {
+      "trade": [
+        {
+          "id": "pavel_errand",
+          "line": "{{name}}出去跑了一趟。天没黑透他就回来了，鞋上全是泥。",
+          "weight": 6,
+          "once": "day",
+          "do": "errand"
+        },
+        {
+          "id": "pavel_water",
+          "line": "{{name}}去井台跑了一趟，带回两囊水——他快，水都没洒。",
+          "weight": 6,
+          "once": "day",
+          "when": {
+            "waterLt": 4
+          },
+          "effects": {
+            "items": {
+              "water": 2
+            },
+            "fatigue": {
+              "self": 1
+            }
+          }
+        }
+      ],
+      "habits": [
+        {
+          "id": "pavel_alone",
+          "line": "{{name}}睡觉要有人在一旁——同屋都出去了的夜，他翻来覆去到后半夜。",
+          "silent": false,
+          "once": "run"
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "dayGte": 6
+            },
+            "line": "{{name}}把城里能跑的路都跑熟了。哪条道有坑，他闭着眼都知道。",
+            "effects": {
+              "memoirLine": "阿走把城里能跑的路跑熟了——腿上记的，比脑子里记的牢。"
+            }
+          },
+          {
+            "when": {
+              "dayGte": 15
+            },
+            "line": "他夜里开始等人齐才进门——从前他第一个到，现在他最后一个。",
+            "effects": {
+              "wind": "阿走夜里放慢了——他在等齐所有人才进门。"
+            }
+          },
+          {
+            "when": {
+              "dayGte": 25
+            },
+            "line": "这次他慢了。{{name}}自己知道，全队只有他知道这意味着什么。",
+            "effects": {
+              "mood": {
+                "all": 1
+              },
+              "memoirLine": "「我去。我快——这次我慢。」他说到做到了一次。"
+            },
+            "doneLine": "他真的慢下来了一回。就一回，够了。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "foodPerMouthLt": 1
+        },
+        "chance": 0.4,
+        "cooldown": 5,
+        "effects": {
+          "fatigue": {
+            "self": 1
+          }
+        },
+        "line": "{{name}}跑了。天黑透了才回来，什么也没带，什么也没说——腿又比话快了一回。"
+      }
+    },
+    "emil": {
+      "trade": [
+        {
+          "id": "emil_pot",
+          "line": "{{name}}多添了一把火。同样的米，他锅里能多出一份——这是手艺，不是法术。",
+          "weight": 6,
+          "once": "day",
+          "when": {
+            "facility": "stove",
+            "item": {
+              "raw": 2
+            }
+          },
+          "effects": {
+            "items": {
+              "meal": 1
+            }
+          },
+          "cost": [
+            {
+              "item": "raw",
+              "n": 1
+            }
+          ]
+        },
+        {
+          "id": "emil_sniff",
+          "line": "{{name}}把家里的米抓一把闻了闻，又闻了闻鲁舟上回捎来的——鼻子是这个家的账房。",
+          "weight": 2,
+          "once": "run",
+          "when": {
+            "dayEvery": 3
+          },
+          "effects": {
+            "knowledge": 0
+          }
+        }
+      ],
+      "habits": [
+        {
+          "id": "emil_no_thin",
+          "line": "省着吃的日子，{{name}}盛饭的勺没停过——最饿的那碗，他照样盛满。",
+          "silent": false,
+          "once": "run"
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "item": {
+                "wood": 4,
+                "parts": 8
+              }
+            },
+            "line": "{{name}}把灶改了——一样的柴，多烧两锅。",
+            "effects": {
+              "facility": {
+                "stove_eco": 1
+              }
+            },
+            "cost": [
+              {
+                "item": "wood",
+                "n": 4
+              },
+              {
+                "item": "parts",
+                "n": 8
+              }
+            ]
+          },
+          {
+            "when": {
+              "facility": "stove_eco",
+              "dayGte": 6
+            },
+            "line": "灶上开始挂肉脯。{{name}}腌的，一排一排，像小户人家的墙。",
+            "effects": {
+              "items": {
+                "canned": 1
+              }
+            }
+          },
+          {
+            "when": {
+              "facility": "stove_eco",
+              "dayGte": 14
+            },
+            "line": "这个家的饭点稳了。到点，灶是热的——围城里最奢侈的一件事，他们有了。",
+            "effects": {
+              "mood": {
+                "all": 1
+              },
+              "memoirLine": "到点，灶是热的。老甑把围城里最奢侈的一件事，做成了寻常。"
+            },
+            "doneLine": "灶永远到点是热的。人是从饭上开始不像难民的。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "foodPerMouthLt": 1
+        },
+        "chance": 0.5,
+        "cooldown": 4,
+        "effects": {
+          "items": {
+            "meal": 1
+          },
+          "mood": {
+            "all": -1
+          }
+        },
+        "line": "饭多了一份。嚼着牙碜——{{name}}没抬头，只说了句：趁热。"
+      }
+    },
+    "zofia": {
+      "trade": [
+        {
+          "id": "zofia_string",
+          "line": "{{name}}给琴续上一弦。断的那根是三年前——她记得那天的箭声。",
+          "weight": 7,
+          "once": "day",
+          "when": {
+            "facilityLt": {
+              "piano": 3
+            },
+            "item": {
+              "wood": 1,
+              "parts": 2
+            }
+          },
+          "effects": {
+            "facility": {
+              "piano": 1
+            }
+          },
+          "cost": [
+            {
+              "item": "wood",
+              "n": 1
+            },
+            {
+              "item": "parts",
+              "n": 2
+            }
+          ]
+        },
+        {
+          "id": "zofia_listen",
+          "line": "{{name}}在窗边坐了一个黄昏，听。她听的东西，别人听不见。",
+          "weight": 5,
+          "once": "day",
+          "when": {
+            "rand": 0.4
+          },
+          "effects": {
+            "wind": "素徽听了半个下午——今夜水门渡那边的箭声，比昨夜密。"
+          }
+        }
+      ],
+      "habits": [],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "facility": "piano"
+            },
+            "line": "琴续上第一弦。{{name}}试了一个音，很轻，像怕吵着谁。",
+            "effects": {
+              "memoirLine": "琴一根一根续上了弦。每续一根，素徽试一个音——都很轻。"
+            }
+          },
+          {
+            "when": {
+              "facilityGte": {
+                "piano": 2
+              }
+            },
+            "line": "第二弦。这个家里的人开始知道她几点练琴——不在更鼓里。"
+          },
+          {
+            "when": {
+              "facilityGte": {
+                "piano": 3
+              }
+            },
+            "line": "琴齐了。黄昏的橘里九号有半刻不像围城——三弦的琴，抵得上一支更鼓。",
+            "effects": {
+              "mood": {
+                "all": 2
+              },
+              "memoirLine": "琴齐了。黄昏那半刻，橘里九号不像围城——素徽用三根弦换的。"
+            },
+            "doneLine": "三弦的琴齐了。她一直在听的那声换气，还没有来。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "deathRecent": 1
+        },
+        "cooldown": 99,
+        "effects": {
+          "mood": {
+            "all": 2,
+            "self": -2
+          }
+        },
+        "line": "{{name}}弹了《蒿里》。这个家的人围着听完，谁也没说话——她替所有人哭了一场，用琴。"
+      }
+    },
+    "grigory": {
+      "trade": [
+        {
+          "id": "grigory_wood",
+          "line": "{{name}}又挑出两块好木，码到墙角——不知道要给谁用的，先备着。",
+          "weight": 6,
+          "once": "day",
+          "when": {
+            "item": {
+              "wood": 3
+            }
+          },
+          "effects": {
+            "arcProgress": 1,
+            "items": {
+              "wood": -2
+            }
+          }
+        }
+      ],
+      "habits": [
+        {
+          "id": "grigory_oil",
+          "line": "{{name}}给家里的门轴上了油。门开合没声——他见不得门响。",
+          "silent": false,
+          "once": "run"
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "progressGte": 1
+            },
+            "line": "墙角的木料有模样了。{{name}}选的板，厚薄都对得上一个人。",
+            "effects": {
+              "memoirLine": "大柯墙角的木料越码越齐——他挑的板，厚薄都对得上一个人。"
+            }
+          },
+          {
+            "when": {
+              "progressGte": 3
+            },
+            "line": "木料码齐了半墙。有人问他做什么，他说：打口像样的。没说给谁。",
+            "effects": {
+              "wind": "大柯在攒木料——看那个尺寸，是打棺的。"
+            }
+          },
+          {
+            "when": {
+              "progressGte": 4
+            },
+            "line": "料齐了。{{name}}把刨子磨快，等一个他不希望的活——木匠的体面，是给每个人都备着这一口。",
+            "effects": {
+              "flags": {
+                "coffin_ready": true
+              },
+              "memoirLine": "棺的料齐了。大柯等一个他不希望的活——一等就是四十一天。"
+            },
+            "doneLine": "那口像样的棺，最后没用上。水退之前谁都没死——他把木料改成了第三张床。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "fuelLt": 2,
+          "item": {
+            "wood": 3
+          }
+        },
+        "chance": 0.5,
+        "cooldown": 4,
+        "effects": {
+          "items": {
+            "wood": -2
+          },
+          "memoirLine": "柴紧的那几天，木料少过两块。大柯说他没动。"
+        },
+        "line": "木料少了两块。{{name}}说他没动——手却在裤腿上擦了擦。"
+      }
+    },
+    "yura": {
+      "trade": [
+        {
+          "id": "yura_help",
+          "line": "{{name}}把家里的粗活揽了——翻角落、抬水，什么都干，什么都干不长。",
+          "weight": 5,
+          "once": "day",
+          "do": "search_home",
+          "when": {
+            "homeLeftover": true
+          }
+        },
+        {
+          "id": "yura_water",
+          "line": "{{name}}拎着囊去抬水。回来的时候袖子全湿——半路洒的，他说是雨。",
+          "weight": 4,
+          "once": "day",
+          "when": {
+            "waterLt": 3
+          },
+          "effects": {
+            "items": {
+              "water": 1
+            }
+          }
+        }
+      ],
+      "habits": [
+        {
+          "id": "yura_bite",
+          "line": "半块饼没了。{{name}}说他没吃——没人问过他。",
+          "silent": false,
+          "once": "day",
+          "effects": {
+            "items": {
+              "raw": -1
+            },
+            "mood": {
+              "self": 1
+            }
+          },
+          "when": {
+            "selfHungerLte": 1,
+            "item": {
+              "raw": 1
+            }
+          }
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "dayGte": 8
+            },
+            "line": "{{name}}开始跟大人们搭手。谁干什么他都看在眼里——大人以为他不懂，他什么都懂。",
+            "effects": {
+              "memoirLine": "阿禾什么都看在眼里。大人以为他不懂——这样他们能好受一点。"
+            }
+          },
+          {
+            "when": {
+              "dayGte": 16
+            },
+            "line": "他开始往水窦的方向看。没人知道为什么，他也不说。",
+            "effects": {
+              "wind": "阿禾总往水窦那头看。他姐姐约他的地方，就在水窦口。"
+            }
+          },
+          {
+            "when": {
+              "dayGte": 24
+            },
+            "line": "{{name}}把那半块饴的事说了。就一句，说完就去看火。",
+            "effects": {
+              "heard": "sewer",
+              "mood": {
+                "self": -1
+              },
+              "memoirLine": "水窦口没有人。阿禾跟所有人说「我没迟到」——那半块饴的甜，他记到今天。"
+            },
+            "doneLine": "他把「我不怕」说了一整个围城。只有一次，说得很快。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "selfMoodLte": -6
+        },
+        "cooldown": 5,
+        "effects": {},
+        "line": "「我不怕。」{{name}}说。他说得很快——从不说谎的人，谎也只有这一个。"
+      }
+    },
+    "vera": {
+      "trade": [
+        {
+          "id": "vera_tally",
+          "line": "{{name}}盘了家底——粮到几时、柴到几时，她算到顿。这个家没人再靠感觉活着。",
+          "weight": 3,
+          "once": "day",
+          "when": {
+            "dayEvery": 3
+          },
+          "effects": {
+            "knowledge": 0
+          }
+        },
+        {
+          "id": "vera_read_docs",
+          "line": "{{name}}把家里的文书挨份读完。没读完的券书，她不落印——这是她的规矩。",
+          "weight": 6,
+          "once": "day",
+          "when": {
+            "docsGte": 2,
+            "dayEvery": 2,
+            "knowledgeLt": 12
+          },
+          "effects": {
+            "knowledge": 1
+          }
+        }
+      ],
+      "habits": [
+        {
+          "id": "vera_check",
+          "line": "{{name}}对着光看纸。纸比人诚实——纸至少不假装。",
+          "silent": false,
+          "once": "run"
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "docsGte": 4
+            },
+            "line": "{{name}}开始数检署上的编号段——有几段，不该出现在这座城。",
+            "effects": {
+              "wind": "薄姑在数检署的编号段——有几段不该出现，她一排一排对。"
+            }
+          },
+          {
+            "when": {
+              "docsGte": 8
+            },
+            "line": "编号对上了大半。{{name}}的私人簿记又厚了一页。",
+            "effects": {
+              "knowledge": 1
+            }
+          },
+          {
+            "when": {
+              "docsGte": 12,
+              "knowledgeGte": 8
+            },
+            "line": "十七道说不清来路的检，说清了十五道。剩下两道，指向同一张网。",
+            "effects": {
+              "knowledge": 1,
+              "wind": "薄姑的簿记指向同一张网——逢双日，水路上有船。",
+              "memoirLine": "四百一十二枚检署她都封过。第 413 枚之后，她只封自己看得懂的。"
+            },
+            "doneLine": "她数完了第 413 枚。数完之后，这座城对她再也没有含糊过。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "foodPerMouthLt": 1
+        },
+        "chance": 0.4,
+        "cooldown": 4,
+        "effects": {
+          "memoirLine": "这一旬的账，末尾差了两笔。薄姑把差额盖住了——用精确撒的谎最像真的。"
+        },
+        "line": "这旬的账差了两笔。{{name}}把簿子合上，压平了角——她盖住了。"
+      }
+    },
+    "danilo": {
+      "trade": [
+        {
+          "id": "danilo_sell_jewel",
+          "line": "{{name}}夜里出去了一趟，回来时珠玑换成了肉脯——黑市的价，比鲁舟公道。",
+          "weight": 7,
+          "once": "day",
+          "when": {
+            "item": {
+              "jewel": 1
+            }
+          },
+          "effects": {
+            "items": {
+              "canned": 2
+            },
+            "notoriety": 1
+          },
+          "cost": [
+            {
+              "item": "jewel",
+              "n": 1
+            }
+          ]
+        },
+        {
+          "id": "danilo_sell_brocade",
+          "line": "{{name}}把蜀锦出了手，换回一盒良药。他在黑市上的信誉，比他的画像年轻十岁。",
+          "weight": 6,
+          "once": "day",
+          "when": {
+            "item": {
+              "brocade": 1
+            },
+            "anyoneSick": true
+          },
+          "effects": {
+            "items": {
+              "meds": 1
+            },
+            "notoriety": 1
+          },
+          "cost": [
+            {
+              "item": "brocade",
+              "n": 1
+            }
+          ]
+        },
+        {
+          "id": "danilo_sell_powder",
+          "line": "硝石换了三升米。{{name}}说这单亏了——他的「亏」，是赚得少。",
+          "weight": 5,
+          "once": "day",
+          "when": {
+            "item": {
+              "powder": 1
+            },
+            "foodPerMouthLt": 2
+          },
+          "effects": {
+            "items": {
+              "raw": 3
+            },
+            "notoriety": 1
+          },
+          "cost": [
+            {
+              "item": "powder",
+              "n": 1
+            }
+          ]
+        }
+      ],
+      "guardShy": true,
+      "habits": [
+        {
+          "id": "danilo_rule",
+          "line": "穷人的口袋是圣地，官家的仓是菜地——{{name}}的规矩，他念了一辈子，也守了一辈子。",
+          "silent": false,
+          "once": "run"
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "dayGte": 8,
+              "item": {
+                "meds": 1
+              }
+            },
+            "line": "黑市上又见了那批药的封皮。{{name}}认得——去年冬天，就是这一批。",
+            "effects": {
+              "wind": "黑市上有批药，封皮眼熟——去年冬天降卒营没等到的那船。"
+            }
+          },
+          {
+            "when": {
+              "dayGte": 16,
+              "anyoneSick": true,
+              "item": {
+                "meds": 2
+              }
+            },
+            "line": "{{name}}匀出一盒药，让人送去降卒营那头。没署名——账他自己记。",
+            "effects": {
+              "items": {
+                "meds": -1
+              },
+              "reputation": {
+                "hospital": 1
+              },
+              "mood": {
+                "self": 1
+              }
+            }
+          },
+          {
+            "when": {
+              "dayGte": 25
+            },
+            "line": "军法队的新画像贴出来了。{{name}}看了很久——像得很，他担心的事，一年比一年真。",
+            "effects": {
+              "notoriety": 1,
+              "memoirLine": "画像一年比一年像。江鳅最后悔的不是被通缉——是那船药他收了钱没送到。"
+            },
+            "doneLine": "画像终究没追上他。那船药的账，他这四十一天里一点一点还清了。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "foodPerMouthLt": 1
+        },
+        "chance": 0.4,
+        "cooldown": 4,
+        "effects": {
+          "items": {
+            "jewel": -1
+          }
+        },
+        "line": "少了一颗珠玑。{{name}}说他没拿——这次是真的没拿，可谁信呢。"
+      }
+    },
+    "alexey": {
+      "trade": [
+        {
+          "id": "alexey_radio",
+          "line": "{{name}}把烽鼓具一件一件装起来。装好的台必须能举火——这条规矩，他没跟人解释过。",
+          "weight": 8,
+          "once": "day",
+          "when": {
+            "noFacility": "radio",
+            "item": {
+              "parts": 6,
+              "comp": 4,
+              "elec": 2
+            }
+          },
+          "effects": {
+            "facility": {
+              "radio": 1
+            }
+          },
+          "cost": [
+            {
+              "item": "parts",
+              "n": 6
+            },
+            {
+              "item": "comp",
+              "n": 4
+            },
+            {
+              "item": "elec",
+              "n": 2
+            }
+          ]
+        }
+      ],
+      "habits": [
+        {
+          "id": "alexey_fire",
+          "line": "{{name}}把两根柴挪到墙角单独码好——那是留给烽火的，谁也不许动。",
+          "silent": true,
+          "once": "day",
+          "effects": {
+            "reserve": {
+              "firewood": 2
+            }
+          },
+          "when": {
+            "item": {
+              "firewood": 2
+            }
+          }
+        },
+        {
+          "id": "alexey_ear",
+          "line": "{{name}}夜里听更鼓，听得比谁都久。鼓没有乱——乱的从来是人。",
+          "silent": true,
+          "once": "day",
+          "effects": {
+            "telegraphEarly": 1
+          },
+          "when": {
+            "facility": "radio"
+          }
+        }
+      ],
+      "arc": {
+        "stages": [
+          {
+            "when": {
+              "facility": "radio"
+            },
+            "line": "烽鼓具响了。头一夜全是沙沙声，{{name}}听到后半夜——他在听的不是声音，是声音的规律。",
+            "effects": {
+              "memoirLine": "烽鼓具响的头一夜，逄灶听到后半夜——他听的不是声音，是规律。"
+            }
+          },
+          {
+            "when": {
+              "facility": "radio",
+              "knowledgeGte": 6
+            },
+            "line": "{{name}}说：那台，还立着。他没说哪座台——知道的人知道。",
+            "effects": {
+              "heard": "beacon"
+            }
+          },
+          {
+            "when": {
+              "facility": "radio",
+              "knowledgeGte": 9
+            },
+            "line": "{{name}}把火种备到了台边。举不举、几时举，他等一句话——等得到等不到，台都得能举。",
+            "effects": {
+              "wind": "逄灶说北津台还能举火——就差一句话、一双手。",
+              "memoirLine": "北津台的火种备好了。举不举、几时举，逄灶等一句话——台，他先修好了。"
+            },
+            "doneLine": "台修好了，火种备着。那句话他等到等不到，台都在那儿。"
+          }
+        ]
+      },
+      "stress": {
+        "when": {
+          "fuelLt": 1
+        },
+        "cooldown": 99,
+        "effects": {},
+        "line": "{{name}}不修东西了。他坐在那儿听——听什么，没人问得出。"
+      }
+    }
+  },
+  "pairs": [
+    {
+      "a": "anton",
+      "b": "marta",
+      "id": "am_ledger",
+      "line": "文简和辛夷对了一晚上的账——誊账之谊，二十年前的字还认得彼此。",
+      "weight": 4,
+      "cooldown": 4,
+      "effects": {
+        "mood": {
+          "self": 1,
+          "other": 1
+        }
+      }
+    },
+    {
+      "a": "anton",
+      "b": "katya",
+      "id": "ak_proof",
+      "line": "文简念，白简核——榜文上的字，一半是文简教的。师生俩把今天核完的字合上了。",
+      "weight": 4,
+      "cooldown": 4,
+      "effects": {
+        "knowledge": 1
+      },
+      "when": {
+        "knowledgeLt": 12
+      }
+    },
+    {
+      "a": "marta",
+      "b": "emil",
+      "id": "me_silence",
+      "line": "灶边两个人，一个熬药一个熬粥，一晚上没说一句话——建安十三年那个疫营，两人都在，都没提过。",
+      "weight": 3,
+      "cooldown": 4,
+      "effects": {
+        "items": {
+          "meal": 1
+        }
+      }
+    },
+    {
+      "a": "bron",
+      "b": "grigory",
+      "id": "bg_door",
+      "line": "石大和大柯一起修门——一个扛一个刨，那场火里互相拖过一次的人，干活不用说话。",
+      "weight": 5,
+      "cooldown": 6,
+      "effects": {
+        "door": 1
+      },
+      "cost": [
+        {
+          "item": "parts",
+          "n": 1
+        }
+      ]
+    },
+    {
+      "a": "katya",
+      "b": "zofia",
+      "id": "kz_score",
+      "line": "白简替素徽抄谱——一个修琴，一个抄谱，认识十年了。那半口气落在了纸上。",
+      "weight": 4,
+      "cooldown": 4,
+      "effects": {
+        "knowledge": 1
+      },
+      "when": {
+        "knowledgeLt": 12
+      }
+    },
+    {
+      "a": "alexey",
+      "b": "zofia",
+      "id": "az_drum",
+      "line": "逄灶和素徽对了几拍鼓谱——台上的旧约，两个人都还记得。北津台的更鼓，没有忘干净。",
+      "weight": 4,
+      "cooldown": 4,
+      "effects": {
+        "knowledge": 1
+      },
+      "when": {
+        "knowledgeLt": 12
+      }
+    },
+    {
+      "a": "danilo",
+      "b": "yura",
+      "id": "dy_route",
+      "line": "江鳅带阿禾认了半条水路——津戍与水窦，一条水道走了三年的人，教得又快又糙。",
+      "weight": 6,
+      "cooldown": 99,
+      "effects": {
+        "grantTrait": {
+          "trait": "stealthy",
+          "value": 1,
+          "label": "走夜路不出声"
+        }
+      }
+    },
+    {
+      "a": "danilo",
+      "b": "emil",
+      "id": "de_avoid",
+      "line": "老甑和江鳅在灶间碰见，各自让了半步——大仓的粮和那船药，账都经过这两双手。",
+      "weight": 3,
+      "cooldown": 8,
+      "effects": {
+        "mood": {
+          "self": -1,
+          "other": -1
+        }
+      }
+    },
+    {
+      "a": "grigory",
+      "b": "vera",
+      "id": "gv_stamp",
+      "line": "大柯的门版编号对上了薄姑的印——征发那夜，她的检署和他的门版，盖的是同一个印。",
+      "weight": 4,
+      "cooldown": 4,
+      "effects": {
+        "knowledge": 1
+      },
+      "when": {
+        "knowledgeLt": 12
+      }
+    },
+    {
+      "a": "katya",
+      "b": "vera",
+      "id": "kv_proof",
+      "line": "白简和薄姑校了一叠公牍——一个誊榜，一个验署，公文上打了多年交道的手，又搭上了。",
+      "weight": 4,
+      "cooldown": 4,
+      "effects": {
+        "knowledge": 1
+      },
+      "when": {
+        "knowledgeLt": 12
+      }
+    },
+    {
+      "a": "pavel",
+      "b": "yura",
+      "id": "py_race",
+      "line": "阿走和阿禾在巷口赛了一趟——十五岁的输得心服口服，笑出了这栋房子里最年轻的声音。",
+      "weight": 4,
+      "cooldown": 4,
+      "effects": {
+        "mood": {
+          "other": 2,
+          "self": 1
+        }
+      }
+    },
+    {
+      "a": "marta",
+      "b": "pavel",
+      "id": "mp_water",
+      "line": "阿走给辛夷的药棚抬了一囊水——路口那碗水，他记到今天。",
+      "weight": 4,
+      "cooldown": 4,
+      "effects": {
+        "items": {
+          "water": 1
+        },
+        "mood": {
+          "self": 1
+        }
+      }
+    }
+  ],
+  "vignettes": {
+    "chance": 0.35,
+    "items": [
+      {
+        "id": "v_sort",
+        "line": "{{name}}整理旧物，从箱底翻出一样小东西——没人记得家里有过它。",
+        "who": "any",
+        "weight": 3,
+        "effects": {
+          "items": {
+            "parts": 1
+          },
+          "knowledge": 1
+        }
+      },
+      {
+        "id": "v_mend",
+        "line": "{{name}}把几件破衣补了。针脚不好看，风进不来。",
+        "who": "any",
+        "weight": 3,
+        "effects": {
+          "mood": {
+            "self": 1
+          }
+        }
+      },
+      {
+        "id": "v_sun",
+        "line": "出了太阳。{{name}}把被褥和书都搬出来晒——半条巷子都是太阳的味道。",
+        "who": "any",
+        "weight": 4,
+        "when": {
+          "weather": [
+            "clear"
+          ]
+        },
+        "effects": {
+          "mood": {
+            "all": 1
+          }
+        }
+      },
+      {
+        "id": "v_rain",
+        "line": "下雨。{{name}}坐在檐下看了一晌——围城里能白坐着看雨的时辰，屈指可数。",
+        "who": "any",
+        "weight": 4,
+        "when": {
+          "weather": [
+            "rain"
+          ]
+        },
+        "effects": {
+          "mood": {
+            "self": 1
+          }
+        }
+      },
+      {
+        "id": "v_snow",
+        "line": "落雪。{{name}}扫出一条道，又停下来看雪把道重新盖上。",
+        "who": "any",
+        "weight": 3,
+        "when": {
+          "weather": [
+            "snow"
+          ]
+        },
+        "effects": {
+          "mood": {
+            "self": 1
+          }
+        }
+      },
+      {
+        "id": "v_sharpen",
+        "line": "{{name}}把家里的刀口都过了一遍磨石。刀不说话，但它们记情。",
+        "who": "any",
+        "weight": 3,
+        "when": {
+          "item": {
+            "knife": 1
+          }
+        },
+        "effects": {
+          "nightPrep": 1
+        }
+      },
+      {
+        "id": "v_marks",
+        "line": "{{name}}在门后的墙上刻了一道。没人问是什么意思——墙上原先就有别的名字。",
+        "who": "any",
+        "weight": 2,
+        "effects": {
+          "memoirLine": "门后的墙上有名有字有道道。橘里九号记自己的账。"
+        },
+        "once": "run"
+      },
+      {
+        "id": "v_neighbor",
+        "line": "{{name}}给隔壁递了半碗粮。没说缘故，也没等谢。",
+        "who": "any",
+        "weight": 2,
+        "when": {
+          "foodPerMouthLt": 3,
+          "item": {
+            "raw": 1
+          }
+        },
+        "effects": {
+          "reputation": {
+            "neighbor": 1
+          },
+          "mood": {
+            "self": 1
+          }
+        },
+        "cost": [
+          {
+            "item": "raw",
+            "n": 1
+          }
+        ]
+      },
+      {
+        "id": "v_count",
+        "line": "{{name}}把米缸量了三遍，得出一个很准又很不想说的数。",
+        "who": "trait:bookkeep",
+        "weight": 3,
+        "effects": {
+          "knowledge": 0
+        }
+      },
+      {
+        "id": "v_lesson",
+        "line": "{{name}}跟着大人看了一晌。手上没学会什么，眼睛会了。",
+        "who": "yura",
+        "weight": 3
+      },
+      {
+        "id": "v_tune",
+        "line": "{{name}}哼了半支不成调的曲子，被打断，又从头哼。",
+        "who": "any",
+        "weight": 3,
+        "effects": {
+          "mood": {
+            "all": 0
+          }
+        }
+      },
+      {
+        "id": "v_gruel",
+        "line": "{{name}}守着灶熬了一锅稀的——米少水多，热的。",
+        "who": "trait:cook",
+        "weight": 3,
+        "when": {
+          "facility": "stove",
+          "item": {
+            "raw": 1
+          }
+        },
+        "effects": {
+          "items": {
+            "meal": 1
+          }
+        },
+        "cost": [
+          {
+            "item": "raw",
+            "n": 1
+          }
+        ]
+      },
+      {
+        "id": "v_wall_listen",
+        "line": "{{name}}贴着墙听了一刻外头的街——听见的都是日常，日常就很好。",
+        "who": "trait:stealthy",
+        "weight": 3,
+        "effects": {
+          "wind": "有人贴墙听了半刻街上的动静——今日无事。"
+        }
+      },
+      {
+        "id": "v_pray",
+        "line": "{{name}}对着墙角的旧神主拜了拜。神主落了灰，他掸了掸。",
+        "who": "any",
+        "weight": 2,
+        "effects": {
+          "mood": {
+            "self": 1
+          }
+        }
+      },
+      {
+        "id": "v_fix_small",
+        "line": "{{name}}把一张瘸腿的案修好了。家里的东西又多活了一年。",
+        "who": "trait:craftAdv",
+        "weight": 3,
+        "when": {
+          "item": {
+            "parts": 1
+          }
+        },
+        "effects": {
+          "mood": {
+            "self": 1
+          }
+        },
+        "cost": [
+          {
+            "item": "parts",
+            "n": 1
+          }
+        ]
+      }
+    ]
+  },
+  "arcLabels": {
+    "anton": "日录",
+    "marta": "药圃",
+    "bron": "门",
+    "katya": "纠榜",
+    "pavel": "夜路",
+    "emil": "灶",
+    "zofia": "琴",
+    "grigory": "棺料",
+    "yura": "水窦",
+    "vera": "检署",
+    "danilo": "黑市",
+    "alexey": "烽鼓"
+  }
+}

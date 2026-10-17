@@ -23,7 +23,8 @@ export const DEFAULT_POLICY = {
   feeding: 'auto',        // auto=管家按饥饿自动喂食 / manual=玩家自己喂
   rationing: false,       // true=省粮（只喂饥饿线以下，熟食往后排）
   nightApproach: 'normal', // cautious=夜里不碰有声的锁 / bold=见锁就撬
-  overviewDays: true      // false=平淡日也逐件细看（概述日开关，长线体验 §4.4）
+  overviewDays: true,     // false=平淡日也逐件细看（概述日开关，长线体验 §4.4）
+  homePriority: 'auto'    // 重心覆写：auto=内核按晨报警情判；mouth/care/gear/guard/read=玩家一句话定
 };
 export function policyOf(state) {
   return { ...DEFAULT_POLICY, ...(state.policy || {}) };

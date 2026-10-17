@@ -7,6 +7,7 @@ import { dawnProblems } from './delegate.js';
 /** 概述日会被吞掉的例行流水 fact（做饭吃饭修修补补）——大事（文档/封印/死亡）永不吞 */
 export const ROUTINE_DAY_FACTS = new Set([
   'auto_day_start', 'eat', 'cook', 'craft', 'build', 'build_door', 'treat', 'talk',
+  'routine_done', 'idle_ap', 'pair_done', 'prep_night', 'cure_meat', 'mend_cloth', 'teach', 'errand', 'nightwork', 'nurse_night', 'prep_used',
   'read', 'guard', 'rest', 'nap', 'chop', 'repair', 'comfort_soup', 'play_piano',
   'search_hit', 'search_miss', 'radio_news', 'radio_weather', 'radio_music', 'radio_missing', 'radio_static',
   'no_ap', 'no_food', 'no_fuel', 'no_material', 'no_tool', 'no_item', 'no_med', 'no_furniture',

@@ -249,9 +249,11 @@ export function cardBrief(state, pack, card) {
         const inner = [y, dry].filter(Boolean).join('；');
         return pack.locMap[l].name + (inner ? `（${inner}）` : '');
       }).join('、');
+    const windLine = (state.windLines || []).length ? `【今日风声】${state.windLines.join('；')}。选项可引用。\n` : '';
+    const focusLine = state.focus && state.focus.key !== 'steady' ? `【今日重心】${{ mouth: '稳嘴', care: '养人', gear: '备器', guard: '守家', read: '读城' }[state.focus.key]}——方案先伺候它。\n` : '';
     const famineVow = (mealsN <= 1 && Object.values(state.directions || {}).some((d) => d.kind === 'vow' && d.alive))
       ? '眼下断粮，嘴最急——不要出践誓类选项（带不回吃的的誓地这晚就是空炮），誓等缓过来再兑。' : '';
-    return `黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。${famineLine}${famineVow}夜里出门只能一个人（${state.sidestory ? '这一局的规矩' : '围城规矩'}：人多目标大）——「大家都出去」做不到，选一个最合适的，其余在家守或睡。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
+    return `${focusLine}${windLine}黄昏，今晚怎么安排。走得动的人：${state.chars.filter((c) => c.alive).map((c) => `${c.name}(${c.id})`).join('、')}。已知地点：${known}。可以给外出者带装备。${famineLine}${famineVow}夜里出门只能一个人（${state.sidestory ? '这一局的规矩' : '围城规矩'}：人多目标大）——「大家都出去」做不到，选一个最合适的，其余在家守或睡。\n出的是**今晚派工**：每个选项的 intents 只需一个 {"type":"dusk_assign","scavenger":<谁去|在家为null>,"location":<去哪|留守为null>,"gear":[带什么],"others":{<其余人id>:"sleep"或"guard"}}。留守派工（scavenger=null）也是正经答案。有人立过誓且誓的地点在已知地点里，派他去该地就是践誓；黄昏不收 direction/policy——念头白天说，黄昏只派工。${closed}${menu}\n\n${ids}`;
   }
   if (card === 'night') {
     const loc = pack.locMap[state.night?.locId];

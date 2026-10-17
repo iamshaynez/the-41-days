@@ -61,8 +61,14 @@ function playOne(pack, seed, policyName, maxDays, sidestory = null, randomChoice
     s.over = true; s.ending = { type: 'timeout', day: s.day };
   }
   const deaths = s.chars.filter((c) => !c.alive).map((c) => c.name);
+  // 居家与四问 KPI（每局）：自主动作种数、覆盖天数比（routineSeen 按"种"记首见日，种数/天数近似覆盖密度）
+  const routines = Object.keys(s.routineSeen || {});
+  const routineDays = (s.routineTodayLog || 0);
   return {
     seed, policy: policyName, days: s.day,
+    distinctRoutines: routines.length,
+    routineDays: s.routineDays || 0,
+    routineCover: s.day ? Math.min(1, (s.routineDays || 0) / s.day) : 0,
     roster: s.chars.length,
     endingTitle: s.ending?.storyline?.title?.split(' · ').slice(-1)[0] || s.ending?.type || 'wiped',
     sideCards: Object.keys(s.firedOnce || {}).filter((id) => pack.cardMap[id]?.side).length,
@@ -178,6 +184,8 @@ function computeKpis(runs, policies) {  const by = {};
       ceasefire_rate: ceasefire.length / rs.length,
       docs_median: median(rs.map((r) => r.docs).sort((a, b) => a - b)),
       overview_share: rs.reduce((a, r) => a + (r.overviews || 0), 0) / rs.reduce((a, r) => a + Math.max(1, r.days), 0),
+      routine_days_share: rs.reduce((a, r) => a + (r.routineDays || 0), 0) / rs.reduce((a, r) => a + Math.max(1, r.days), 0),
+      distinct_routines_median: median(rs.map((r) => r.distinctRoutines || 0).sort((a, b) => a - b)),
       raid_wipe_unknown: null
     };
   }
@@ -197,6 +205,13 @@ export function checkGates(report, gates) {
     if (!inBand(bal.docs_median, g.docs_per_run_median)) failures.push(`每局文档中位数 ${bal.docs_median} 越带 ${JSON.stringify(g.docs_per_run_median)}`);
     if (g.overview_share && bal.overview_share !== undefined && !inBand(bal.overview_share, g.overview_share)) {
       failures.push(`概述日占比 ${bal.overview_share.toFixed(3)} 越带 ${JSON.stringify(g.overview_share)}（机器人策略偏糙，下限是存在性断言——真实玩家的安静日更多）`);
+    }
+    // 居家与四问（设计说明见 docs/居家与四问-v0.1.md §6）：家里不许再是空转的——有自主动作的天、每局自主动作种数
+    if (g.routine_days_share && bal.routine_days_share !== undefined && !inBand(bal.routine_days_share, g.routine_days_share)) {
+      failures.push(`有自主动作的天占比 ${bal.routine_days_share.toFixed(2)} 越带 ${JSON.stringify(g.routine_days_share)}`);
+    }
+    if (g.distinct_routines_median && bal.distinct_routines_median !== undefined && !inBand(bal.distinct_routines_median, g.distinct_routines_median)) {
+      failures.push(`每局自主动作种数中位 ${bal.distinct_routines_median} 越带 ${JSON.stringify(g.distinct_routines_median)}`);
     }
     // 恶魔策略（若在样本里）：存活率应显著低于均衡
     const devil = report.kpis.devil;

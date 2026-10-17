@@ -261,7 +261,7 @@ export function tickWar(ctx) {
     s.winterActive = false;
     ctx.emit('WINTER_END', {}); ctx.fact('winter_end', {});
   }
-  if (!war.telegraphed && !s.sidestory && s.day >= war.endDay - ctx.pack.manifest.war.telegraphDays) { // 别传没有交割前兆
+  if (!war.telegraphed && !s.sidestory && s.day >= war.endDay - ctx.pack.manifest.war.telegraphDays - (s.telegraphBonus || 0)) { // 别传没有交割前兆；逄灶听得出更早的动静
     war.telegraphed = true;
     ctx.emit('WAR_TELEGRAPH', {}); ctx.fact('war_telegraph', {});
   }

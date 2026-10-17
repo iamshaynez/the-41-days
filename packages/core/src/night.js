@@ -1,7 +1,7 @@
 // 夜间探索引擎（内核设计 §6：时间槽/门与容器/声响/检定/战斗/NPC）。
 // 门状态记在 night.unlocked/cleared/sawed（不污染内容对象）；locState 经事件记账。
 import { charById, combatModOf, moodLevel, aliveChars } from './state.js';
-import { findDoc, docAvailable } from './dayActions.js';
+import { findDoc, docAvailable, applyDayAction } from './dayActions.js';
 import { recordCausal } from './causality.js';
 import { locInPool } from './unlock.js';
 import { stepGateOk } from './mainline.js';
@@ -16,6 +16,8 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
     const c = charById(s, id);
     if (!c) continue;
     if (plan === 'guard') { c.guardTonight = true; c.awakeTonight = true; ctx.emit('CHAR_FLAG', { char: id, key: 'guardTonight', val: true }); ctx.emit('CHAR_FLAG', { char: id, key: 'awakeTonight', val: true }); recordCausal(ctx, 'guard_night', { actor: id, target: 'home' }); }
+    else if (plan === 'nurse') nightNurse(ctx, c);
+    else if (plan === 'work') nightWork(ctx, c);
     else { c.awakeTonight = false; ctx.emit('CHAR_FLAG', { char: id, key: 'awakeTonight', val: false }); }
   }
   // A-3 协防承诺兑现：白天答应替邻居守门（n_thugs 的 flagTonight），这一夜家里人手都在门外街上——
@@ -63,7 +65,7 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
   }
   s.night = {
     home: false, locId: location, charId: c.id,
-    room: loc.rooms[0].id, slots: pack.manifest.nightSlots, noise: 0,
+    room: loc.rooms[0].id, slots: pack.manifest.nightSlots + (s.nightPrep || 0), noise: 0,
     pack: carried, packSlots: slotsUsed, cap: c.backpack, observed: {},
     unlocked: {}, cleared: {}, sawed: {}, firstVisit: st.firstVisit,
     gear: [...carried], lowSlotsAck: false
@@ -82,6 +84,7 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
   }
   s.phase = 'night';
   ctx.emit('NIGHT_STARTED', { loc: location, char: c.id, night: s.night });
+  if (s.nightPrep) { ctx.fact('prep_used', { char: c.id, n: s.nightPrep }); s.nightPrep = 0; ctx.emit('FLAG', { key: 'nightPrep', val: 0 }); }
   ctx.fact('night_arrive', { char: c.id, loc: loc.name, slots: s.night.slots });
   // 停火窗口（灰雀线三选择的第三路）：乐谱生效期内，前线没有枪声
   const hushed = location === 'frontline' && (s.eventFlags.crossing_hushed_until || 0) >= s.day;
@@ -507,4 +510,42 @@ export function endNightReturn(ctx, reason) {
 function forceEnd(ctx, reason) {
   endNightReturn(ctx, reason);
   return { ok: true, ended: true };
+}
+
+
+/** 夜岗·看护（居家与四问）：医者陪病人一夜——按"治过"结算（药照消耗），自己疲劳 +1 */
+function nightNurse(ctx, c) {
+  const s = ctx.s;
+  c.awakeTonight = true; ctx.emit('CHAR_FLAG', { char: c.id, key: 'awakeTonight', val: true });
+  if (!c.traits?.healer) { ctx.fact('need_trait', { trait: '懂医' }); return; }
+  const patient = [...aliveChars(s)].filter((x) => x.id !== c.id && (x.sick >= 1 || x.wound >= 1))
+    .sort((a, b) => (b.sick * 2 + b.wound) - (a.sick * 2 + a.wound))[0];
+  if (!patient) { ctx.fact('no_patient', {}); return; }
+  let med = null;
+  if (patient.wound >= 1 && ctx.hasItem('bandage')) { ctx.takeItem('bandage', 1, '看护'); ctx.setCharFlag(patient, 'woundTreatedDay', s.day); med = 'bandage'; }
+  else if (patient.sick >= 1 && ctx.hasItem('meds')) { ctx.takeItem('meds', 1, '看护'); ctx.setCharFlag(patient, 'sickTreatedDay', s.day); med = 'meds'; }
+  else if (patient.sick >= 1 && ctx.hasItem('herbmed')) { ctx.takeItem('herbmed', 1, '看护'); ctx.setCharFlag(patient, 'sickTreatedDay', s.day); ctx.setCharFlag(patient, 'sickTreatedHerb', true); med = 'herbmed'; }
+  ctx.setFatigue(c, c.fatigue + 1, '守了一夜病人');
+  ctx.setCharFlag(patient, 'bedRest', true); // 被看护的人按卧床计（深眠）
+  ctx.fact('nurse_night', { char: c.id, patient: patient.id, med });
+}
+
+/** 夜岗·夜作：点灯做一件安静的活（做饭/手艺/缝补/读书），疲劳 +1，灯火招贼（raid 读 nightWork） */
+function nightWork(ctx, c) {
+  const s = ctx.s, pack = ctx.pack;
+  c.awakeTonight = true; ctx.emit('CHAR_FLAG', { char: c.id, key: 'awakeTonight', val: true });
+  const prevPhase = s.phase, prevAp = c.ap;
+  s.phase = 'day'; c.ap = Math.max(c.ap, 1); // 借夜里的精神干白天的活：动作管线要白天相位与一点行动力
+  let done = null;
+  const tryAct = (intent) => { if (done) return; const r = applyDayAction(ctx, { type: 'act', actor: c.id, ...intent }); if (r?.ok) done = intent.action; };
+  if (s.facilities.stove && (ctx.hasItem('raw') || ctx.hasItem('meat') || ctx.hasItem('veg', 2))) tryAct({ action: 'cook' });
+  if (c.traits?.healer && s.facilities.workbench && ctx.hasItem('parts', 2) && ctx.hasItem('water', 1) && c.mendedToday !== s.day) tryAct({ action: 'mend_cloth' });
+  if (s.facilities.workbench && ctx.hasItem('herb', 3)) tryAct({ action: 'craft', target: 'make_herbmed' });
+  if (s.facilities.workbench && ctx.hasItem('comp', 1) && !ctx.hasItem('lockpick')) tryAct({ action: 'craft', target: 'make_lockpick' });
+  if (ctx.hasItem('book') && !c.readToday) tryAct({ action: 'read' });
+  s.phase = prevPhase; c.ap = prevAp; // 行动力借完归还（夜作花的是疲劳不是 AP）
+  ctx.emit('CHAR_FLAG', { char: c.id, key: 'ap', val: c.ap });
+  ctx.setFatigue(c, c.fatigue + 1, '点灯干了半夜活');
+  ctx.setFlag('nightWork', [...(s.nightWork || []), c.id]);
+  ctx.fact('nightwork', { char: c.id, did: done });
 }
