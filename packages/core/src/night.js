@@ -1,10 +1,63 @@
 // 夜间探索引擎（内核设计 §6：时间槽/门与容器/声响/检定/战斗/NPC）。
 // 门状态记在 night.unlocked/cleared/sawed（不污染内容对象）；locState 经事件记账。
+// 夜野 v0.1：地点不再是同一张桌子——nightRules（恒定性格）× nightTable（每夜夜况）× 天气（跨地变数）
+// 三层合成 night.env（槽/声/巡逻/失手/湿陷/寒），开局掷定随 NIGHT_STARTED 落盘可回放。
 import { charById, combatModOf, moodLevel, aliveChars } from './state.js';
 import { findDoc, docAvailable, applyDayAction } from './dayActions.js';
 import { recordCausal } from './causality.js';
 import { locInPool } from './unlock.js';
 import { stepGateOk } from './mainline.js';
+
+/** 天气对夜的影响系数（manifest.night.env 可覆写；不认识的天气回落恒等） */
+const WEATHER_ENV = {
+  rain: { noiseMul: 0.7, miss: 0.1, wet: 0.1 },
+  fog: { miss: 0.2, patrolMul: 0.7 },
+  snow: { patrolMul: 0.8 },
+  clear: { patrolMul: 1.15 },
+  cold: {}
+};
+
+/** threat → 巡逻基线：写显 nightRules.patrol 的地点按写的算；
+ *  没写的按威胁推导（threat≤1 无巡逻——教堂与空宅的安静是性格，不是漏洞） */
+function patrolBase(loc) {
+  if (loc.nightRules && loc.nightRules.patrol !== undefined) return loc.nightRules.patrol;
+  return Math.max(0, (loc.threat || 0) - 1) * 0.055;
+}
+
+/** 掷夜况并合成环境（纯读 loc/manifest/weather——fold 走 NIGHT_STARTED 载荷，不重算） */
+export function rollNightEnv(ctx, loc) {
+  const s = ctx.s;
+  const rules = loc.nightRules || {};
+  const nc = ctx.pack.manifest.night || {};
+  const weatherEnv = { ...WEATHER_ENV[s.weather] };
+  Object.assign(weatherEnv, (nc.env && nc.env[s.weather]) || {});
+  // 夜况：地点夜况表掷一条（无表的地点 env 仍是天气的函数——夜夜仍有小变数）
+  const table = loc.nightTable || [];
+  const cond = table.length ? ctx.rng.weighted(table.map((c) => ({ w: c.w || 1, c }))).c : null;
+  const fx = cond?.fx || {};
+  const clamp01 = (x) => Math.max(0, Math.min(0.6, x));
+  const env = {
+    slots: (rules.slots || 0) + (fx.slots || 0),
+    noiseMul: (rules.noiseMul ?? 1) * (fx.noiseMul ?? 1) * (weatherEnv.noiseMul ?? 1),
+    patrol: Math.max(patrolBase(loc), fx.patrol || 0) * (weatherEnv.patrolMul ?? 1),
+    miss: clamp01((rules.miss || 0) + (fx.miss || 0) + (weatherEnv.miss || 0)),
+    wet: clamp01((rules.wet || 0) + (fx.wet || 0) + (weatherEnv.wet || 0)),
+    cold: !!(rules.cold || fx.cold),
+    lootBias: Object.keys(rules.lootBias || {}).length || Object.keys(fx.lootBias || {}).length
+      ? { ...(rules.lootBias || {}), ...(fx.lootBias || {}) } : null
+  };
+  return { cond, env };
+}
+
+/** 夜访中的环境读数（老档/别传无 env 字段 → 全默认，行为与 0.40 一致） */
+export function nightEnvOf(n, loc) {
+  return n?.env || { slots: 0, noiseMul: 1, patrol: 0, miss: 0, wet: 0, cold: false, lootBias: null };
+}
+
+/** 地点恒定的进门心情（乱葬岗这一类：地方本身压人，与夜况无关） */
+function rulesMood(loc) {
+  return loc.nightRules?.moodOnEnter || 0;
+}
 
 export function startNight(ctx, { scavenger, location, gear = [], others = {} }) {
   const s = ctx.s, pack = ctx.pack;
@@ -45,10 +98,11 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
   const nc = ctx.pack.manifest.night || {};
   const refillMinDays = nc.refillMinDays ?? 2;
   const refillChance = nc.refillChance ?? 0.6;
+  const refillMul = loc.nightRules?.refillMul ?? 1; // 野外的东西长得回来，城里的东西搬空就空了
   for (const r of loc.rooms) {
     for (const cont of r.containers || []) {
       const when = st.searched[cont.id];
-      if (when && s.day - when >= refillMinDays && ctx.rng.chance(refillChance)) {
+      if (when && s.day - when >= refillMinDays && ctx.rng.chance(Math.min(0.95, refillChance * refillMul))) {
         delete st.searched[cont.id];
         ctx.emit('LOC_REFILL', { loc: location, cont: cont.id });
         ctx.fact('container_refilled', { name: cont.name });
@@ -63,12 +117,16 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
     carried.push(g);
     slotsUsed += pack.itemMap[g].slots || 1;
   }
+  // 夜野：掷夜况、合成环境——env 随 night 对象落进 NIGHT_STARTED，回放即重建
+  const { cond, env } = rollNightEnv(ctx, loc);
   s.night = {
     home: false, locId: location, charId: c.id,
-    room: loc.rooms[0].id, slots: pack.manifest.nightSlots + (s.nightPrep || 0), noise: 0,
+    room: loc.rooms[0].id, slots: pack.manifest.nightSlots + (s.nightPrep || 0) + env.slots,
+    noise: 0,
     pack: carried, packSlots: slotsUsed, cap: c.backpack, observed: {},
     unlocked: {}, cleared: {}, sawed: {}, firstVisit: st.firstVisit,
-    gear: [...carried], lowSlotsAck: false
+    gear: [...carried], lowSlotsAck: false,
+    env, ...(cond ? { cond: { id: cond.id, name: cond.name, text: cond.text } } : {})
   };
   c.awakeTonight = true;
   ctx.emit('CHAR_FLAG', { char: c.id, key: 'awakeTonight', val: true });
@@ -86,6 +144,11 @@ export function startNight(ctx, { scavenger, location, gear = [], others = {} })
   ctx.emit('NIGHT_STARTED', { loc: location, char: c.id, night: s.night });
   if (s.nightPrep) { ctx.fact('prep_used', { char: c.id, n: s.nightPrep }); s.nightPrep = 0; ctx.emit('FLAG', { key: 'nightPrep', val: 0 }); }
   ctx.fact('night_arrive', { char: c.id, loc: loc.name, slots: s.night.slots });
+  if (s.night.cond) {
+    ctx.fact('night_cond', { loc: loc.name, name: s.night.cond.name, text: s.night.cond.text, slots: env.slots || 0, patrol: env.patrol > 0 });
+    const enterMood = (cond.fx?.mood || 0) + (rulesMood(loc) || 0);
+    if (enterMood) ctx.mood(c, enterMood, `夜况：${s.night.cond.name}`);
+  }
   // 停火窗口（灰雀线三选择的第三路）：乐谱生效期内，前线没有枪声
   const hushed = location === 'frontline' && (s.eventFlags.crossing_hushed_until || 0) >= s.day;
   if (hushed) ctx.fact('crossing_hushed', {});
@@ -223,12 +286,71 @@ export function applyNightAction(ctx, intent) {
       }
       const cont = r.containers?.find((x) => x.id === intent.target) || r.containers?.find((x) => !st.searched[x.id]);
       if (!cont) return nightError(ctx, '没有可搜的容器了');
+      if (cont.type === 'buried' && !st.searched[cont.id + ':open']) return nightError(ctx, '埋着的东西——先 dig 挖开（铲子省力，徒手也能挖）');
       if (cont.type === 'locked' && !st.searched[cont.id + ':open']) return nightError(ctx, '容器上着锁，先 open');
       if (st.searched[cont.id]) return nightError(ctx, '搜过了');
       spend(ctx, 1);
+      const env = nightEnvOf(n, loc);
+      // 黑暗失手（夜野）：看不清的屋子摸黑翻——先 observe 看过一圈，失手减半
+      const miss = env.miss * (n.observed[r.id] ? 0.5 : 1);
+      if (miss > 0 && ctx.rng.chance(miss)) {
+        st.searched[cont.id] = s.day;
+        ctx.emit('LOC_SEARCHED', { loc: n.locId, cont: cont.id, day: s.day });
+        ctx.fact('search_miss_dark', { name: cont.name });
+        return { ok: true };
+      }
+      // 湿陷（夜野）：水汽漫上来的一格白翻——泽地与船舱的夜比城里短
+      if (env.wet > 0 && ctx.rng.chance(env.wet)) {
+        spend(ctx, 1);
+        ctx.fact('wet_slip', { name: cont.name });
+      }
       st.searched[cont.id] = s.day;
       ctx.emit('LOC_SEARCHED', { loc: n.locId, cont: cont.id, day: s.day });
       lootNight(ctx, cont, c);
+      return { ok: true };
+    }
+    // 挖开埋着的容器（夜野·乱葬岗/泽地埋瓮）：铲子两格无声；徒手三格带响，人也会累
+    case 'dig': {
+      const r = room();
+      const st = s.locState[n.locId];
+      const cont = r.containers?.find((x) => x.id === (intent.target || '')) || r.containers?.find((x) => x.type === 'buried' && !st.searched[x.id + ':open']);
+      if (!cont || cont.type !== 'buried' || st.searched[cont.id + ':open']) return nightError(ctx, '这里没有埋着可挖的东西');
+      if (carried(ctx, 'shovel')) {
+        spend(ctx, 2);
+        ctx.fact('night_dig', { name: cont.name, with: 'shovel' });
+      } else {
+        spend(ctx, 3); addNoise(ctx, 1);
+        ctx.setFatigue(c, c.fatigue + 1, '徒手刨土');
+        ctx.fact('night_dig', { name: cont.name, with: 'hands' });
+      }
+      st.searched[cont.id + ':open'] = true;
+      ctx.emit('LOC_SEARCHED', { loc: n.locId, cont: cont.id + ':open' });
+      return { ok: true };
+    }
+    // 巡逻岔路的答法（夜野）：藏进暗处/交出一件东西打发——动手走 attack@patrol
+    case 'hide': {
+      if (!n.patrol) return nightError(ctx, '没有火把在逼近');
+      spend(ctx, 2);
+      const mod = (c.traits?.stealthy || 0) + (n.observed[n.room] ? 1 : 0);
+      const rk = ctx.check('藏匿', mod);
+      if (rk.outcome === 'fail') {
+        ctx.fact('patrol_hide_fail', {});
+        return patrolCombat(ctx, c);
+      }
+      clearPatrol(ctx);
+      ctx.fact('patrol_evaded', {});
+      return { ok: true };
+    }
+    case 'bribe': {
+      if (!n.patrol) return nightError(ctx, '没有火把在逼近');
+      const droppable = n.pack.filter((x) => !n.gear.includes(x));
+      if (!droppable.length) return nightError(ctx, '身上没有可以交出去的东西');
+      // 挑最值钱的一件递出去——巡兵认的是分量不是种类
+      const best = droppable.reduce((a, b) => ((ctx.pack.itemMap[b]?.value || 0) >= (ctx.pack.itemMap[a]?.value || 0) ? b : a));
+      removeCarried(ctx, best);
+      ctx.addItem(best, -1, '打发巡兵');
+      clearPatrol(ctx);
+      ctx.fact('patrol_bribed', { item: ctx.pack.itemMap[best]?.name || best });
       return { ok: true };
     }
     case 'dialogue': {
@@ -272,6 +394,12 @@ export function applyNightAction(ctx, intent) {
       return { ok: true };
     }
     case 'attack': {
+      // 巡逻不是地点住民：转进遭遇战（打赢照常可搜身——他背的东西掉在地上）
+      if (intent.target === 'patrol') {
+        if (!n.patrol) return nightError(ctx, '火把已经走了');
+        spend(ctx, 1);
+        return patrolCombat(ctx, c);
+      }
       const npc = (loc.npcs || []).find((x) => x.id === intent.target);
       if (!npc) return nightError(ctx, '无此目标');
       const st = s.locState[n.locId];
@@ -318,6 +446,35 @@ function carried(ctx, id) {
   const n = ctx.s.night;
   return n && n.pack && n.pack.includes(id);
 }
+
+/** 巡逻遭遇战（夜野）：威胁即强度——军营的火把比南市的硬。打赢即清账，顺手捡走他掉的 */
+function patrolCombat(ctx, c) {
+  const s = ctx.s;
+  const loc = ctx.pack.locMap[s.night.locId];
+  const th = loc?.threat || 2;
+  const patrol = {
+    id: 'patrol', name: '巡夜人', stance: 'hostile', armed: th >= 3,
+    carry: [
+      { item: 'canned', count: [1, 2], w: 2 },
+      { item: 'bullet', count: [0, 2], w: th >= 3 ? 2 : 0 },
+      { item: 'meal', count: [1, 1], w: 1 }
+    ]
+  };
+  const r = combatRound(ctx, patrol, c, { surprise: true });
+  if (r.combat === 'win') { // 巡逻是流动的：倒下即从夜里退场，掉的军粮当场可拾
+    lootNight(ctx, { id: 'patrol', name: '巡夜人', loot: patrol.carry }, c);
+    ctx.fact('patrol_down', {});
+    s.night.patrol = null;
+    ctx.emit('NIGHT_PATCH', { patrol: null });
+  }
+  return r;
+}
+function clearPatrol(ctx) {
+  const s = ctx.s;
+  if (!s.night?.patrol) return;
+  s.night.patrol = null;
+  ctx.emit('NIGHT_PATCH', { patrol: null });
+}
 function removeCarried(ctx, id) {
   const n = ctx.s.night;
   const i = n.pack.indexOf(id);
@@ -334,8 +491,9 @@ function addNoise(ctx, n) {
   const s = ctx.s;
   s.night.noise += n;
   ctx.emit('NOISE', { to: s.night.noise });
+  const env = nightEnvOf(s.night, ctx.pack.locMap[s.night.locId]);
   for (let k = 0; k < n; k++) {
-    if (ctx.rng.chance(0.25)) {
+    if (ctx.rng.chance(0.25 * env.noiseMul)) {
       const loc = ctx.pack.locMap[s.night.locId];
       for (const x of loc.npcs || []) if (!s.locState[s.night.locId].npcState[x.id]) {
         s.locState[s.night.locId].npcState[x.id] = 'alert';
@@ -343,12 +501,22 @@ function addNoise(ctx, n) {
       }
       ctx.fact('night_noise_alert', {});
     }
+    // 巡逻（夜野）：火把循声而来——没写巡逻的空地也有威胁，撬棍的每一声都算数
+    if (!s.night.patrol && env.patrol > 0 && ctx.rng.chance(env.patrol)) {
+      s.night.patrol = { from: s.night.noise };
+      ctx.emit('NIGHT_PATCH', { patrol: s.night.patrol });
+      ctx.fact('patrol_coming', { loc: ctx.pack.locMap[s.night.locId]?.name });
+    }
   }
 }
 
 function lootNight(ctx, cont, c) {
   const s = ctx.s;
-  const entries = (cont.loot || []).filter((e) => (e.w || 0) > 0);
+  const env = nightEnvOf(s.night, ctx.pack.locMap[s.night?.locId]);
+  const entries = (cont.loot || []).filter((e) => (e.w || 0) > 0)
+    // 夜况偏置（夜野）：涨水冲来的、盗掘者翻剩的——同一张货表，今夜不一样
+    .map((e) => { const b = env.lootBias?.[e.item]; return b !== undefined ? { ...e, w: e.w * b } : e; })
+    .filter((e) => (e.w || 0) > 0);
   if (entries.length) {
     // 每箱掷 N 次（§12 规格）——次数与命中率住内容包（manifest.night）
     const nc = ctx.pack.manifest.night || {};
@@ -490,7 +658,6 @@ export function endNightReturn(ctx, reason) {
       if (inPack) ctx.addItem(g, 1, '归还装备');
       else ctx.addItem(g, 1, '战损归位'); // 被丢弃逻辑保护，理论不可达；防御性归还
     }
-    ctx.emit('NIGHT_ENDED', { loc: n.locId, reason: reason || 'dawn', carried: n.pack.length, gear: n.gear || [] });
     // 今晚真正出门的人（破晓疲劳结算据此区分「夜访未眠」与守卫的睡椅相抵）
     ctx.outTonight = n.charId;
     // A-1 夜访事实带人名：叙事者不再拿渡口的鲁舟顶包（二周目实测 8+ 处主语顶替）
@@ -499,7 +666,19 @@ export function endNightReturn(ctx, reason) {
     s.lastScavenger = n.charId;
     ctx.emit('FLAG', { key: 'lastScavenger', val: n.charId });
     const st = s.locState[n.locId];
-    if (st) st.firstVisit = false;
+    if (st) {
+      st.firstVisit = false;
+      st.lastVisitDay = s.day; // 方案卡的轮换依据（fold 经 NIGHT_ENDED 还原）
+    }
+    // 寒地收工（夜野）：在冷地方熬到后半夜的人，回家比出门多一分倦——冬季翻倍
+    const loc = ctx.pack.locMap[n.locId];
+    const env = nightEnvOf(n, loc);
+    if (env.cold) {
+      const who = charById(s, n.charId);
+      if (who && who.alive) ctx.setFatigue(who, who.fatigue + (s.winterActive ? 2 : 1), '寒夜收工');
+      ctx.fact('cold_night_end', { loc: loc?.name });
+    }
+    ctx.emit('NIGHT_ENDED', { loc: n.locId, reason: reason || 'dawn', carried: n.pack.length, gear: n.gear || [], lastVisitDay: s.day });
   } else {
     ctx.emit('NIGHT_ENDED', { home: true });
   }

@@ -161,7 +161,7 @@ export function operatorPolicy(name) {
     default: // balanced：参考运营
       return {
         day: (s, pack) => baseDay(s, pack, { build: true }),
-        dusk: (s) => {
+        dusk: (s, pack) => {
           const fit = s.chars.filter((c) => c.alive && c.wound < 3 && c.sick < 3);
           const scav = fit.sort((a, b) => b.backpack - a.backpack)[0];
           const others = {};
@@ -170,21 +170,38 @@ export function operatorPolicy(name) {
           for (const g of guards.slice(0, s.day >= 30 ? 2 : 1)) others[g.id] = 'guard';
           for (const c of s.chars.filter((x) => x.alive)) if (!others[c.id]) others[c.id] = 'sleep';
           if (!scav) return { type: 'dusk_assign', scavenger: null, others };
-          const known = s.knownLocs.filter((l) => l !== 'home');
-          // v0.2 仪表校准：缺粮之夜直奔粮行（南市是食物矿），其余按"最久未访"轮换
+          const known = s.knownLocs.filter((l) => l !== 'home' && pack?.locMap[l]);
+          // 夜野校准：旧版硬编码六地名单把机器人锁死在五地（40 局模拟其余全零到访）——
+          // 改为全已知地点动态轮换：缺粮直奔粮仓，其余「没去过的优先，去过的最久未访优先」
           const foodEq = (s.inventory.raw || 0) + (s.inventory.canned || 0) + (s.inventory.meat || 0) + (s.inventory.veg || 0) + (s.inventory.meal || 0) * 2;
-          const lastVisit = {};
-          for (const e of (s.causality?.entries || [])) if (e.verb === 'volunteer') lastVisit[e.target] = e.day;
-          const richOrder = ['market', 'villas', 'church', 'hospital', 'post', 'frontline'];
-          const ranked = richOrder.filter((l) => known.includes(l))
-            .sort((a, b) => (lastVisit[a] || 0) - (lastVisit[b] || 0));
-          const loc = (foodEq < 8 && known.includes('market')) ? 'market' : (ranked[0] || known[0]);
+          const lastV = (l) => s.locState?.[l]?.lastVisitDay ?? -1;
+          const never = (l) => !s.locState?.[l];
+          const ranked = [...known].sort((a, b) => (Number(never(b)) - Number(never(a))) || (lastV(a) - lastV(b)));
+          const famine = foodEq < 8;
+          const foodRich = (l) => {
+            const loc = pack?.locMap[l];
+            if (!loc) return false;
+            return (loc.rooms || []).some((r) => (r.containers || []).some((c) => (c.loot || []).some((e) => ['meal', 'canned', 'raw', 'meat', 'veg'].includes(e.item) && e.w > 0)));
+          };
+          const loc = famine ? (ranked.find(foodRich) || ranked[0] || known[0]) : (ranked[0] || known[0]);
+          // 家什按地点配（锁→撬棍，瓦砾/埋→铲，栅栏→锯，险地带刀）
           const gear = [];
-          if (s.inventory.crowbar) gear.push('crowbar');
-          if (s.inventory.knife) gear.push('knife');
+          const doors = new Set(((pack?.locMap[loc]?.rooms || [])).map((r) => r.door));
+          if (doors.has('locked') && s.inventory.crowbar) gear.push('crowbar');
+          if ((doors.has('rubble') || (pack?.locMap[loc]?.rooms || []).some((r) => (r.containers || []).some((c) => c.type === 'buried'))) && s.inventory.shovel) gear.push('shovel');
+          if (doors.has('bars') && s.inventory.saw) gear.push('saw');
+          if ((pack?.locMap[loc]?.threat || 0) >= 2 && s.inventory.knife) gear.push('knife');
           return { type: 'dusk_assign', scavenger: scav.id, location: loc, gear, others };
         },
-        night: (s) => ({ type: 'night', action: 'search' })
+        night: (s, pack) => {
+          // 埋着的容器先挖（夜野）：搜不动埋瓮——机器人也得会拿铲子
+          const n = s.night;
+          const loc = pack?.locMap[n?.locId];
+          const room = loc?.rooms?.find((r) => r.id === n?.room);
+          const buried = (room?.containers || []).find((c) => c.type === 'buried' && !(s.locState?.[n.locId]?.searched?.[c.id + ':open']));
+          if (buried) return { type: 'night', action: 'dig' };
+          return { type: 'night', action: 'search' };
+        }
       };
   }
 }

@@ -20,7 +20,9 @@ const ITEM_ALIAS = {
   手弩: 'pistol', 强弩: 'rifle', 弩箭: 'bullet'
 };
 export const LOC_ALIAS = {
-  南市: 'market', 里社: 'church', 医棚: 'hospital', 驿亭: 'post', 宅区: 'villas', 水门渡: 'frontline', 旧垒: 'frontline', 前线: 'frontline', 水窦: 'sewer', 城濠: 'sewer', 北津台: 'beacon', 烽台: 'beacon', 家: 'home'
+  南市: 'market', 里社: 'church', 医棚: 'hospital', 驿亭: 'post', 宅区: 'villas', 水门渡: 'frontline', 旧垒: 'frontline', 前线: 'frontline', 水窦: 'sewer', 城濠: 'sewer', 北津台: 'beacon', 烽台: 'beacon',
+  渔村: 'fishing', 南湖: 'fishing', 江津: 'dockyard', 军市: 'dockyard', 故郢: 'jiying', 纪南: 'jiying', 古冢: 'baling', 八岭: 'baling', 辎营: 'camp', 军营: 'camp', 黑市: 'shahead', 沙头: 'shahead', 章台: 'zhangtai', 药圃: 'garden',
+  枯泽: 'xieshui', 泽地: 'xieshui', 薪炭林: 'guanlin', 炭林: 'guanlin', 乱葬岗: 'luanfen', 葬岗: 'luanfen', 废船: 'feichuan', 津滩: 'feichuan', 水碓: 'mifang', 碓房: 'mifang', 家: 'home'
 };
 const RECIPE_ALIAS = { 艾条: 'make_cigs', 汤药: 'make_herbmed', 拨针: 'make_lockpick', 环首刀: 'make_knife', 斧: 'make_axe', 浊酒: 'make_moonshine', 酒: 'make_moonshine', 弩箭: 'make_bullet' };
 const FAC_ALIAS = {

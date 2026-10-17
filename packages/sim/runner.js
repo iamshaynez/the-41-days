@@ -77,6 +77,10 @@ function playOne(pack, seed, policyName, maxDays, sidestory = null, randomChoice
     ending: s.ending?.type || 'wiped',
     docs: s.docsSeen.length,
     knowledge: s.knowledge,
+    // 夜野：地点多样性——去过的不同地点数 / 是否到访过野外（wilds 池成员）
+    distinctLocs: Object.entries(s.locState || {}).filter(([k, v]) => v.firstVisit === false).length,
+    wildsVisited: ['xieshui', 'guanlin', 'luanfen', 'feichuan', 'mifang']
+      .some((w) => s.locState?.[w]?.firstVisit === false),
     deaths
   };
 }
@@ -186,6 +190,8 @@ function computeKpis(runs, policies) {  const by = {};
       overview_share: rs.reduce((a, r) => a + (r.overviews || 0), 0) / rs.reduce((a, r) => a + Math.max(1, r.days), 0),
       routine_days_share: rs.reduce((a, r) => a + (r.routineDays || 0), 0) / rs.reduce((a, r) => a + Math.max(1, r.days), 0),
       distinct_routines_median: median(rs.map((r) => r.distinctRoutines || 0).sort((a, b) => a - b)),
+      distinct_locs_median: median(rs.map((r) => r.distinctLocs || 0).sort((a, b) => a - b)),
+      wilds_visit_share: rs.filter((r) => r.wildsVisited).length / rs.length,
       raid_wipe_unknown: null
     };
   }
@@ -212,6 +218,13 @@ export function checkGates(report, gates) {
     }
     if (g.distinct_routines_median && bal.distinct_routines_median !== undefined && !inBand(bal.distinct_routines_median, g.distinct_routines_median)) {
       failures.push(`每局自主动作种数中位 ${bal.distinct_routines_median} 越带 ${JSON.stringify(g.distinct_routines_median)}`);
+    }
+    // 夜野：夜间地点多样性——两卡时代的实测是 40 局全只到访 5 地（其余 11 地零到访）
+    if (g.distinct_locs_median && bal.distinct_locs_median !== undefined && !inBand(bal.distinct_locs_median, g.distinct_locs_median)) {
+      failures.push(`每局到访地点数中位 ${bal.distinct_locs_median} 越带 ${JSON.stringify(g.distinct_locs_median)}`);
+    }
+    if (g.wilds_visit_share && bal.wilds_visit_share !== undefined && !inBand(bal.wilds_visit_share, g.wilds_visit_share)) {
+      failures.push(`野外到访局占比 ${bal.wilds_visit_share.toFixed(2)} 越带 ${JSON.stringify(g.wilds_visit_share)}`);
     }
     // 恶魔策略（若在样本里）：存活率应显著低于均衡
     const devil = report.kpis.devil;

@@ -223,6 +223,27 @@
       "facility": "metal",
       "ap": 1,
       "$comment": "探索工具链补全：撬棍不再只能捡"
+    },
+    {
+      "id": "make_shovel",
+      "need": [
+        {
+          "item": "wood",
+          "n": 3
+        },
+        {
+          "item": "parts",
+          "n": 2
+        }
+      ],
+      "out": {
+        "item": "shovel",
+        "n": 1
+      },
+      "ap": 1,
+      "facility": "workbench",
+      "name": "铲",
+      "$comment": "夜野工具链：铲子此前只有邻里借一条来路——工作台打得起，坟地与瓦砾才算得上门"
     }
   ],
   "facilities": [

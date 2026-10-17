@@ -1,5 +1,5 @@
 {
-  "$comment": "内核设计-v0.2 §4（避难所内景）与 GDD-v0.2 §8.1（地点卡，荆州卷）。door: open|locked|rubble|bars；容器 tool 门槛同内核 §4；loot 为权重表 [{item,count:[min,max],w}]。内部 id 沿用 v0.1。城市扩展 0.30.0 新字段：mark=用途图例（treasure|danger|story|trade|food|med，舆图一眼看懂）；pool=周目池组（manifest.locationPools 定义，每周目组内只浮出 pick 个——一周目去不全城）；requires=解锁条件组（visitedAny 任一/visitedAll 全部/flags 旗标/docs 文档/minDay 天数，各类 AND）；heardWhen=风闻条件（上图灰名+hint 提示，尚不可去——先去了哪里，才听说哪里）；blurb=黄昏方案卡的一句话。依赖链示例：sewer 夜访+sewer_intel→fishing；#064 藏宝图→baling。",
+  "$comment": "内核设计-v0.2 §4（避难所内景）与 GDD-v0.2 §8.1（地点卡，荆州卷）。door: open|locked|rubble|bars；容器 tool 门槛同内核 §4；loot 为权重表 [{item,count:[min,max],w}]。内部 id 沿用 v0.1。城市扩展 0.30.0 新字段：mark=用途图例（treasure|danger|story|trade|food|med，舆图一眼看懂）；pool=周目池组（manifest.locationPools 定义，每周目组内只浮出 pick 个——一周目去不全城）；requires=解锁条件组（visitedAny 任一/visitedAll 全部/flags 旗标/docs 文档/minDay 天数，各类 AND）；heardWhen=风闻条件（上图灰名+hint 提示，尚不可去——先去了哪里，才听说哪里）；blurb=黄昏方案卡的一句话。依赖链示例：sewer 夜访+sewer_intel→fishing；#064 藏宝图→baling。 夜野 v0.1：nightRules=地点恒定性格（槽/声/巡逻/失手/湿陷/寒/回补/进门心情，白名单见 content.js）；nightTable=每夜掷一次的夜况（fx 同白名单+lootBias/mood）；buried=埋着的容器（dig 挖开：铲两格无声，徒手三格带响）；wilds 池的五个野外见 manifest.locationPools。",
   "locations": [
     {
       "id": "home",
@@ -465,7 +465,53 @@
         "#014",
         "#002"
       ],
-      "flavor": "铺面像被巨兽舔过。三天前这里还有排队买米的人。"
+      "flavor": "铺面像被巨兽舔过。三天前这里还有排队买米的人。",
+      "nightRules": {
+        "wet": 0.1,
+        "refillMul": 0.85
+      },
+      "nightTable": [
+        {
+          "id": "ember",
+          "w": 2,
+          "name": "余烬未熄",
+          "text": "烧塌的铺面还冒着一线白烟，灰烬吸走了每一声轻响。",
+          "fx": {
+            "noiseMul": 0.7
+          }
+        },
+        {
+          "id": "ashfall",
+          "w": 2,
+          "name": "灰落如雪",
+          "text": "细灰簌簌地落，火柴划亮也照不出三步外的字。",
+          "fx": {
+            "miss": 0.15
+          }
+        },
+        {
+          "id": "picked",
+          "w": 2,
+          "name": "有人先来过",
+          "text": "新鲜的翻掘痕迹——比你手快的人今夜来过。",
+          "fx": {
+            "lootBias": {
+              "raw": 0.4,
+              "canned": 0.4
+            },
+            "mood": -1
+          }
+        },
+        {
+          "id": "deserters",
+          "w": 1,
+          "name": "溃兵结伙",
+          "text": "粮行那头有压低的说话声，至少三个人。",
+          "fx": {
+            "patrol": 0.12
+          }
+        }
+      ]
     },
     {
       "id": "church",
@@ -613,7 +659,42 @@
         "#058",
         "#026"
       ],
-      "flavor": "庑廊的穿堂风翻动简册，灰尘在光柱里缓慢地游。"
+      "flavor": "庑廊的穿堂风翻动简册，灰尘在光柱里缓慢地游。",
+      "nightRules": {
+        "refillMul": 1.1
+      },
+      "nightTable": [
+        {
+          "id": "draft",
+          "w": 2,
+          "name": "穿堂风",
+          "text": "庑廊的穿堂风翻动简册，寒气顺着地砖爬上来。",
+          "fx": {
+            "cold": true
+          }
+        },
+        {
+          "id": "lodgers",
+          "w": 2,
+          "name": "借宿的人",
+          "text": "廊下多了几床裹紧的破絮——翻东西得放轻手。",
+          "fx": {
+            "lootBias": {
+              "raw": 0.5,
+              "veg": 0.5
+            }
+          }
+        },
+        {
+          "id": "moonlight",
+          "w": 2,
+          "name": "月照庑廊",
+          "text": "月光把社堂照得透亮，这一夜看得格外清楚。",
+          "fx": {
+            "miss": -0.05
+          }
+        }
+      ]
     },
     {
       "id": "hospital",
@@ -701,7 +782,41 @@
       "docsPool": [
         "#021"
       ],
-      "flavor": "棚里挤满了榻。她两边都在救——这话说出来，两边都会要她的命。"
+      "flavor": "棚里挤满了榻。她两边都在救——这话说出来，两边都会要她的命。",
+      "nightRules": {
+        "refillMul": 1.15,
+        "slots": 1
+      },
+      "nightTable": [
+        {
+          "id": "wails",
+          "w": 2,
+          "name": "伤兵夜啼",
+          "text": "里棚的呻吟没有停过，出来的人话都变少了。",
+          "fx": {
+            "mood": -1
+          }
+        },
+        {
+          "id": "supply",
+          "w": 1,
+          "name": "药料刚到",
+          "text": "门口的筐里码着新收的草药，露水还在。",
+          "fx": {
+            "lootBias": {
+              "herb": 2.0,
+              "herbmed": 1.5
+            }
+          }
+        },
+        {
+          "id": "quiet",
+          "w": 2,
+          "name": "她歇下了",
+          "text": "杜仲伏在案上睡着。这一夜没人来抢药。",
+          "fx": {}
+        }
+      ]
     },
     {
       "id": "post",
@@ -813,7 +928,39 @@
       ],
       "npcs": [],
       "docsPool": [],
-      "flavor": "几千封没能送到的信。有的收信人已经不存在了，寄信人还在等回音。"
+      "flavor": "几千封没能送到的信。有的收信人已经不存在了，寄信人还在等回音。",
+      "nightRules": {
+        "miss": 0.15
+      },
+      "nightTable": [
+        {
+          "id": "windy",
+          "w": 2,
+          "name": "风穿亭舍",
+          "text": "亭舍的破窗把风切成哨音，掩不住撬锁的响。",
+          "fx": {
+            "noiseMul": 1.4
+          }
+        },
+        {
+          "id": "lamp",
+          "w": 1,
+          "name": "守亭人点的灯",
+          "text": "廊柱上挂着一盏昏黄的灯——谁还在等信？",
+          "fx": {
+            "miss": -0.1
+          }
+        },
+        {
+          "id": "damp",
+          "w": 2,
+          "name": "雨气渗库",
+          "text": "信袋潮得能拧出水，翻一封多花一口气。",
+          "fx": {
+            "wet": 0.15
+          }
+        }
+      ]
     },
     {
       "id": "villas",
@@ -926,14 +1073,46 @@
       ],
       "npcs": [],
       "docsPool": [],
-      "flavor": "大族走的时候带走了符传，留下了所有带不走的东西。"
+      "flavor": "大族走的时候带走了符传，留下了所有带不走的东西。",
+      "nightRules": {
+        "refillMul": 0.7
+      },
+      "nightTable": [
+        {
+          "id": "candle",
+          "w": 2,
+          "name": "烛泪未干",
+          "text": "书案上的烛泪还是软的——这宅子昨天有人来过。",
+          "fx": {
+            "patrol": 0.08
+          }
+        },
+        {
+          "id": "dogs",
+          "w": 1,
+          "name": "野犬占了堂屋",
+          "text": "堂屋深处有低低的呜声，不止一条。",
+          "fx": {
+            "patrol": 0.1,
+            "mood": -1
+          }
+        },
+        {
+          "id": "settling",
+          "w": 2,
+          "name": "梁木呻吟",
+          "text": "空宅在夜里咯咯作响，像有人踱步。",
+          "fx": {
+            "mood": -1
+          }
+        }
+      ]
     },
     {
       "id": "frontline",
       "name": "水门渡旧垒",
       "threat": 4,
       "mark": "danger",
-      "intelUnlock": "knows_frontline",
       "rooms": [
         {
           "id": "f_shell",
@@ -1090,14 +1269,54 @@
         "#003",
         "#031"
       ],
-      "flavor": "滩涂上叠着十一年前的旧垒。最贵的东西都留在没人敢去的地方。"
+      "flavor": "滩涂上叠着十一年前的旧垒。最贵的东西都留在没人敢去的地方。",
+      "nightRules": {
+        "cold": true,
+        "slots": -1
+      },
+      "nightTable": [
+        {
+          "id": "relief",
+          "w": 2,
+          "name": "换防间隙",
+          "text": "旧垒的哨位空着——换防的队伍还没接上来。",
+          "fx": {
+            "patrol": 0.02
+          }
+        },
+        {
+          "id": "stray",
+          "w": 1,
+          "name": "流矢之夜",
+          "text": "黑暗里偶尔有箭破空的声音，不知射向谁。",
+          "fx": {
+            "patrol": 0.12
+          }
+        },
+        {
+          "id": "flare",
+          "w": 1,
+          "name": "江上起火光",
+          "text": "对岸的火光把滩涂照成白昼，藏不住人。",
+          "fx": {
+            "patrol": 0.15,
+            "miss": -0.1
+          }
+        }
+      ],
+      "requires": {
+        "minDay": 10
+      },
+      "heardWhen": {
+        "minDay": 6
+      },
+      "hint": "水门渡的旧垒谁都认得——认得和敢去，是两回事。"
     },
     {
       "id": "sewer",
       "name": "城濠水窦",
       "threat": 2,
       "mark": "story",
-      "intelUnlock": "knows_sewer",
       "rooms": [
         {
           "id": "sw_edge",
@@ -1230,14 +1449,59 @@
         }
       ],
       "docsPool": [],
-      "flavor": "城濠的水不臭，是因为还活着。濠里的人知道所有墙根的洞。"
+      "flavor": "城濠的水不臭，是因为还活着。濠里的人知道所有墙根的洞。",
+      "nightRules": {
+        "noiseMul": 0.5,
+        "wet": 0.2
+      },
+      "nightTable": [
+        {
+          "id": "rising",
+          "w": 2,
+          "name": "濠水上涨",
+          "text": "水线漫过脚踝，每一步都拖着水声与寒气。",
+          "fx": {
+            "wet": 0.15,
+            "cold": true
+          }
+        },
+        {
+          "id": "rats",
+          "w": 2,
+          "name": "鼠群夜行",
+          "text": "成群的濠鼠窜过脚背，窸窣声盖过一切。",
+          "fx": {
+            "lootBias": {
+              "herb": 0.5
+            }
+          }
+        },
+        {
+          "id": "lantern",
+          "w": 1,
+          "name": "中间人点灯",
+          "text": "濠鼠窝那头亮着一豆灯火——他在等什么人。",
+          "fx": {}
+        }
+      ],
+      "requires": {
+        "visitedAny": [
+          "market"
+        ],
+        "minDay": 5
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "market"
+        ]
+      },
+      "hint": "走夜路的人提过：南市外圈的城濠下有个水窦，濠里有人有路。"
     },
     {
       "id": "beacon",
       "name": "北津台",
       "threat": 3,
       "mark": "danger",
-      "intelUnlock": "knows_beacon",
       "rooms": [
         {
           "id": "bc_slope",
@@ -1316,7 +1580,52 @@
       ],
       "npcs": [],
       "docsPool": [],
-      "flavor": "江边第三台。鼓架还在，薪柴还干——像有人一直在等它再响。"
+      "flavor": "江边第三台。鼓架还在，薪柴还干——像有人一直在等它再响。",
+      "nightRules": {
+        "miss": 0.1,
+        "slots": -1
+      },
+      "nightTable": [
+        {
+          "id": "gale",
+          "w": 2,
+          "name": "台上大风",
+          "text": "台顶的风撕着衣角，也撕散了所有的声响。",
+          "fx": {
+            "noiseMul": 0.6
+          }
+        },
+        {
+          "id": "watchlight",
+          "w": 1,
+          "name": "烽卒的灯",
+          "text": "台基的龛里竟有一点将熄的灯火。",
+          "fx": {
+            "mood": 1
+          }
+        },
+        {
+          "id": "riverfire",
+          "w": 2,
+          "name": "望见江上火",
+          "text": "台顶望下去，江面上有船队在夜里移动。",
+          "fx": {}
+        }
+      ],
+      "requires": {
+        "visitedAny": [
+          "post",
+          "church"
+        ],
+        "minDay": 8
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "post",
+          "church"
+        ]
+      },
+      "hint": "驿亭的亭长比过江上三座烽台——北岸第三台的鼓架还在。"
     },
     {
       "id": "fishing",
@@ -1477,7 +1786,43 @@
       ],
       "docsPool": [],
       "flavor": "南湖的鱼越来越难捞——捞鱼的人，一半抽了丁，一半逃了湖。",
-      "echoHint": "旧梦里有这片湖——上一世你没走到。这一世，水路又开了。"
+      "echoHint": "旧梦里有这片湖——上一世你没走到。这一世，水路又开了。",
+      "nightRules": {
+        "wet": 0.15,
+        "refillMul": 1.3
+      },
+      "nightTable": [
+        {
+          "id": "flood",
+          "w": 2,
+          "name": "湖水拍埂",
+          "text": "湖埂湿滑，鱼笱浸在水线以下。",
+          "fx": {
+            "wet": 0.15
+          }
+        },
+        {
+          "id": "lamp",
+          "w": 1,
+          "name": "七娘的灯",
+          "text": "芦棚里亮着灯，网架上的鱼还挂着水光。",
+          "fx": {
+            "lootBias": {
+              "raw": 1.6
+            }
+          }
+        },
+        {
+          "id": "lakefog",
+          "w": 2,
+          "name": "湖雾",
+          "text": "雾从水面漫上来，三步外只剩人影。",
+          "fx": {
+            "miss": 0.15,
+            "patrol": 0.0
+          }
+        }
+      ]
     },
     {
       "id": "dockyard",
@@ -1657,7 +2002,35 @@
         "#065"
       ],
       "flavor": "渡口的旗换了颜色，生意照做——只是价目表换成了军中的。",
-      "echoHint": "上一世的渡口只在别人嘴里活过。这一世醒来的夜里，南岸有火。"
+      "echoHint": "上一世的渡口只在别人嘴里活过。这一世醒来的夜里，南岸有火。",
+      "nightRules": {},
+      "nightTable": [
+        {
+          "id": "nightmkt",
+          "w": 2,
+          "name": "夜市开张",
+          "text": "军市棚还亮着——夜里有夜里的买卖。",
+          "fx": {}
+        },
+        {
+          "id": "shiftchange",
+          "w": 1,
+          "name": "换岗时分",
+          "text": "戍栅的脚步声换了一班，交接口令的声音很近。",
+          "fx": {
+            "patrol": 0.18
+          }
+        },
+        {
+          "id": "tide",
+          "w": 2,
+          "name": "江风倒灌",
+          "text": "江风把转运仓的门吹得哐当响，掩人耳目。",
+          "fx": {
+            "noiseMul": 0.8
+          }
+        }
+      ]
     },
     {
       "id": "jiying",
@@ -1800,7 +2173,40 @@
         "#055"
       ],
       "flavor": "四百年前的都城塌成了土冈。农人绕着走，说夜里听得见编钟。",
-      "echoHint": "旧梦里满坑的简牍没人替你读过。这一世，简牍坑的豆灯还亮着。"
+      "echoHint": "旧梦里满坑的简牍没人替你读过。这一世，简牍坑的豆灯还亮着。",
+      "nightRules": {
+        "miss": 0.2,
+        "refillMul": 1.25
+      },
+      "nightTable": [
+        {
+          "id": "lamp",
+          "w": 1,
+          "name": "豆灯还亮",
+          "text": "简牍坑边亮着一盏豆灯——拾简人今夜也在。",
+          "fx": {}
+        },
+        {
+          "id": "bells",
+          "w": 1,
+          "name": "编钟之声",
+          "text": "风穿过高台的空洞，呜呜地像编钟在响。",
+          "fx": {
+            "mood": -1
+          }
+        },
+        {
+          "id": "collapse",
+          "w": 2,
+          "name": "夯土又塌了一角",
+          "text": "官署基的新塌口露出一层没翻过的土。",
+          "fx": {
+            "lootBias": {
+              "book": 1.5
+            }
+          }
+        }
+      ]
     },
     {
       "id": "baling",
@@ -1939,7 +2345,40 @@
       ],
       "docsPool": [],
       "flavor": "八岭山的封土一座连一座。图上圈的那座塌了半边——塌，是最近的事。",
-      "echoHint": "那一世图在别人手里。这一世醒来，掌心还留着朱笔圈的印子。"
+      "echoHint": "那一世图在别人手里。这一世醒来，掌心还留着朱笔圈的印子。",
+      "nightRules": {
+        "miss": 0.25
+      },
+      "nightTable": [
+        {
+          "id": "diggers",
+          "w": 2,
+          "name": "盗掘者还在",
+          "text": "封土那头有镐头磕石的脆响——不止你一个人图这座墓。",
+          "fx": {
+            "patrol": 0.15,
+            "mood": -1
+          }
+        },
+        {
+          "id": "moonmound",
+          "w": 2,
+          "name": "月照封土",
+          "text": "月光把封土坡照成一片惨白，椁室口大张。",
+          "fx": {
+            "miss": -0.1
+          }
+        },
+        {
+          "id": "collapse",
+          "w": 1,
+          "name": "墓道渗水",
+          "text": "墓道深处的渗水声一下一下，像地底有节拍。",
+          "fx": {
+            "wet": 0.15
+          }
+        }
+      ]
     },
     {
       "id": "camp",
@@ -2089,7 +2528,43 @@
         }
       ],
       "docsPool": [],
-      "flavor": "车辙深深碾进冻土。营里的火整夜不熄——数箭的人也整夜不睡。"
+      "flavor": "车辙深深碾进冻土。营里的火整夜不熄——数箭的人也整夜不睡。",
+      "nightRules": {
+        "slots": -1
+      },
+      "nightTable": [
+        {
+          "id": "counting",
+          "w": 2,
+          "name": "数箭的人醒着",
+          "text": "营中火堆旁坐着一个不睡的人，箭一支支过手。",
+          "fx": {
+            "patrol": 0.22,
+            "mood": -1
+          }
+        },
+        {
+          "id": "convoy",
+          "w": 1,
+          "name": "辎车夜发",
+          "text": "辎车场空了一半——车队趁夜出了营。",
+          "fx": {
+            "lootBias": {
+              "canned": 1.5
+            }
+          }
+        },
+        {
+          "id": "campfire",
+          "w": 2,
+          "name": "营火通明",
+          "text": "粮囤方向的火把密得像栅栏。",
+          "fx": {
+            "patrol": 0.15,
+            "miss": -0.1
+          }
+        }
+      ]
     },
     {
       "id": "shahead",
@@ -2214,7 +2689,43 @@
         }
       ],
       "docsPool": [],
-      "flavor": "没有招牌，没有市籍。价钱是活的，命也是。"
+      "flavor": "没有招牌，没有市籍。价钱是活的，命也是。",
+      "nightRules": {},
+      "nightTable": [
+        {
+          "id": "newgoods",
+          "w": 2,
+          "name": "帘后有新货",
+          "text": "货帘的影子比昨天厚——新到的私货。",
+          "fx": {
+            "lootBias": {
+              "meds": 1.5,
+              "comp": 1.3
+            }
+          }
+        },
+        {
+          "id": "heat",
+          "w": 1,
+          "name": "风声紧",
+          "text": "连黑市都屏着气：巡兵今晚查得勤。",
+          "fx": {
+            "patrol": 0.15
+          }
+        },
+        {
+          "id": "empty",
+          "w": 1,
+          "name": "帘卷人空",
+          "text": "铺面的帘子卷着，人货都不知去向。",
+          "fx": {
+            "lootBias": {
+              "cigs": 0.4,
+              "coffee": 0.4
+            }
+          }
+        }
+      ]
     },
     {
       "id": "zhangtai",
@@ -2337,7 +2848,42 @@
       "docsPool": [
         "#044"
       ],
-      "flavor": "「章华之台，三休乃至。」如今一休就到了顶——顶上长着一棵树。"
+      "flavor": "「章华之台，三休乃至。」如今一休就到了顶——顶上长着一棵树。",
+      "nightRules": {
+        "miss": 0.15,
+        "refillMul": 1.2
+      },
+      "nightTable": [
+        {
+          "id": "treetop",
+          "w": 2,
+          "name": "台顶的树",
+          "text": "离宫塌了四百年，台顶的树在风里响成一片。",
+          "fx": {
+            "mood": 1
+          }
+        },
+        {
+          "id": "score",
+          "w": 1,
+          "name": "谱龛漏了",
+          "text": "楔窝的谱龛裂了缝，旧谱的残页散了一地。",
+          "fx": {
+            "lootBias": {
+              "book": 1.6
+            }
+          }
+        },
+        {
+          "id": "dark",
+          "w": 2,
+          "name": "云掩月",
+          "text": "连月光也照不进回廊的深处。",
+          "fx": {
+            "miss": 0.15
+          }
+        }
+      ]
     },
     {
       "id": "garden",
@@ -2467,7 +3013,1095 @@
       ],
       "npcs": [],
       "docsPool": [],
-      "flavor": "畦垄齐整——荒了的地不长这么齐。有人夜里回来照看它。"
+      "flavor": "畦垄齐整——荒了的地不长这么齐。有人夜里回来照看它。",
+      "nightRules": {
+        "wet": 0.15,
+        "refillMul": 1.5
+      },
+      "nightTable": [
+        {
+          "id": "dew",
+          "w": 2,
+          "name": "夜露采药",
+          "text": "带露的药株最是好认，畦垄齐整如初。",
+          "fx": {
+            "lootBias": {
+              "herb": 1.6
+            }
+          }
+        },
+        {
+          "id": "boar",
+          "w": 1,
+          "name": "野猪拱畦",
+          "text": "畦垄被拱得乱七八糟，黑暗里有粗重的鼻息。",
+          "fx": {
+            "patrol": 0.12,
+            "lootBias": {
+              "herb": 0.5
+            }
+          }
+        },
+        {
+          "id": "footprints",
+          "w": 1,
+          "name": "有人刚来过",
+          "text": "焙房门口的泥印还是新的。",
+          "fx": {
+            "lootBias": {
+              "herbmed": 0.5,
+              "bandage": 0.5
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "xieshui",
+      "name": "泄水枯泽",
+      "threat": 2,
+      "mark": "food",
+      "pool": "wilds",
+      "requires": {
+        "visitedAny": [
+          "market"
+        ],
+        "minDay": 6
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "market"
+        ]
+      },
+      "hint": "南市避难的人提过：城西南的泄水泽秋天就干了，菱角和鱼蚌沉在泥里，去的人不多。",
+      "blurb": "泥里的野菱与鱼蚌——长回来的野食",
+      "aliases": [
+        "枯泽",
+        "泽地"
+      ],
+      "nightRules": {
+        "wet": 0.2,
+        "miss": 0.1,
+        "refillMul": 1.6
+      },
+      "nightTable": [
+        {
+          "id": "harvest",
+          "w": 2,
+          "name": "菱角正熟",
+          "text": "干泽的泥面上密密是野菱，蹲下来就摸得着。",
+          "fx": {
+            "lootBias": {
+              "veg": 1.8,
+              "raw": 1.4
+            }
+          }
+        },
+        {
+          "id": "mist",
+          "w": 2,
+          "name": "泽雾",
+          "text": "雾贴着泥面走，火柴照出去一团浑黄。",
+          "fx": {
+            "miss": 0.2
+          }
+        },
+        {
+          "id": "refugees",
+          "w": 1,
+          "name": "流民同来",
+          "text": "泽那头也有火光，一明一灭——不止你们在找吃的。",
+          "fx": {
+            "patrol": 0.1,
+            "mood": -1
+          }
+        },
+        {
+          "id": "egrets",
+          "w": 1,
+          "name": "宿鸟惊起",
+          "text": "白鹭成片惊起的声音像有人来了。",
+          "fx": {
+            "noiseMul": 1.4
+          }
+        }
+      ],
+      "rooms": [
+        {
+          "id": "xs_mire",
+          "name": "陷泥滩",
+          "door": "open",
+          "containers": [
+            {
+              "id": "xs_mussels",
+              "name": "蚌窝",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "veg",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "xs_caltrop",
+          "name": "菱角荡",
+          "door": "open",
+          "containers": [
+            {
+              "id": "xs_caltrop_bed",
+              "name": "菱丛",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "veg",
+                  "count": [
+                    3,
+                    5
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "herb",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "raw",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            },
+            {
+              "id": "xs_buried_jar",
+              "name": "泥下埋瓮",
+              "type": "buried",
+              "loot": [
+                {
+                  "item": "meal",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "jewel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ],
+              "docs": [
+                "#066"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "xs_hut",
+          "name": "泽口窝棚",
+          "door": "open",
+          "containers": [
+            {
+              "id": "xs_net",
+              "name": "鱼罩与篓",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "parts",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "泽户逃走前把能带走的都带走了——带不走的，都埋在了泥里。"
+    },
+    {
+      "id": "guanlin",
+      "name": "官薪炭林",
+      "threat": 2,
+      "mark": "danger",
+      "pool": "wilds",
+      "requires": {
+        "visitedAny": [
+          "church",
+          "post"
+        ],
+        "minDay": 8
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "church"
+        ]
+      },
+      "hint": "里社烧的香炭来自城北官林——守藏吏记得每一条运炭的路，伐木人跑光了，林子还在。",
+      "blurb": "柴海与伐木人的家什——路远，狼也回来了",
+      "aliases": [
+        "薪炭林",
+        "炭林"
+      ],
+      "nightRules": {
+        "slots": -2,
+        "cold": true,
+        "refillMul": 1.4
+      },
+      "nightTable": [
+        {
+          "id": "axe_echo",
+          "w": 2,
+          "name": "林深有斧声",
+          "text": "林子深处有伐木声——有人在夜里砍官柴。",
+          "fx": {
+            "patrol": 0.1
+          }
+        },
+        {
+          "id": "wolves",
+          "w": 2,
+          "name": "野犬成群",
+          "text": "绿眼睛在炭道两侧明明灭灭，跟着你走了半里地。",
+          "fx": {
+            "patrol": 0.15,
+            "mood": -1
+          }
+        },
+        {
+          "id": "snowbreak",
+          "w": 1,
+          "name": "雪压枝头",
+          "text": "雪把枯枝压脆了，一碰就断——捡柴的好夜晚。",
+          "fx": {
+            "lootBias": {
+              "firewood": 1.6
+            }
+          }
+        },
+        {
+          "id": "stillness",
+          "w": 1,
+          "name": "林子静极了",
+          "text": "连风都不进来的密林深处，静得能听见自己心跳。",
+          "fx": {}
+        }
+      ],
+      "rooms": [
+        {
+          "id": "gl_charcoal",
+          "name": "炭窑群",
+          "door": "open",
+          "containers": [
+            {
+              "id": "gl_kiln",
+              "name": "封窑",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "firewood",
+                  "count": [
+                    3,
+                    5
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "fuel",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "wood",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "gl_lodge",
+          "name": "伐木人棚",
+          "door": "open",
+          "containers": [
+            {
+              "id": "gl_tools",
+              "name": "家什架",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "shovel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "saw",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "axe",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "parts",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            },
+            {
+              "id": "gl_bunk",
+              "name": "通铺草垫",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "meal",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "bandage",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ],
+              "docs": [
+                "#067"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "gl_fell",
+          "name": "新伐区",
+          "door": "open",
+          "containers": [
+            {
+              "id": "gl_logs",
+              "name": "原木垛",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "wood",
+                  "count": [
+                    3,
+                    6
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "官家的林子，砍一棵都是罪——如今没人管了，可林子自己认得斧子。"
+    },
+    {
+      "id": "luanfen",
+      "name": "城西乱葬岗",
+      "threat": 1,
+      "mark": "treasure",
+      "pool": "wilds",
+      "requires": {
+        "visitedAny": [
+          "hospital",
+          "frontline"
+        ],
+        "minDay": 9
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "hospital"
+        ]
+      },
+      "hint": "医棚抬出去的人一夜比一夜多——薄席裹着，都去了城西那片高坡。没人愿意夜里去那儿。",
+      "blurb": "随葬的楚玉——从没人敢来翻的地方",
+      "aliases": [
+        "乱葬岗",
+        "葬岗"
+      ],
+      "nightRules": {
+        "miss": 0.2,
+        "moodOnEnter": -2,
+        "refillMul": 0.6
+      },
+      "nightTable": [
+        {
+          "id": "fresh",
+          "w": 2,
+          "name": "新坟层叠",
+          "text": "最新的坟压着旧坟，薄席的一角还在风里动。",
+          "fx": {
+            "mood": -2
+          }
+        },
+        {
+          "id": "exposed",
+          "w": 2,
+          "name": "雨水冲开了土",
+          "text": "雨水冲开一处旧坟，椁木的一角露在月光下。",
+          "fx": {
+            "lootBias": {
+              "jewel": 1.8,
+              "brocade": 1.5
+            }
+          }
+        },
+        {
+          "id": "watcher",
+          "w": 1,
+          "name": "有人在哭坟",
+          "text": "高坡的另一头蹲着一个影子，哭声压得很低。",
+          "fx": {
+            "patrol": 0.05,
+            "mood": -1
+          }
+        }
+      ],
+      "rooms": [
+        {
+          "id": "lf_slope",
+          "name": "坟坡",
+          "door": "open",
+          "containers": [
+            {
+              "id": "lf_thin",
+              "name": "薄席新坟",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "cigs",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ],
+              "docs": [
+                "#068"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lf_old",
+          "name": "旧茔地",
+          "door": "open",
+          "containers": [
+            {
+              "id": "lf_oldgraves",
+              "name": "塌陷的旧墓",
+              "type": "buried",
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "brocade",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "wine",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "lf_mound",
+          "name": "大封土",
+          "door": "open",
+          "containers": [
+            {
+              "id": "lf_chamber",
+              "name": "民椁残室",
+              "type": "buried",
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "brocade",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "葬的是这半年围城里死去的人——也葬着四百年前楚国人的旧物。"
+    },
+    {
+      "id": "feichuan",
+      "name": "沙头津滩废船",
+      "threat": 3,
+      "mark": "trade",
+      "pool": "wilds",
+      "requires": {
+        "visitedAny": [
+          "shahead"
+        ],
+        "minDay": 10
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "market"
+        ]
+      },
+      "hint": "黑市的市牙收船货收到手软——搁浅在沙头津滩的那些废船，涨潮才够着，退潮全是泥。",
+      "blurb": "搁浅船里的私货与船具——涨潮就够不着",
+      "aliases": [
+        "废船",
+        "津滩"
+      ],
+      "nightRules": {
+        "wet": 0.25,
+        "refillMul": 1.2
+      },
+      "nightTable": [
+        {
+          "id": "tide",
+          "w": 2,
+          "name": "涨潮",
+          "text": "江水漫上滩涂，外排的船够不着了——里排还露着。",
+          "fx": {
+            "wet": 0.15,
+            "lootBias": {
+              "raw": 0.5
+            }
+          }
+        },
+        {
+          "id": "cargo",
+          "w": 2,
+          "name": "舱里有货",
+          "text": "一条半沉的货船舱门大开，泡胀的麻包里露出货角。",
+          "fx": {
+            "lootBias": {
+              "wine": 1.8,
+              "cigs": 1.6,
+              "sugar": 1.5
+            }
+          }
+        },
+        {
+          "id": "guard_dog",
+          "w": 1,
+          "name": "守船犬",
+          "text": "船板上有爪子刮过的声音，低吼从舱底传上来。",
+          "fx": {
+            "patrol": 0.15,
+            "mood": -1
+          }
+        },
+        {
+          "id": "smugglers",
+          "w": 1,
+          "name": "私货船到了",
+          "text": "滩尾有一条船吃水很深——有人在夜里卸货，灯火压得极低。",
+          "fx": {
+            "patrol": 0.12,
+            "lootBias": {
+              "comp": 1.5
+            }
+          }
+        }
+      ],
+      "rooms": [
+        {
+          "id": "fc_mudflat",
+          "name": "泥滩",
+          "door": "open",
+          "containers": [
+            {
+              "id": "fc_driftwood",
+              "name": "流木堆",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "firewood",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "wood",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fc_junk",
+          "name": "搁浅货船",
+          "door": "open",
+          "containers": [
+            {
+              "id": "fc_hold",
+              "name": "泡胀的货舱",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "wine",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "cigs",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "comp",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fc_cabin",
+          "name": "船楼",
+          "door": "locked",
+          "containers": [
+            {
+              "id": "fc_chest",
+              "name": "船长箱",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "jewel",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "bullet",
+                  "count": [
+                    0,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "elec",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "白衣渡江那夜逃出来的船，搁在这儿再没人认领——除了江水，夜夜来碰。"
+    },
+    {
+      "id": "mifang",
+      "name": "西水碓房",
+      "threat": 1,
+      "mark": "story",
+      "pool": "wilds",
+      "requires": {
+        "visitedAny": [
+          "sewer",
+          "garden"
+        ],
+        "minDay": 10
+      },
+      "heardWhen": {
+        "visitedAny": [
+          "sewer"
+        ]
+      },
+      "hint": "濠鼠中间人提过水路尽头的老碓房：水轮还转着，碓声半里外都听得见——看碓的人也还在。",
+      "blurb": "水轮不停，碓房不死——机巧与米",
+      "aliases": [
+        "水碓",
+        "碓房"
+      ],
+      "nightRules": {
+        "noiseMul": 0.6,
+        "wet": 0.1,
+        "slots": 1
+      },
+      "nightTable": [
+        {
+          "id": "wheel",
+          "w": 2,
+          "name": "水轮还转",
+          "text": "水轮带得碓杵一下一下地舂——有人夜里还在碓米。",
+          "fx": {
+            "lootBias": {
+              "meal": 1.6,
+              "raw": 1.3
+            }
+          }
+        },
+        {
+          "id": "frozen",
+          "w": 1,
+          "name": "水冻轮僵",
+          "text": "引水槽冻住了，水轮结着冰壳——碓房这一夜是哑的。",
+          "fx": {
+            "cold": true,
+            "noiseMul": 1.2
+          }
+        },
+        {
+          "id": "miller",
+          "w": 1,
+          "name": "看碓人在",
+          "text": "碓房角落的草铺有人翻了个身，鼾声混在碓声里。",
+          "fx": {
+            "patrol": 0.06
+          }
+        },
+        {
+          "id": "burst",
+          "w": 1,
+          "name": "水槽崩了一节",
+          "text": "崩开的水槽把零件冲得满地——白捡的机巧。",
+          "fx": {
+            "lootBias": {
+              "parts": 1.7,
+              "comp": 1.4
+            }
+          }
+        }
+      ],
+      "rooms": [
+        {
+          "id": "mf_race",
+          "name": "引水槽",
+          "door": "open",
+          "containers": [
+            {
+              "id": "mf_grate",
+              "name": "拦污栅",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "parts",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "wood",
+                  "count": [
+                    1,
+                    3
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "herb",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mf_hall",
+          "name": "碓室",
+          "door": "open",
+          "containers": [
+            {
+              "id": "mf_hopper",
+              "name": "碓斗",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "raw",
+                  "count": [
+                    2,
+                    4
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "veg",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "water",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 1
+                }
+              ]
+            },
+            {
+              "id": "mf_drawer",
+              "name": "账屉",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "book",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 2
+                },
+                {
+                  "item": "sugar",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                }
+              ],
+              "docs": [
+                "#069"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mf_gear",
+          "name": "轮室",
+          "door": "rubble",
+          "containers": [
+            {
+              "id": "mf_gearbox",
+              "name": "齿轮组",
+              "type": "open",
+              "loot": [
+                {
+                  "item": "comp",
+                  "count": [
+                    1,
+                    2
+                  ],
+                  "w": 3
+                },
+                {
+                  "item": "elec",
+                  "count": [
+                    0,
+                    1
+                  ],
+                  "w": 1
+                },
+                {
+                  "item": "parts",
+                  "count": [
+                    2,
+                    3
+                  ],
+                  "w": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "npcs": [],
+      "docsPool": [],
+      "flavor": "水碓是官家的产业，跑得了人跑不了水——它替所有走了的人继续干活。"
     }
   ]
 }

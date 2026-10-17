@@ -1,6 +1,6 @@
 {
   "id": "base",
-  "semver": "0.40.0",
+  "semver": "0.41.0",
   "name": "第 41 天 · 江陵",
   "coreVersion": ">=0.1.0",
   "files": [
@@ -64,6 +64,18 @@
         "baling"
       ],
       "comment": "北线每局只开一地：故郢的简牍，或古冢的椁藏"
+    },
+    {
+      "group": "wilds",
+      "pick": 2,
+      "members": [
+        "xieshui",
+        "guanlin",
+        "luanfen",
+        "feichuan",
+        "mifang"
+      ],
+      "comment": "野外每局浮出两地（C(5,2)=10 种组合）：泽地的野食、林子的柴与家什、葬岗的随葬、津滩的私货、碓房的米与机巧——城外的地会长回来（refillMul 高），但各有各的规矩"
     }
   ],
   "war": {

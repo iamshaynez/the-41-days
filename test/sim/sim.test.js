@@ -18,7 +18,7 @@ describe('平衡模拟（固定种子，确定性）', () => {
     for (const r of report.runs) {
       assert.ok(Number.isFinite(r.days) && r.days >= 1 && r.days <= 62);
       assert.ok(r.alive >= 0 && r.alive <= 3);
-      assert.ok(['ceasefire', 'contract_end', 'wiped', 'timeout', 'maicheng', 'pyrrhic', 'alt_both', 'hostage'].includes(r.ending)); // v0.2：结局枚举含或然三类
+      assert.ok(['ceasefire', 'contract_end', 'wiped', 'timeout', 'maicheng', 'pyrrhic', 'alt_both', 'hostage', 'join_table'].includes(r.ending)); // v0.2：结局枚举含或然三类；夜野后水门渡可达 → 券局（出江陵记）真实开张
     }
   });
 

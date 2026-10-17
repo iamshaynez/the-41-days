@@ -214,6 +214,41 @@
       "y": 40,
       "kind": "city",
       "mark": "med"
+    },
+    {
+      "id": "xieshui",
+      "name": "泄水枯泽",
+      "x": 22,
+      "y": 82,
+      "kind": "out"
+    },
+    {
+      "id": "guanlin",
+      "name": "官薪炭林",
+      "x": 57,
+      "y": 6,
+      "kind": "out"
+    },
+    {
+      "id": "luanfen",
+      "name": "城西乱葬岗",
+      "x": 8,
+      "y": 66,
+      "kind": "out"
+    },
+    {
+      "id": "feichuan",
+      "name": "沙头津滩废船",
+      "x": 88,
+      "y": 74,
+      "kind": "out"
+    },
+    {
+      "id": "mifang",
+      "name": "西水碓房",
+      "x": 32,
+      "y": 74,
+      "kind": "out"
     }
   ],
   "traces": [
@@ -527,6 +562,31 @@
     {
       "from": "jiying",
       "to": "baling",
+      "cls": "lane"
+    },
+    {
+      "from": "market",
+      "to": "xieshui",
+      "cls": "lane"
+    },
+    {
+      "from": "church",
+      "to": "guanlin",
+      "cls": "lane"
+    },
+    {
+      "from": "frontline",
+      "to": "luanfen",
+      "cls": "lane"
+    },
+    {
+      "from": "shahead",
+      "to": "feichuan",
+      "cls": "lane"
+    },
+    {
+      "from": "sewer",
+      "to": "mifang",
       "cls": "lane"
     }
   ]
