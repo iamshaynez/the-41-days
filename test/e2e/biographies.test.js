@@ -132,3 +132,51 @@ describe('列传 e2e：LLM 模式（桩史官）', () => {
     assert.ok(full.ending.biographies.every((b) => b.via === 'direct'), '第 99 天的幻觉必须被 lint 逐人回退');
   });
 });
+
+describe('终卷仪式 e2e：finalizing 先行（合卷不静默）', () => {
+  test('终局那一轮的 SSE：finalizing 带卷名，且先于 state-patch/done 到达', async () => {
+    const ctx = await boot(false);
+    try {
+      const run = await (await fetch(`${ctx.base}/api/runs`, { method: 'POST', headers: auth(ctx.token), body: JSON.stringify({ mode: 'direct', seed: 42, prologue: false }) })).json();
+      let st = await (await fetch(`${ctx.base}/api/runs/${run.id}`, { headers: auth(ctx.token) })).json().then((r) => r.state);
+      let finalRaw = '';
+      for (let d = 0; d < 50 && !st.over; d++) {
+        if (st.eventView) {
+          const o = st.eventView.options[st.eventView.options.length - 1];
+          const res = await fetch(`${ctx.base}/api/runs/${run.id}/input`, { method: 'POST', headers: auth(ctx.token), body: JSON.stringify({ input: `选${o.key === 'refuse' ? 'B' : 'A'}` }) });
+          const raw = await res.text();
+          st = latestState(raw, st);
+          if (/event: finalizing/.test(raw)) finalRaw = raw;
+          if (st.over) break;
+        }
+        const res = await fetch(`${ctx.base}/api/runs/${run.id}/input`, { method: 'POST', headers: auth(ctx.token), body: JSON.stringify({ input: '天黑吧' }) });
+        const raw = await res.text();
+        st = latestState(raw, st);
+        if (/event: finalizing/.test(raw)) finalRaw = raw;
+        if (st.over) break;
+        const guardName = st.charView?.find((c) => c.alive)?.name || '石大';
+        const res2 = await fetch(`${ctx.base}/api/runs/${run.id}/input`, { method: 'POST', headers: auth(ctx.token), body: JSON.stringify({ input: `今晚都不出去，${guardName}守夜` }) });
+        const raw2 = await res2.text();
+        st = latestState(raw2, st);
+        if (/event: finalizing/.test(raw2)) finalRaw = raw2;
+      }
+      assert.ok(finalRaw, '终局轮应有 finalizing 事件——等待仪式的原料');
+      const finAt = finalRaw.indexOf('event: finalizing');
+      const patAt = finalRaw.indexOf('event: state-patch');
+      const doneAt = finalRaw.indexOf('event: done');
+      assert.ok(finAt >= 0 && (patAt < 0 || finAt < patAt), 'finalizing 先于 state-patch（书页先亮完结，再等合卷）');
+      assert.ok(doneAt < 0 || finAt < doneAt, 'finalizing 先于 done');
+      const title = finalRaw.match(/event: finalizing\ndata: (.+)\n/)?.[1];
+      assert.ok(title && JSON.parse(title).title, 'finalizing 要带卷名（等待卡的大字）');
+    } finally {
+      ctx.app.server.close(); rmSync(ctx.dir, { recursive: true, force: true });
+    }
+  });
+});
+
+function latestState(raw, prev) {
+  let st = prev;
+  for (const m of raw.matchAll(/event: state-patch\ndata: (.+)\n/g)) st = JSON.parse(m[1]).state || st;
+  for (const m of raw.matchAll(/event: done\ndata: (.+)\n/g)) { const d = JSON.parse(m[1]); if (d.state) st = d.state; }
+  return st;
+}
