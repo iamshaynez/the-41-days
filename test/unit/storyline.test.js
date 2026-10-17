@@ -10,6 +10,8 @@ function playedRun(seed = 31) {
   let s = state;
   s.facilities.stove = 1;
   s.doorLevel = 3; // 顶格防御排除袭击随机性，夹具只关心因果
+  // 居家自主（0.40.0）：收尾时角色会翻家里没翻的角落——本夹具只要因果账，把家里的角落先翻空
+  for (const r of PACK.locMap.home.rooms || []) { s.house.opened[r.id] = true; for (const ct of r.containers || []) s.house.searched[ct.id] = true; }
   // D1：烧书做饭 + 拒助（清空可食物，避免 deny_food 噪声）
   s.inventory = { raw: 1, book: 1 };
   s = step(s, [{ type: 'act', actor: 'bron', action: 'cook' }]).state;

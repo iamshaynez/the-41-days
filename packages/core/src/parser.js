@@ -82,7 +82,10 @@ export function parseDirect(state, pack, input) {
     if (m) {
       const k = m[1];
       const byKey = card?.options?.find((o) => o.key.toLowerCase() === k.toLowerCase());
-      const byIndex = card?.options?.[Number(k) - 1];
+      // 选A/选B = 选项的序位（A→第1项），不要求内容把 key 起成 a/b——
+      // 实测伤：卡键是 copy/sloppy 时「选A」无声落空，门口的卡永远答不掉
+      const li = /^[a-zA-Z]$/.test(k) ? k.toLowerCase().charCodeAt(0) - 96 : Number(k);
+      const byIndex = card?.options?.[li - 1];
       if (byKey) return { intents: [{ type: 'event_choice', option: byKey.key }] };
       if (byIndex) return { intents: [{ type: 'event_choice', option: byIndex.key }] };
     }
@@ -131,6 +134,11 @@ export function parseDirect(state, pack, input) {
       // 没点地方：内核最优方案（dusk_auto 由 resolve 展开成 planDusk 首方案）
       return { intents: [{ type: 'dusk_auto', rest: /休|睡/.test(text) && !/守/.test(text) }] };
     }
+  }
+  // 重心覆写（居家与四问·破晓判断题）：「今天先把药备上」「先顾人」——一句话改今天的重心
+  {
+    const fm = [[/先?(稳嘴|顾嘴|找吃的要紧|吃的要紧|先顾吃)/, 'mouth'], [/先?(养人|顾人|照顾人|先治|先养)/, 'care'], [/先?(备器|备柴|备工具|先修|先造|先打)/, 'gear'], [/先?(守家|守门|防贼|先守)/, 'guard'], [/先?(读城|读书|识城|先读)/, 'read'], [/重心(照旧|交给你|你定|随你)/, 'auto']];
+    for (const [re, key] of fm) if (re.test(text) && /先|重心|今天/.test(text)) return { intents: [{ type: 'policy', key: 'homePriority', value: key }] };
   }
   // 长期策略（"以后省着吃"——说出口的话沉淀成规矩）
   if (/省着|省点|配给/.test(text)) return { intents: [{ type: 'policy', key: 'rationing', value: true }] };

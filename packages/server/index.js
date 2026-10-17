@@ -15,7 +15,7 @@ import pkg from '../../package.json' with { type: 'json' };
 import { worldBrief, renderDirect, humanFacts, narrationLint, buildFeedback } from './narrate.js';
 import { rejectText } from '../core/src/rejects.js';
 import { describeIntent } from './narrate.js';
-import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView, charCare, relationsOf , homeOf } from '../core/index.js';
+import { loadPack, loadPrompt, createRun, beginRun, resolveInput, parseDirect, fold, optionAvailable, eventOptionsView, aliveChars, apMaxOf, renderMemoirDirect, memoirLint, planDusk, planNightStep, dawnProblems, suggests, freeExamples, policyOf, validateIntentShape, preludeBeatView, mapView, buildChronicle, dayDigest, stripMarkers, validateTextMarkers, nightHomeView, charCare, relationsOf , homeOf , homeTracks } from '../core/index.js';
 import { makeProvider, healthCheck } from '../llm/index.js';
 import { referee, narrator, memoirist, optionsmith, annalist, ensemble as ensembleRole, biographer as biographerRole } from '../llm/index.js';
 import { stagedirector } from '../llm/gateway.js';
@@ -270,6 +270,8 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     const view = { ...state };
     view.itemNames = Object.fromEntries(pack.items.map((i) => [i.id, i.name]));
     view.itemFlavors = Object.fromEntries(pack.items.filter((i) => i.flavor).map((i) => [i.id, i.flavor]));
+    // 家的进度轨（居家与四问）：门几道、琴几弦、日录几卷——家底抽屉「这个家」读它
+    view.homeTracks = homeTracks(state, pack);
     // 这个家的房间名（别传住的是船舱/医棚/窝棚，不是橘里的门厅）
     const home = homeOf(pack, state);
     view.roomNames = Object.fromEntries((home.rooms || []).map((r) => [r.id, r.name]));

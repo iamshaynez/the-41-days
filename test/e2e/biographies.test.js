@@ -63,6 +63,8 @@ async function input(b, t, id, text) {
   let st = null;
   for (const m of raw.matchAll(/event: state-patch\ndata: (.+)\n/g)) st = JSON.parse(m[1]).state || st;
   for (const m of raw.matchAll(/event: done\ndata: (.+)\n/g)) { const d = JSON.parse(m[1]); if (d.state) st = d.state; }
+  // 有些输入轮不落 state-patch（纯叙事/纯拒绝）——回读一次，别拿旧状态当现状
+  if (!st) st = await (await fetch(`${b}/api/runs/${id}`, { headers: auth(t) })).json().then((r) => r.state);
   return st;
 }
 

@@ -1067,6 +1067,7 @@ function openHomebook() {
   // 这个家
   html += `<section class="hb-sec"><p class="m-kicker">${s.homeName ? esc(s.homeName) : '这个家'}</p>
     <p class="hb-line">门板加固 ${s.doorLevel || 0} 层${facs.length ? ' · ' + esc(facs.join('、')) : ' · 还没有像样的家什'}</p>
+    ${(s.homeTracks || []).length ? `<p class="hb-line dim">长出来的：${esc((s.homeTracks || []).join(' · '))}</p>` : ''}
     <p class="hb-line dim">走得动的房间：${esc(opened.join('、') || '门厅')}</p></section>`;
   // 物资格
   html += `<section class="hb-sec"><p class="m-kicker">物资清单</p><div id="hb-inv"></div></section>`;

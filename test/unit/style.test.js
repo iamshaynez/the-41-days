@@ -1,7 +1,7 @@
 // 文风圣经 lint（文风圣经-v0.1 §7）：叙事文本的禁词零命中。
 // 启用顺序：prelude/mainline/historia（随批次上线即启用）→
 // narrations/events/characters（文案丰满批次一改写后启用，2026-10）→
-// sidestories（批次八校订后启用）。白名单：露布体卡片可豁免「日渐／已经」。
+// sidestories（批次八校订后启用）；autonomy（居家与四问，0.40.0 起）。白名单：露布体卡片可豁免「日渐／已经」。
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -21,7 +21,7 @@ const walk = (node, where) => {
   else if (Array.isArray(node)) node.forEach((x, i) => walk(x, `${where}[${i}]`));
   else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) walk(v, `${where}.${k}`);
 };
-for (const f of ['prelude.json', 'mainline.json', 'historia.json', 'narrations.json', 'events.json', 'characters.json', 'docs.json', 'seals.json', 'sidestories.json']) {
+for (const f of ['prelude.json', 'mainline.json', 'historia.json', 'narrations.json', 'events.json', 'characters.json', 'docs.json', 'seals.json', 'sidestories.json', 'autonomy.json']) {
   walk(JSON.parse(readFileSync(join(PACK_DIR, f), 'utf8')), f);
 }
 

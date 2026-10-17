@@ -92,6 +92,7 @@ function apply(s, ev) {
       break;
     }
     case 'EVENT_FIRED': {
+      if (d.beat) break; // 节拍卡只入叙述不占门口位（0.38.0 起 beat 不挂 activeEvent——fold 漏了这一层）
       const ae = { cardId: d.cardId };
       if (d.night) ae.night = true;
       if (d.actorId) ae.actorId = d.actorId;
