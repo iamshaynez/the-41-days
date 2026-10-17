@@ -290,7 +290,7 @@ body[data-day='45'][data-phase='night'] #fx, body[data-day='45'][data-phase='nig
 }
 .menu-btn:hover { filter: drop-shadow(1px 2px 0 var(--shadow)) brightness(1.08); }
 .menu-btn .icon { width: 14px; height: 14px; }
-/* 舆图抽屉开关（仅移动端显形；桌面侧栏常驻，用不着它） */
+/* 史卷抽屉开关（仅移动端显形；桌面侧栏常驻，用不着它） */
 #btn-wing { display: none; }
 .wing-drawer-head { display: none; }   /* 抽屉头只在窄屏抽屉里显形 */
 /* 触控优化：交互件免双击缩放延迟，按压有回礼 */
@@ -1441,8 +1441,11 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
   .doc-wall { grid-template-columns: 1fr; }
   .annal-cols { grid-template-columns: 1fr; }
   #view-archive .panel.paper, #view-admin .panel.paper { padding: 20px 18px 24px; }
-  /* —— 舆图与史卷：收进底部抽屉（实测：侧栏常驻时书页只剩三成屏）——
-     窄屏 #wing 脱离文档流，整屏让给叙事流；点报头的「舆图」拉出 */
+  /* —— 史卷收进底部抽屉（实测：侧栏常驻时书页只剩三成屏）——
+     窄屏 #wing 脱离文档流，整屏让给叙事流；点报头的「史卷」拉出。
+     舆图在窄屏不展示：100×100 方图按 520px 最小宽铺开就占满整个抽屉，
+     史卷被挤出视口（线上反馈）；地图暂无玩法交互，手机档整卡让位。
+     桌面侧栏舆图与「大观」全屏图不受影响。 */
   #wing {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 47;
     display: flex; flex-direction: column;   /* 盖过 1080 断点的横排——抽屉里竖着摞 */
@@ -1462,10 +1465,8 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
   }
   #wing .wing-card + .wing-card { border-top: 1px solid var(--rule); }
   #wing .wing-card { min-width: 0; width: 100%; }
-  #map-box { max-width: none; width: 100%; overflow-x: auto; }
-  #map-box .map-svg { min-width: 520px; }   /* 舆图放大横滚：标签从 ~11px 升到 ~16px */
-  #wing .mp-label { fill: var(--ink-2); font-size: 3.5px; }        /* 抽屉里单独提亮放大——炭笔小字不该费眼 */
-  #wing .place text { fill: var(--ink-2); font-size: 3.7px; }
+  #map-panel { display: none; }   /* 舆图窄屏让位（见上）——回窄屏须重新拍板尺寸与入口 */
+  #chronicle-panel .wing-head { display: none; }   /* 抽屉里只剩一卡，抬头由抽屉头担任 */
   /* 史卷手机档：抽屉里整屏宽，正文字号提到与书页同级 */
   #wing .chron-text { font-size: 15.5px; line-height: 1.85; }
   #wing .chron-pen, #wing .chron-mir { font-size: 14px; line-height: 1.75; }
