@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { newRun, step, PACK, ch } from '../helpers.js';
 import { Ctx } from '../../packages/core/index.js';
 import { buildFeedback } from '../../packages/server/narrate.js';
+import { proposalToCard } from '../../packages/core/src/ge.js';
 
 describe('账卡台账 buildLedger', () => {
   test('吃饭：物资与饥饿两笔账都带原因', () => {
@@ -113,6 +114,32 @@ describe('账卡台账 buildLedger', () => {
     const waters = fb.ledger.items.filter((x) => x.item === 'water');
     assert.equal(waters.length, 2, '同因聚成一笔、异因分开');
     assert.deepEqual(waters.map((x) => x.delta).sort(), [1, 2]);
+  });
+
+  test('GE 生成卡的心情账用人话：why 显《卡名》，不泄漏内部 id（验证局截图实测：ge_1_g… 上屏）', () => {
+    const { state } = newRun({ seed: 80 });
+    state.day = 5;
+    const proposal = {
+      title: '半块麦饼',
+      text: '对门的老者把半块麦饼放在你们门槛上，没留话。文简捡起来时饼还是热的，说明他家里今天有火。',
+      theme: '稀缺',
+      anchors: ['第5天', '天气:clear'],
+      options: [
+        { label: '收进来，分着吃', mood_all: 1, outcomeText: '饼很硬，很暖。' },
+        { label: '放回去', outcomeText: '门槛空了。' }
+      ]
+    };
+    const card = proposalToCard(PACK, state, proposal);
+    state.geCards = { [card.id]: card };
+    state.activeEvent = { cardId: card.id, generated: true };
+    const r = step(state, [{ type: 'event_choice', option: 'g0' }]);
+    const fb = buildFeedback(r.state, r.facts, r.events, PACK, state.day);
+    const moodRows = fb.ledger.chars.flatMap((c) => c.rows.filter((x) => x.k === 'mood'));
+    assert.ok(moodRows.length > 0, '全队心情 +1 应入人物账');
+    for (const m of moodRows) {
+      assert.ok(!m.why.includes('ge_'), `账卡原因不许泄漏内部 id（got ${m.why}）`);
+      assert.ok(m.why.includes(`《${card.title}》`), `GE 卡的心情账用《卡名》人话（got ${m.why}）`);
+    }
   });
 });
 
