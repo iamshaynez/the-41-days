@@ -495,11 +495,13 @@ function tierOf(rawWhy, delegated, turn) {
 }
 export function buildLedger(state, events, pack, inputDay, turn = {}) {
   const cname = (id) => state.chars.find((c) => c.id === id)?.name || pack.charMap?.[id]?.name || id;
-  // why 人话化：内容包默认码兜底；事件卡 id → 《卡名》；ml_<stepId> → 城事步题
+  // why 人话化：内容包默认码兜底；事件卡 id → 《卡名》（内容包卡册 + run 级 GE 卡册双查——
+  // GE 生成卡不进内容包，只查 pack.cardMap 会把 ge_1_g… 裸 id 漏上账面）；ml_<stepId> → 城事步题
   const whyTxt = (why) => {
     if (!why || why === 'gain') return '得物';
     if (why === 'use') return '用掉';
-    if (pack.cardMap?.[why]?.title) return `《${pack.cardMap[why].title}》`;
+    const card = pack.cardMap?.[why] || state.geCards?.[why];
+    if (card?.title) return `《${card.title}》`;
     if (why.startsWith('ml_')) {
       const st = (pack.mainline?.steps || []).find((x) => 'ml_' + x.id === why);
       if (st) return `城事：${st.title}`;
