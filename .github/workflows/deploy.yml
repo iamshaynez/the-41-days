@@ -27,8 +27,8 @@ jobs:
           file: docker/Dockerfile
           push: true
           tags: |
-            ${{ secrets.ACR_REGISTRY }}/girlboss/app41:${{ github.sha }}
-            ${{ secrets.ACR_REGISTRY }}/girlboss/app41:main
+            ${{ secrets.ACR_REGISTRY }}/xiaowenz/app41:${{ github.sha }}
+            ${{ secrets.ACR_REGISTRY }}/xiaowenz/app41:main
 
       - name: 部署到测试机(本机)
         run: |
