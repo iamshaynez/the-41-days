@@ -81,7 +81,7 @@ export function createRun(pack, { seed = 1, difficulty = 'documentary', roster, 
     weather: 'clear', winterActive: false, winterStart, winterEnd,
     war: { endDay, telegraphed: false, ended: false, endingType: null },
     chars, inventory: inv,
-    facilities: { bed: 0, bed_good: 0, stove: 0, stove_eco: 0, stoveFireLeft: 0, heater: 0, heater_iron: 0, workbench: 0, workbench2: 0, workbench3: 0, metal: 0, rain: 0, rain_filter: 0, trap: 0, trapBaited: false, trapDay: -9, garden: 0, garden_veg: 0, gardenStarted: -9, distill: 0, distillReady: -9, radio: 0, piano: 0 },
+    facilities: { bed: 0, stove: 0, stove_eco: 0, stoveFireLeft: 0, heater: 0, heater_iron: 0, workbench: 0, metal: 0, rain: 0, trap: 0, trapBaited: false, trapDay: -9, garden: 0, garden_veg: 0, gardenStarted: -9, distill: 0, distillReady: -9, radio: 0, piano: 0 },
     doorLevel: 0, homeFurniture: 6,
     house: { opened: { hall: true, living: true, kitchen: true }, searched: {}, hiddenFound: {} },
     knownLocs: [...pack.manifest.startKnowledgeLocations, ...(ids.includes('alexey') ? ['beacon'] : [])], // 逄灶开局识北津台

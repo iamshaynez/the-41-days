@@ -218,8 +218,8 @@ function actCraft(ctx, c, recipeId) {
   const r = pack.recipes.find((x) => x.id === recipeId);
   if (!r) return { ok: false, reason: 'BAD_TARGET' };
   if (['cook_meal', 'fine_meal'].includes(r.id)) return { ok: false, reason: 'USE_COOK' };
-  const wbLv = s.facilities.workbench + s.facilities.workbench2 + s.facilities.workbench3;
-  if (r.facility === 'workbench' && (!wbLv || wbLv < (r.wbLevel || 1))) { ctx.fact('need_facility', { facility: '工作台' + (r.wbLevel || 1) }); return { ok: false, reason: 'NEED_FACILITY' }; }
+  const wbLv = s.facilities.workbench;
+  if (r.facility === 'workbench' && !wbLv) { ctx.fact('need_facility', { facility: '工作台' }); return { ok: false, reason: 'NEED_FACILITY' }; }
   if (r.facility !== 'workbench' && !s.facilities[r.facility]) { ctx.fact('need_facility', { facility: r.facility }); return { ok: false, reason: 'NEED_FACILITY' }; }
   if (r.chefOnly && !c.traits?.cook) return { ok: false, reason: 'NEED_TRAIT' };
   const disc = c.traits?.craftDisc || 0;
@@ -256,6 +256,7 @@ function actBuild(ctx, c, target) {
   const fac = pack.facilityMap[target];
   if (!fac) return { ok: false, reason: 'BAD_TARGET' };
   if (fac.charOnly && c.id !== fac.charOnly) return { ok: false, reason: 'NEED_TRAIT' };
+  if (fac.requires && !s.facilities[fac.requires]) { ctx.fact('need_facility', { facility: pack.facilityMap[fac.requires]?.name || fac.requires }); return { ok: false, reason: 'NEED_FACILITY' }; }
   if ((s.facilities[target] || 0) >= (fac.max || 1)) return { ok: false, reason: 'MAX' };
   const disc = c.traits?.craftDisc || 0;
   const need = (n) => Math.max(1, Math.ceil(n * (1 - disc)));

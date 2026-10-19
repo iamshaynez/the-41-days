@@ -73,6 +73,9 @@ function playOne(pack, seed, policyName, maxDays, sidestory = null, randomChoice
     endingTitle: s.ending?.storyline?.title?.split(' · ').slice(-1)[0] || s.ending?.type || 'wiped',
     sideCards: Object.keys(s.firedOnce || {}).filter((id) => pack.cardMap[id]?.side).length,
     overviews: s.overviewDays || 0, // 概述日（长线体验 §4.4）：平淡日被一句话收卷的天数
+    // 家什（拍平 0.42.0）：这局家里长出几件（设施件数+门板层数）与底线三件达成——积累感的硬指标
+    builds: pack.facilities.reduce((a, f) => a + Math.max(0, s.facilities?.[f.id] || 0), 0) + (s.doorLevel || 0),
+    baseTrio: !!(s.facilities.stove && (s.facilities.bed || 0) >= 1 && s.doorLevel >= 1),
     alive: s.chars.filter((c) => c.alive).length,
     ending: s.ending?.type || 'wiped',
     docs: s.docsSeen.length,
@@ -192,6 +195,8 @@ function computeKpis(runs, policies) {  const by = {};
       distinct_routines_median: median(rs.map((r) => r.distinctRoutines || 0).sort((a, b) => a - b)),
       distinct_locs_median: median(rs.map((r) => r.distinctLocs || 0).sort((a, b) => a - b)),
       wilds_visit_share: rs.filter((r) => r.wildsVisited).length / rs.length,
+      builds_median: median(rs.map((r) => r.builds || 0).sort((a, b) => a - b)),
+      base_trio_share: rs.filter((r) => r.baseTrio).length / rs.length,
       raid_wipe_unknown: null
     };
   }
@@ -225,6 +230,13 @@ export function checkGates(report, gates) {
     }
     if (g.wilds_visit_share && bal.wilds_visit_share !== undefined && !inBand(bal.wilds_visit_share, g.wilds_visit_share)) {
       failures.push(`野外到访局占比 ${bal.wilds_visit_share.toFixed(2)} 越带 ${JSON.stringify(g.wilds_visit_share)}`);
+    }
+    // 家什（拍平 0.42.0）：代理要真能把家立起来——底线三件近必达，总件数有下限也有天花板（材料约束仍在）
+    if (g.builds_per_run_median && bal.builds_median !== undefined && !inBand(bal.builds_median, g.builds_per_run_median)) {
+      failures.push(`每局家什件数中位 ${bal.builds_median} 越带 ${JSON.stringify(g.builds_per_run_median)}`);
+    }
+    if (g.base_trio_share && bal.base_trio_share !== undefined && !inBand(bal.base_trio_share, g.base_trio_share)) {
+      failures.push(`底线三件达成率 ${bal.base_trio_share.toFixed(2)} 越带 ${JSON.stringify(g.base_trio_share)}`);
     }
     // 恶魔策略（若在样本里）：存活率应显著低于均衡
     const devil = report.kpis.devil;

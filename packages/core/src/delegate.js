@@ -229,12 +229,22 @@ export function planDay(state, pack) {
   //    35 天"安排了→做不到"的墙纸式噪音）；材料不足就跳过，建材缺口交给交易建议补
   {
     const builder = aliveChars(s).find((c) => c.ap >= 2 && c.apMax >= 2 && !busy.has(c.id));
+    // 门不是设施清单里的户口，加固档住在 doorReinforce——单走一条账（facilityMap['door'] 不存在，别再拿它问价）
     const canAfford = (target) => {
+      if (target === 'door') {
+        const lv = pack.doorReinforce?.levels[s.doorLevel];
+        if (!lv) return false;
+        if (lv.facility && !s.facilities[lv.facility]) return false;
+        return Object.entries(lv.cost || {}).every(([k, n]) => has(s, k, n));
+      }
       const f = pack.facilityMap?.[target];
-      return !!f && Object.entries(f.cost || {}).every(([k, n]) => has(s, k, n));
+      return !!f && (!f.requires || !!s.facilities[f.requires]) && Object.entries(f.cost || {}).every(([k, n]) => has(s, k, n));
     };
     if (builder) {
       const winterSoon = s.winterActive || s.day >= s.winterStart - 4;
+      // 断粮且有药时把药圃翻成菜园（粮食是每天的事）；gardenStarted===−9 才翻，别踩掉正在长的药
+      const foodTight = (s.inventory.meal || 0) + (s.inventory.raw || 0) + (s.inventory.veg || 0) < 2;
+      const medOk = (s.inventory.herbmed || 0) + (s.inventory.meds || 0) >= 1;
       let target = null;
       if (!s.facilities.stove && canAfford('stove')) target = 'stove';
       else if ((s.facilities.bed || 0) < Math.min(2, aliveChars(s).length) && canAfford('bed')) target = 'bed'; // 床先于门：夜里睡地板，白天就没有——慢性力竭是一切计划的地基
@@ -242,9 +252,11 @@ export function planDay(state, pack) {
       else if (winterSoon && !s.facilities.heater && canAfford('heater')) target = 'heater';
       else if (!s.facilities.trap && canAfford('trap')) target = 'trap';
       else if ((s.facilities.bed || 0) < 3 && canAfford('bed')) target = 'bed';
-      else if (!s.facilities.stove_eco && has(s, 'wood', 4) && has(s, 'parts', 8)) target = 'stove_eco';
-      else if (!s.facilities.heater_iron && has(s, 'comp', 5)) target = 'heater_iron';
-      else if (!s.facilities.garden && has(s, 'comp', 6)) target = 'garden';
+      else if (s.doorLevel < (pack.doorReinforce?.maxLevel ?? 3) && canAfford('door')) target = 'door'; // 门二三层：有铁砧的加固件便宜，别停在第一层
+      else if (!s.facilities.stove_eco && canAfford('stove_eco')) target = 'stove_eco';
+      else if (!s.facilities.heater_iron && canAfford('heater_iron')) target = 'heater_iron';
+      else if (!s.facilities.garden && canAfford('garden')) target = 'garden';
+      else if (s.facilities.garden && !s.facilities.garden_veg && s.facilities.gardenStarted === -9 && foodTight && medOk && canAfford('garden_veg')) target = 'garden_veg';
       if (target) { intents.push(delegated({ type: 'act', actor: builder.id, action: 'build', target })); use(builder.id); }
     }
   }
@@ -953,7 +965,8 @@ export function tradeDeals(state, pack) {
     { item: 'raw', when: () => foodTotal < 4 },
     { item: 'firewood', when: () => (s.inventory.firewood || 0) < 3 },
     { item: 'wood', when: () => (s.inventory.wood || 0) < 4 && !has(s, 'axe') },
-    { item: 'parts', when: () => (s.inventory.parts || 0) < 4 }
+    // 家什水位（拍平 0.42.0）：底线没立起来前，零件补到 8（够门+床+火盆），别卡在饿不死的 4
+    { item: 'parts', when: () => (s.inventory.parts || 0) < 8 && ((s.facilities.bed || 0) < 2 || s.doorLevel < 3 || !s.facilities.workbench) }
   ].sort((a, b) => prio(a.item) - prio(b.item));
   for (const w of want) {
     const sku = stock.find((x) => x.item === w.item);
