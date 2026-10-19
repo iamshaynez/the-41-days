@@ -1,5 +1,5 @@
 {
-  "$comment": "内核设计-v0.2 §3.2 制造配方 + §4 设施树（荆州卷）。facilities 为可建清单（含升级 prev），recipes 为配方。内部 id 不变；radio=烽鼓具（听更/终局件），piano=续弦的琴（素徽专属）。",
+  "$comment": "内核设计-v0.2 §3.2 制造配方 + §4 设施（荆州卷）。facilities 为平铺可建清单（升级树已拍平：原升级件独立成条目，用 requires 声明前置）；recipes 为配方。radio=烽鼓具（听更/终局件），piano=续弦的琴（素徽专属）。effectText/flavor 供家什架提示与落成卡展示，须与内核机制一字不差（内容即数据）。",
   "recipes": [
     {
       "id": "cook_meal",
@@ -55,7 +55,6 @@
         }
       ],
       "facility": "workbench",
-      "wbLevel": 1,
       "ap": 1
     },
     {
@@ -71,7 +70,6 @@
         }
       ],
       "facility": "workbench",
-      "wbLevel": 1,
       "ap": 1
     },
     {
@@ -87,7 +85,6 @@
         }
       ],
       "facility": "workbench",
-      "wbLevel": 1,
       "ap": 1
     },
     {
@@ -167,26 +164,6 @@
       "days": 2
     },
     {
-      "id": "make_bullet",
-      "out": {
-        "item": "bullet",
-        "n": 5
-      },
-      "need": [
-        {
-          "item": "powder",
-          "n": 1
-        },
-        {
-          "item": "comp",
-          "n": 1
-        }
-      ],
-      "facility": "workbench",
-      "wbLevel": 3,
-      "ap": 2
-    },
-    {
       "id": "make_saw",
       "name": "锯",
       "out": {
@@ -252,45 +229,39 @@
       "name": "简易床",
       "max": 4,
       "cost": {
-        "wood": 5,
-        "parts": 8
+        "wood": 4,
+        "parts": 4
       },
       "ap": 2,
-      "upgrades": [
-        {
-          "id": "bed_good",
-          "name": "像样的床",
-          "cost": {
-            "wood": 5,
-            "parts": 10,
-            "comp": 2
-          },
-          "ap": 2,
-          "perUnit": true
-        }
-      ]
+      "effectText": "睡床的人一夜恢复两格疲劳，地板将息只回一格；床位不够时，养伤的人优先。",
+      "flavor": "木板搭在两条长凳上，铺了旧毡。这一夜起，有人不用睡地板了。"
     },
     {
       "id": "stove",
       "name": "炉灶",
       "max": 1,
       "cost": {
-        "wood": 5,
-        "parts": 6
+        "wood": 4,
+        "parts": 4
       },
       "ap": 2,
-      "upgrades": [
-        {
-          "id": "stove_eco",
-          "name": "节能灶",
-          "cost": {
-            "wood": 4,
-            "parts": 8,
-            "comp": 4
-          },
-          "ap": 2
-        }
-      ]
+      "effectText": "解锁烹饪：生食、肉或两份蔬菜烧成熟饭；一根柴烧两锅，余火留到下一顿。",
+      "flavor": "灶膛第一把火点起来，烟从墙缝里出去，饭香留在屋里。"
+    },
+    {
+      "id": "stove_eco",
+      "name": "节能灶",
+      "max": 1,
+      "requires": "stove",
+      "cost": {
+        "wood": 4,
+        "parts": 5,
+        "comp": 4
+      },
+      "ap": 2,
+      "effectText": "炉膛改了道：同一根柴的余火从烧两锅变四锅，柴火省下一半。",
+      "flavor": "灶膛改了道。火还是那把火，日子得省着过。",
+      "$comment": "一根柴烧四锅（原灶两锅）——原为炉灶升级件，拍平为独立条目，需先有炉灶"
     },
     {
       "id": "heater",
@@ -298,23 +269,27 @@
       "max": 1,
       "cost": {
         "wood": 4,
-        "parts": 4
+        "parts": 2
       },
       "ap": 2,
       "burn": 2,
-      "upgrades": [
-        {
-          "id": "heater_iron",
-          "name": "铁炉",
-          "cost": {
-            "wood": 5,
-            "parts": 8,
-            "comp": 5
-          },
-          "ap": 2,
-          "burn": 3
-        }
-      ]
+      "effectText": "冬夜烧柴取暖，一夜两柴；落雪的夜睡下的人不受寒，酷寒的夜还不够。",
+      "flavor": "火盆端进屋，炭网上头一层薄红。今夜风雪再大，脚是热的。"
+    },
+    {
+      "id": "heater_iron",
+      "name": "铁炉",
+      "max": 1,
+      "requires": "heater",
+      "cost": {
+        "wood": 5,
+        "parts": 5,
+        "comp": 5
+      },
+      "ap": 2,
+      "burn": 3,
+      "effectText": "炉膛深了：酷寒夜也撑得住；可烧煤，柴紧时一根柴也过一夜；雪夜还化出一碗水。",
+      "flavor": "铁炉立起来，炉膛深，火养得住。这个冬天，屋里有了过冬的样子。"
     },
     {
       "id": "workbench",
@@ -322,32 +297,11 @@
       "max": 1,
       "cost": {
         "wood": 10,
-        "parts": 10
+        "parts": 6
       },
       "ap": 3,
-      "upgrades": [
-        {
-          "id": "workbench2",
-          "name": "二级工作台",
-          "cost": {
-            "wood": 8,
-            "parts": 8,
-            "comp": 5,
-            "elec": 2
-          },
-          "ap": 3
-        },
-        {
-          "id": "workbench3",
-          "name": "三级工作台",
-          "cost": {
-            "comp": 8,
-            "elec": 4,
-            "powder": 2
-          },
-          "ap": 3
-        }
-      ]
+      "effectText": "台面立起来：卷烟、草药药、开锁器、铲子都在这打。",
+      "flavor": "台面钉稳，工具挂上墙。手艺人没了活计，活计还在。"
     },
     {
       "id": "metal",
@@ -355,10 +309,12 @@
       "max": 1,
       "cost": {
         "wood": 6,
-        "parts": 10,
+        "parts": 6,
         "comp": 5
       },
-      "ap": 3
+      "ap": 3,
+      "effectText": "铁器开炉：刀、斧、锯、铁撬出自铁砧；门板第二、三层加固也靠它。",
+      "flavor": "铁砧落定，一声试锤，巷子里都听得见。"
     },
     {
       "id": "rain",
@@ -366,21 +322,12 @@
       "max": 1,
       "cost": {
         "wood": 5,
-        "parts": 8,
+        "parts": 5,
         "comp": 4
       },
       "ap": 2,
-      "upgrades": [
-        {
-          "id": "rain_filter",
-          "name": "带滤网集雨器",
-          "cost": {
-            "comp": 3,
-            "parts": 4
-          },
-          "ap": 1
-        }
-      ]
+      "effectText": "雨天摆在檐下，一夜接两碗水。",
+      "flavor": "檐下支起木槽，接的是天上掉下来的家当。"
     },
     {
       "id": "trap",
@@ -388,18 +335,20 @@
       "max": 1,
       "cost": {
         "wood": 3,
-        "parts": 6,
+        "parts": 4,
         "comp": 2
       },
-      "ap": 2
+      "ap": 2,
+      "effectText": "放块生肉做饵，隔三日开笼，五成把握笼里有货。",
+      "flavor": "笼子支在墙根，饵放好了。三天后再来看。"
     },
     {
       "id": "garden",
       "name": "药圃",
       "max": 1,
       "cost": {
-        "parts": 8,
-        "comp": 6
+        "parts": 4,
+        "comp": 5
       },
       "ap": 2,
       "waterStart": 2,
@@ -407,22 +356,27 @@
       "yield": {
         "herb": 4
       },
-      "upgrades": [
-        {
-          "id": "garden_veg",
-          "name": "葵菜园",
-          "cost": {
-            "parts": 6,
-            "comp": 8
-          },
-          "ap": 2,
-          "waterStart": 3,
-          "days": 5,
-          "yield": {
-            "veg": 4
-          }
-        }
-      ]
+      "effectText": "浇两碗水，四天后收四株草药。",
+      "flavor": "翻出一畦土，埋下种子，浇了头一遍水。围城里也有等得起的事。"
+    },
+    {
+      "id": "garden_veg",
+      "name": "葵菜园",
+      "max": 1,
+      "requires": "garden",
+      "cost": {
+        "parts": 4,
+        "comp": 6
+      },
+      "ap": 2,
+      "waterStart": 3,
+      "days": 5,
+      "yield": {
+        "veg": 4
+      },
+      "effectText": "把药圃翻作菜园：浇三碗水，五天后收四份菜。",
+      "flavor": "药换成了菜。救人是一句老话，吃饭是每天的事。",
+      "$comment": "原为药圃升级件，拍平为独立条目（翻种）；vitals 里 garden_veg 的产出优先生效"
     },
     {
       "id": "distill",
@@ -430,10 +384,12 @@
       "max": 1,
       "cost": {
         "wood": 6,
-        "parts": 10,
+        "parts": 6,
         "comp": 8
       },
-      "ap": 3
+      "ap": 3,
+      "effectText": "一份糖、两碗水，文火两天，得一坛私酿。",
+      "flavor": "蒸馏器接好了，头一锅水正在滚。等它两天。"
     },
     {
       "id": "radio",
@@ -444,38 +400,33 @@
         "comp": 4,
         "elec": 2
       },
-      "ap": 2
+      "ap": 2,
+      "effectText": "案头听更：白日可收战报、行情与城里的风声。",
+      "flavor": "烽鼓具擦亮摆上案头。转了两圈旋钮，沙沙声里，城外的世界回来了。"
     },
     {
       "id": "piano",
-      "name": "续弦的琴（素徽，三次）",
+      "name": "续弦的琴",
       "max": 3,
+      "charOnly": "zofia",
       "cost": {
         "wood": 2,
         "parts": 4
       },
       "ap": 2,
-      "charOnly": "zofia"
-    },
-    {
-      "id": "stove_eco",
-      "name": "节能灶",
-      "cost": {
-        "wood": 4,
-        "parts": 8
-      },
-      "ap": 2,
-      "max": 1,
-      "$comment": "一根柴烧四锅（原灶两锅）——planDay 的建造序早就点名它，只是一直没有户口"
+      "effectText": "素徽的琴：续一根弦屋里亮一分，三弦续满，这支曲子才弹得成。",
+      "flavor": "一根弦续上了。素徽按了按，音还差着，但已经是琴的声音了。"
     }
   ],
   "doorReinforce": {
     "maxLevel": 3,
+    "effectText": "门板一层层钉上去，夜袭的人撬门要多费手脚；第二、三层要铁砧上打的加固件。",
+    "flavor": "又一层门板钉上去了。钉子敲到底，屋里听得清清楚楚。",
     "levels": [
       {
         "cost": {
-          "wood": 5,
-          "parts": 5
+          "wood": 4,
+          "parts": 2
         },
         "ap": 2
       },
@@ -489,7 +440,7 @@
       {
         "cost": {
           "comp": 3,
-          "parts": 5
+          "parts": 3
         },
         "ap": 2,
         "facility": "metal"

@@ -443,10 +443,10 @@ export function homeTracks(state, pack) {
   const s = state;
   const out = [];
   const fac = s.facilities || {};
-  const F = { stove: '灶', heater: '火盆', workbench: '工作台', metal: '铁砧', radio: '烽鼓具', trap: '捕鼠笼', garden: '药圃', distill: '蒸馏器', rain: '集雨器', piano: '琴' };
+  const F = { stove: '灶', stove_eco: '节能灶', heater: '火盆', heater_iron: '铁炉', workbench: '工作台', metal: '铁砧', radio: '烽鼓具', trap: '捕鼠笼', garden: '药圃', garden_veg: '葵菜园', distill: '蒸馏器', rain: '集雨器', piano: '琴' };
   for (const [k, label] of Object.entries(F)) if (fac[k]) out.push(`${label}${k === 'piano' ? ` ${fac[k]}/3 弦` : ''}`);
   if (s.doorLevel) out.push(`门 ${s.doorLevel}/3 道`);
-  if ((fac.bed || 0) + (fac.bed_good || 0)) out.push(`床 ${(fac.bed || 0) + (fac.bed_good || 0)} 张`);
+  if ((fac.bed || 0) + (fac.bed_good || 0)) out.push(`床 ${(fac.bed || 0) + (fac.bed_good || 0)} 张`); // bed_good 并入计数：老档里可能还留着
   const arcs = s.arcs || {};
   const labels = pack.autonomy?.arcLabels || {};
   for (const [id, a] of Object.entries(arcs)) {

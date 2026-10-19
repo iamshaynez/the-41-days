@@ -37,26 +37,36 @@ function baseDay(s, pack, { build = true, treat = true, searchHome = true } = {}
   for (const c of s.chars.filter((x) => x.alive && x.sick === 1 && !x.bedRest && !acts.some((a) => a.actor === x.id) && (s.inventory.meal || 0) > 0)) {
     acts.push({ type: 'act', actor: c.id, action: 'rest' });
   }
-  // 建造序：炉灶 → 门 → 床 → 工作台
+  // 建造序：炉灶 → 门 → 床 → 工作台（造价与前置一律读内容包——别在机器人里养第二份账本）
   if (build) {
-    const builder = s.chars.find((c) => c.alive && c.ap >= 2 && !acts.some((a) => a.actor === c.id));
+    // 吃饭是 0AP 的嘴上事，不占手——只有被排了正经活的人不让再建（delegate 同口径）
+    const heavyBusy = new Set(acts.filter((a) => a.action !== 'eat').map((a) => a.actor));
+    const builder = s.chars.find((c) => c.alive && c.ap >= 2 && !heavyBusy.has(c.id));
+    const canAfford = (target) => {
+      if (target === 'door') {
+        const lv = pack.doorReinforce?.levels[s.doorLevel];
+        if (!lv) return false;
+        if (lv.facility && !s.facilities[lv.facility]) return false;
+        return Object.entries(lv.cost || {}).every(([k, n]) => (s.inventory[k] || 0) >= n);
+      }
+      const f = pack.facilityMap?.[target];
+      return !!f && (!f.requires || !!s.facilities[f.requires]) && Object.entries(f.cost || {}).every(([k, n]) => (s.inventory[k] || 0) >= n);
+    };
     if (builder) {
       const winterSoon = s.winterActive || s.day >= s.winterStart - 4;
-      if (!s.facilities.stove) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'stove' });
-      else if (s.doorLevel < 1) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'door' });
-      else if (winterSoon && !s.facilities.heater) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'heater' });
+      if (!s.facilities.stove && canAfford('stove')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'stove' });
+      else if (s.doorLevel < 1 && canAfford('door')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'door' });
+      else if (winterSoon && !s.facilities.heater && canAfford('heater')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'heater' });
       // v0.2 校准：药路是冬季疫病的答案——工作台要早建（汤药=草药×3）
-      else if (!s.facilities.workbench && (s.inventory.wood || 0) >= 10 && (s.inventory.parts || 0) >= 10) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'workbench' });
-      else if (!s.facilities.garden && (s.inventory.comp || 0) >= 6) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'garden' });
+      else if (!s.facilities.workbench && canAfford('workbench')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'workbench' });
+      else if (!s.facilities.garden && canAfford('garden')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'garden' });
       // 菜园是设计好的食物自给 loop：药圃收获一次后升级葵菜园（v0.2）
-      else if (s.facilities.garden && !s.facilities.garden_veg && s.facilities.gardenStarted === -9 && (s.inventory.comp || 0) >= 8) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'garden_veg' });
-      else if (!s.facilities.trap) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'trap' });
-      else if (s.facilities.bed < 2) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'bed' });
-      else if (s.doorLevel < 3 && (s.inventory.wood || 0) >= 5 && (s.inventory.parts || 0) >= 5) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'door' });
-      else if (!s.facilities.stove_eco && (s.inventory.wood || 0) >= 4 && (s.inventory.parts || 0) >= 8) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'stove_eco' });
-      else if (!s.facilities.heater_iron && (s.inventory.comp || 0) >= 5) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'heater_iron' });
-      // 药圃重栽（收获后 gardenStarted=-9，需重新起畦）
-      else if (s.facilities.garden && s.facilities.gardenStarted === -9 && (s.inventory.water || 0) >= 2) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'garden' });
+      else if (s.facilities.garden && !s.facilities.garden_veg && s.facilities.gardenStarted === -9 && canAfford('garden_veg')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'garden_veg' });
+      else if (!s.facilities.trap && canAfford('trap')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'trap' });
+      else if ((s.facilities.bed || 0) < 2 && canAfford('bed')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'bed' });
+      else if (s.doorLevel < 3 && canAfford('door')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'door' });
+      else if (!s.facilities.stove_eco && canAfford('stove_eco')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'stove_eco' });
+      else if (!s.facilities.heater_iron && canAfford('heater_iron')) acts.push({ type: 'act', actor: builder.id, action: 'build', target: 'heater_iron' });
     }
   }
   // 煎药：草药够了且有人手就熬汤药（疫病季的命根子）
@@ -74,11 +84,19 @@ function baseDay(s, pack, { build = true, treat = true, searchHome = true } = {}
   // 交易：卖余粮（木/珠宝/酒）换食物、药品、柴
   if (s.franko) {
     const give = {};
+    // 建材留底线（与管家 tradeDeals 的 RESERVE 同口径）：家什没立起来前，零件/木板不进货担
     if ((s.inventory.jewel || 0) > 0) give.jewel = 1;
     else if ((s.inventory.wine || 0) > 0) give.wine = 1;
-    else if ((s.inventory.parts || 0) >= 8) give.parts = 6;
-    else if ((s.inventory.wood || 0) >= 8) give.wood = 4;
+    else if ((s.inventory.parts || 0) >= 12) give.parts = 4;
+    else if ((s.inventory.wood || 0) >= 10) give.wood = 4;
     if (Object.keys(give).length) {
+      // 家什未立时先紧着建材（与管家 tradeDeals 的建材档同口径）：余粮换零件，别等饿不死了才补到 4
+      const homeThin = (s.facilities.bed || 0) < 2 || s.doorLevel < 3 || !s.facilities.workbench;
+      const partsSku = s.franko.stock.find((x) => x.item === 'parts' && x.n > 0);
+      if (homeThin && (s.inventory.parts || 0) < 8 && partsSku && !give.parts) {
+        acts.push({ type: 'trade_op', give, get: { parts: 2 } });
+        return acts;
+      }
       const lowFuel = (s.inventory.firewood || 0) + (s.inventory.wood || 0) + (s.inventory.book || 0) < 2;
       const winterSoon = s.winterActive || s.day >= s.winterStart - 6;
       const fw = s.franko.stock.find((x) => x.item === 'firewood' && x.n > 0);

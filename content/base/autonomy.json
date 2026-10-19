@@ -246,11 +246,11 @@
       "prep_night": {
         "id": "ladder_prep_night",
         "line": "{{name}}把火折子多备了一截，撬棍磨快了一分——今晚出门的人能多走几步。",
-        "weight": 3,
+        "weight": 2,
         "once": "day",
         "when": {
           "item": {
-            "parts": 1
+            "parts": 3
           }
         },
         "effects": {

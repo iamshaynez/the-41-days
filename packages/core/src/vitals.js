@@ -213,10 +213,10 @@ export function tickProduction(ctx) {
     s.facilities.trapDay = day;
     ctx.emit('FACILITY_STATE', { facility: 'trapDay', to: day });
   }
-  const gardenLevel = s.facilities.garden_veg || s.facilities.garden;
-  const gardenDef = ctx.pack.recipes?.facilities?.find((f) => f.id === (s.facilities.garden_veg ? 'garden_veg' : 'garden'));
-  if (gardenLevel && s.facilities.gardenStarted > 0 && day - s.facilities.gardenStarted >= (gardenDef?.days || (s.facilities.garden_veg ? 5 : 4))) {
-    const yieldItems = gardenDef?.yield || (s.facilities.garden_veg ? { veg: 3 } : { herb: 3 });
+  const gardenId = s.facilities.garden_veg ? 'garden_veg' : 'garden';
+  const gardenDef = ctx.pack.facilityMap?.[gardenId];
+  if (s.facilities[gardenId] && s.facilities.gardenStarted > 0 && day - s.facilities.gardenStarted >= (gardenDef?.days || 4)) {
+    const yieldItems = gardenDef?.yield || { herb: 3 };
     for (const [it, n] of Object.entries(yieldItems)) ctx.addItem(it, n, '园子');
     s.facilities.gardenStarted = -9;
     ctx.emit('FACILITY_STATE', { facility: 'gardenStarted', to: -9 });
@@ -227,9 +227,8 @@ export function tickProduction(ctx) {
     ctx.emit('FACILITY_STATE', { facility: 'distillReady', to: -9 });
     ctx.fact('moonshine_ready', {});
   }
-  // 集雨（雨天 ×2，雪天需滤网）
+  // 集雨（雨天 ×2）
   if (s.facilities.rain && s.weather === 'rain') ctx.addItem('water', 2, '集雨');
-  else if (s.facilities.rain_filter && s.weather === 'snow') ctx.addItem('water', 1, '集雪');
   // 借出工具归还（事件卡 flag）
   if (s.shovelReturnDay && day >= s.shovelReturnDay) {
     ctx.addItem('shovel', 1, '归还'); s.shovelReturnDay = 0;
