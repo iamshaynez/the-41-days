@@ -26,7 +26,7 @@ export const LOC_ALIAS = {
 };
 const RECIPE_ALIAS = { 艾条: 'make_cigs', 汤药: 'make_herbmed', 拨针: 'make_lockpick', 环首刀: 'make_knife', 斧: 'make_axe', 浊酒: 'make_moonshine', 酒: 'make_moonshine', 弩箭: 'make_bullet' };
 const FAC_ALIAS = {
-  床: 'bed', 炉灶: 'stove', 火盆: 'heater', 铁炉: 'heater_iron', 工作台: 'workbench', 二级工作台: 'workbench2', 三级工作台: 'workbench3',
+  床: 'bed', 炉灶: 'stove', 节能灶: 'stove_eco', 火盆: 'heater', 铁炉: 'heater_iron', 工作台: 'workbench',
   铁砧: 'metal', 集雨器: 'rain', 捕鼠笼: 'trap', 药圃: 'garden', 葵菜园: 'garden_veg', 蒸馏器: 'distill', 烽鼓具: 'radio', 琴: 'piano', 门: 'door'
 };
 

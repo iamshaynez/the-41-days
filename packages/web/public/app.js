@@ -175,6 +175,42 @@ function renderObituary(c, day) {
   revealFlow();
 }
 
+/** 落成卡（家什拍平 0.42.0）：头一件整幅贺卡；同件添置与续弦走小戳记，仪式不疲劳 */
+function renderBuiltCard(def, day, nth) {
+  const s = state.s || {};
+  if (nth === 1 || def.id === 'piano') {
+    closePara();
+    const box = el('div', 'built-card');
+    const countNote = def.max > 1 ? (def.id === 'piano' ? `第${'一二三'[nth - 1] || nth}根弦` : `第${nth}件`) : '';
+    box.innerHTML = `
+      <span class="bc-kicker">成</span>
+      <div class="bc-name">${esc(def.name)}</div>
+      ${countNote ? `<div class="bc-count">${esc(countNote)}</div>` : ''}
+      <div class="bc-flavor">${esc(def.flavor || '')}</div>
+      <div class="bc-effect">${esc(def.effectText || '')}</div>
+      <div class="bc-date">立于围城第 ${day} 日</div>`;
+    $('narration').appendChild(box);
+    revealFlow();
+  } else {
+    const chip = el('div', 'built-stamp', `${svgUse(facIcon(def.id), 'bs-ic')}家什添置 · ${esc(def.name)} 第${nth}件`);
+    $('narration').appendChild(chip);
+  }
+}
+
+/** 门板加固卡：与家什落成同礼，落款记层数 */
+function renderDoorCard(s) {
+  closePara();
+  const box = el('div', 'built-card door-card');
+  box.innerHTML = `
+    <span class="bc-kicker">固</span>
+    <div class="bc-name">门板 · 第${'一二三'[s.doorLevel - 1] || s.doorLevel}层</div>
+    <div class="bc-flavor">${esc(s.doorDef?.flavor || '又一层门板钉上去了。')}</div>
+    <div class="bc-effect">${esc(s.doorDef?.effectText || '')}</div>
+    <div class="bc-date">钉于围城第 ${s.day} 日</div>`;
+  $('narration').appendChild(box);
+  revealFlow();
+}
+
 function enterGame(mode, s) {
   state.mode = mode;
   $('setup').hidden = true; $('game').hidden = false;
@@ -822,6 +858,17 @@ function applyState(s) {
     }
   }
   state.lastAlive = aliveNow;
+  // 落成：家里长出新的家什（或门板又厚一层）——整幅卡贺一贺（家什拍平 0.42.0）
+  if (state.lastFacilities) {
+    const defs = new Map((s.facilityDefs || []).map((d) => [d.id, d]));
+    for (const [id, n] of Object.entries(s.facilities || {})) {
+      const was = state.lastFacilities[id] || 0;
+      if (n > was && defs.has(id)) for (let k = was; k < n; k++) renderBuiltCard(defs.get(id), s.day, k + 1);
+    }
+    if ((s.doorLevel || 0) > (state.lastDoor || 0)) renderDoorCard(s);
+  }
+  state.lastFacilities = { ...(s.facilities || {}) };
+  state.lastDoor = s.doorLevel || 0;
   // 阶段切换：天光扫过 + 全局换肤
   if (state.lastPhase !== s.phase) {
     document.body.dataset.phase = s.phase === 'prologue' ? 'dawn' : s.phase; // 序章走破晓的天光
@@ -1002,19 +1049,22 @@ const ITEM_META = {
 const CAT_ORDER = ['食物', '水', '燃料', '医疗', '材料', '工具', '嗜好', '值钱'];
 const CAT_TOKEN = { 食物: '食', 水: '水', 燃料: '火', 医疗: '医', 材料: '材', 工具: '具', 嗜好: '嗜', 值钱: '值' };
 const ROOM_NAME = { hall: '门厅', living: '客厅', kitchen: '厨房', bedroom: '卧室', attic: '阁楼', cellar: '地窖', yard: '后院', garage: '车库' };
+const FAC_ICON = { rain: 'rainf' }; // 图标 sprite 与设施 id 不同名的补一张对照，其余同名
+const facIcon = (id) => FAC_ICON[id] || id;
 const FAC_NAME = (s) => {
   const f = s.facilities || {};
   const out = [];
-  if (f.stove) out.push(f.stove_eco ? '节能炉' : '炉灶');
+  if (f.stove) out.push(f.stove_eco ? '节能灶' : '炉灶');
   if ((f.stoveFireLeft || 0) > 0) out.push('灶有余火'); // 痕迹：一灶火没熄，日子就有余温
   if (f.heater) out.push(f.heater_iron ? '铁炉' : '火盆');
   if (f.radio) out.push('烽鼓具');
   if (f.piano >= 3) out.push('续弦的琴');
-  if (f.bed) out.push('床');
-  if (f.garden) out.push('苗圃');
-  if (f.trap) out.push('陷阱');
+  if (f.bed) out.push(`床×${f.bed}`);
+  if (f.garden) out.push(f.garden_veg ? '菜园' : '药圃');
+  if (f.trap) out.push('捕鼠笼');
   if (f.rain) out.push('集雨器');
   if (f.workbench) out.push('工作台');
+  if (f.metal) out.push('铁砧');
   if (f.distill) out.push('蒸馏器');
   return out;
 };
@@ -1074,6 +1124,8 @@ function openHomebook() {
     <p class="hb-line">门板加固 ${s.doorLevel || 0} 层${facs.length ? ' · ' + esc(facs.join('、')) : ' · 还没有像样的家什'}</p>
     ${(s.homeTracks || []).length ? `<p class="hb-line dim">长出来的：${esc((s.homeTracks || []).join(' · '))}</p>` : ''}
     <p class="hb-line dim">走得动的房间：${esc(opened.join('、') || '门厅')}</p></section>`;
+  // 家什架（家什拍平 0.42.0）：能建的都摆出来——建成的点亮，缺料的留影；点一件看说明
+  html += `<section class="hb-sec"><p class="m-kicker">家什架</p><div class="shelf" id="hb-shelf"></div><p class="shelf-note" id="hb-shelf-note">点一件家什，看它的用处与身价。</p></section>`;
   // 物资格
   html += `<section class="hb-sec"><p class="m-kicker">物资清单</p><div id="hb-inv"></div></section>`;
   // 夜访现状
@@ -1092,6 +1144,7 @@ function openHomebook() {
   sheet.innerHTML = html;
   renderSiegeInto($('hb-siege'), s);
   renderInvGrid($('hb-inv'), s.inventory);
+  renderShelf($('hb-shelf'), s);
   const polBtn = sheet.querySelector('.hb-policy');
   if (polBtn) polBtn.addEventListener('click', () => {
     const on = state.s?.policy?.overviewDays !== false;
@@ -1101,6 +1154,62 @@ function openHomebook() {
   sheet.querySelector('.sheet-x').addEventListener('click', closeSheets);
   openSheet('homebook');
 }
+/** 家什架（家什拍平 0.42.0）：全部可建家什一字排开——建成的点亮，缺料的留影；点一件看说明 */
+function renderShelf(box, s) {
+  if (!box) return;
+  const defs = s.facilityDefs || [];
+  const fac = s.facilities || {};
+  const inv = s.inventory || {};
+  const matName = (k) => (ITEM_META[k] && ITEM_META[k][0]) || (s.itemNames || {})[k] || k;
+  const costText = (cost) => Object.entries(cost).map(([k, v]) => `${matName(k)}×${v}`).join(' · ') || '不要料';
+  const defName = (id) => (defs.find((d) => d.id === id) || {}).name || id;
+  const tiles = [];
+  // 门板领头（不是设施户口，三层到顶）
+  if (s.doorDef) {
+    const next = s.doorDef.next || null;
+    const maxed = s.doorLevel >= (s.doorDef.maxLevel || 3);
+    const needAnvil = next?.facility && !fac[next.facility];
+    tiles.push({
+      icon: 'door', name: '门板', count: s.doorLevel, max: s.doorDef.maxLevel,
+      cls: s.doorLevel > 0 ? 'built' : 'dim',
+      cost: maxed ? '' : costText(next.cost),
+      effect: s.doorDef.effectText || '',
+      flavor: s.doorDef.flavor || '',
+      status: maxed ? '三层钉满' : (needAnvil ? `下一层要先有${defName(next.facility)}` : (next ? `下一层：${costText(next.cost)}` : ''))
+    });
+  }
+  const zofiaHere = (s.charView || []).some((c) => c.id === 'zofia');
+  for (const d of defs) {
+    const n = fac[d.id] || 0;
+    const reqOk = !d.requires || !!fac[d.requires];
+    const missing = Object.entries(d.cost).filter(([k, v]) => (inv[k] || 0) < v).map(([k, v]) => `${matName(k)}×${v - (inv[k] || 0)}`);
+    const maxed = n >= d.max;
+    let cls = 'built', status = '已落成';
+    if (!n) {
+      if (!reqOk) { cls = 'locked'; status = `要先有${defName(d.requires)}`; }
+      else if (missing.length) { cls = 'dim'; status = `还差 ${missing.join(' · ')}`; }
+      else { cls = 'open'; status = '料是齐的，等一双闲手'; }
+    } else if (!maxed) {
+      status = d.id === 'piano' ? `${n}/3 弦，还能续` : `×${n}，还能添`;
+    } else {
+      status = d.id === 'piano' ? '三弦成曲' : (d.max > 1 ? `×${n} 满` : '已落成');
+    }
+    if (d.charOnly === 'zofia' && !zofiaHere) status += '（素徽专属）';
+    tiles.push({ icon: facIcon(d.id), name: d.name, count: n, max: d.max, cls, cost: costText(d.cost), effect: d.effectText, flavor: d.flavor, status });
+  }
+  box.innerHTML = '';
+  const note = $('hb-shelf-note');
+  for (const t of tiles) {
+    const tile = el('button', `shelf-tile ${t.cls}`);
+    tile.type = 'button';
+    tile.innerHTML = `${svgUse(t.icon, 'st-ic')}<span class="st-name">${esc(t.name)}</span>${t.count > 0 ? `<b class="st-count">${t.count}${t.max > 1 ? '/' + t.max : ''}</b>` : ''}`;
+    const detail = `<b>${esc(t.name)}</b>${t.count > 0 ? '（有了）' : ''} —— ${esc(t.effect)}<br><span class="shelf-cost">身价：${esc(t.cost)}${t.flavor ? '<br>' + esc(t.flavor) : ''}</span><br><span class="shelf-status">${esc(t.status)}</span>`;
+    tile.title = detail.replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
+    tile.addEventListener('click', () => { note.innerHTML = detail; });
+    box.appendChild(tile);
+  }
+}
+
 /** 物资图标格（细目抽屉用，与旧侧栏同一副版式） */
 function renderInvGrid(box, inv) {
   box.innerHTML = '';

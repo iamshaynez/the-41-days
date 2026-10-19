@@ -1329,6 +1329,75 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
   letter-spacing: .2em; margin-top: 10px; padding-top: 8px; border-top: 1px solid #3a332a;
 }
 
+/* —— 落成卡（家什拍平 0.42.0）：讣告是黑石朱印，这是描金暖底——生死同礼 —— */
+.built-card {
+  max-width: 30em; margin: 34px auto 26px; text-align: center;
+  border: 3px double var(--rule-strong);
+  background: #241c0e;
+  background-image: var(--grain);
+  color: #e8d9ae;
+  padding: 26px 32px 20px; position: relative;
+  animation: obitIn 1.6s ease both;
+}
+.built-card .bc-kicker {
+  position: absolute; top: 2px; left: 50%; transform: translate(-50%, -50%);
+  background: var(--rule-strong); color: #f3e9d4;
+  font-family: var(--font-li);
+  font-size: 12px; padding: 1px 10px; letter-spacing: .4em; text-indent: .4em;
+}
+.built-card .bc-name { font-family: var(--font-li); font-size: 24px; letter-spacing: .7em; text-indent: .7em; font-weight: 700; margin-top: 6px; }
+.built-card .bc-count { font-family: var(--font-kai); color: #c9a86a; font-size: 13px; margin-top: 6px; letter-spacing: .2em; }
+.built-card .bc-flavor { font-family: var(--font-kai); color: #cbbd93; font-size: 14px; margin-top: 10px; line-height: 1.9; }
+.built-card .bc-effect { font-family: var(--font-kai); color: #9a8f6d; font-size: 12px; margin-top: 8px; }
+.built-card .bc-date {
+  font-family: var(--font-mono); font-size: 11px; color: #8a7d5c;
+  letter-spacing: .2em; margin-top: 10px; padding-top: 8px; border-top: 1px solid #4a3d22;
+}
+/* 同件添置：小戳记（仪式不疲劳） */
+.built-stamp {
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+  max-width: 30em; margin: 14px auto;
+  font-family: var(--font-kai); font-size: 13px; color: #b8a470;
+  border: 1px solid #5a4a26; background: rgba(90, 74, 38, .12);
+  padding: 6px 14px; letter-spacing: .1em;
+}
+.built-stamp .bs-ic { width: 15px; height: 15px; opacity: .8; }
+
+/* —— 家什架（细目抽屉）：一字排开的家什，建成点亮、缺料留影 —— */
+.shelf {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 8px; margin-top: 10px;
+}
+.shelf-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 6px 8px; cursor: pointer; position: relative;
+  background: var(--paper-lo); border: 1px solid var(--rule);
+  color: var(--ink-2); font-family: var(--font-kai);
+}
+.shelf-tile .st-ic { width: 26px; height: 26px; }
+.shelf-tile .st-name { font-size: 12px; letter-spacing: .1em; }
+.shelf-tile .st-count {
+  position: absolute; top: 4px; right: 6px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--ink-3);
+}
+.shelf-tile.built { border-color: var(--rule-strong); color: var(--ink); background: var(--paper-hi); }
+.shelf-tile.built .st-ic { color: #c9a86a; }
+.shelf-tile.open { border-color: var(--rule-strong); color: var(--ink); }
+.shelf-tile.open::after {
+  content: '料齐'; position: absolute; top: 4px; left: 6px;
+  font-size: 10px; color: #c9a86a; font-family: var(--font-kai);
+}
+.shelf-tile.locked { opacity: .45; }
+.shelf-tile.locked .st-ic, .shelf-tile.dim .st-ic { opacity: .4; }
+.shelf-tile.dim { color: var(--ink-3); }
+.shelf-tile:hover, .shelf-tile:focus-visible { outline: 1px solid var(--rule-strong); }
+.shelf-note {
+  font-family: var(--font-kai); font-size: 12.5px; color: var(--ink-2);
+  margin-top: 10px; line-height: 1.9; min-height: 2.6em;
+}
+.shelf-note .shelf-cost { color: var(--ink-3); font-size: 12px; }
+.shelf-note .shelf-status { color: #c9a86a; }
+
 /* —— 开局仪式：门后的名字墙 —— */
 .wall-names {
   display: flex; flex-direction: column; align-items: flex-start; gap: 10px;

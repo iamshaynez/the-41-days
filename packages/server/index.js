@@ -279,6 +279,17 @@ export function createApp({ dbPath, adminUsername, adminPassword, inputRatePerMi
     view.itemFlavors = Object.fromEntries(pack.items.filter((i) => i.flavor).map((i) => [i.id, i.flavor]));
     // 家的进度轨（居家与四问）：门几道、琴几弦、日录几卷——家底抽屉「这个家」读它
     view.homeTracks = homeTracks(state, pack);
+    // 家什架（设施拍平 0.42.0）：全部可建家什的定义直读内容包——UI 只展示，不在前端养第二份真相
+    view.facilityDefs = pack.facilities.map((f) => ({
+      id: f.id, name: f.name, max: f.max ?? 1, cost: f.cost || {}, ap: f.ap ?? 2,
+      requires: f.requires || null, charOnly: f.charOnly || null,
+      effectText: f.effectText || '', flavor: f.flavor || ''
+    }));
+    view.doorDef = { maxLevel: pack.doorReinforce?.maxLevel ?? 0, effectText: pack.doorReinforce?.effectText || '', flavor: pack.doorReinforce?.flavor || '' };
+    {
+      const lv = pack.doorReinforce?.levels[state.doorLevel];
+      if (lv) view.doorDef.next = { cost: lv.cost || {}, ap: lv.ap ?? 2, facility: lv.facility || null };
+    }
     // 这个家的房间名（别传住的是船舱/医棚/窝棚，不是橘里的门厅）
     const home = homeOf(pack, state);
     view.roomNames = Object.fromEntries((home.rooms || []).map((r) => [r.id, r.name]));
