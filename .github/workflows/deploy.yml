@@ -41,6 +41,8 @@ jobs:
             ${{ secrets.ACR_REGISTRY }}/xiaowenz/app41:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # 阿里云 ACR 个人版不认 buildx 默认的 provenance 认证清单（vnd.oci.empty）——关掉
+          provenance: false
 
       - name: 部署到测试机并冒烟（受限密钥 → 服务器 deploy.sh）
         env:
