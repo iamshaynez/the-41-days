@@ -1089,15 +1089,6 @@ body.overlay-open #overlay-backdrop { opacity: 1; pointer-events: auto; }
 @keyframes riteLine { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .rite { animation: none; } .rite .rr { animation: none; } }
 
-  font-family: var(--font-carved); font-size: 34px; letter-spacing: .3em; text-indent: .3em;
-  color: var(--ink); margin: 12px 0 14px;
-}
-  font-family: var(--font-kai); font-size: 15px; color: var(--ink-2); margin: 0 auto 10px; max-width: 32em; line-height: 1.9;
-}
-  font-family: var(--font-carved); font-size: 14px; letter-spacing: .3em; color: var(--accent);
-  border-bottom: 1px dashed var(--rule); padding-bottom: 8px; margin: 0 0 16px;
-}
-
 /* 遗档/真相/回忆录展卷：材质随层 */
 .rite .dr-head { margin-bottom: 22px; }
 .rite .dr-title { font-family: var(--font-carved); font-size: 25px; letter-spacing: .22em; color: var(--ink); margin: 10px 0 0; }
@@ -1808,6 +1799,18 @@ body.motion-off .gazette, body.motion-off .gazette.has-cite::after { animation: 
   #wing { flex-direction: row; padding-top: 0; }
   .wing-card { flex: 1; min-height: 180px; }
   #chronicle-box { max-height: 220px; }
+}
+/* —— 平板横屏（761–1080 横持）：撤回竖排，回到桌面式左右分栏 ——
+   上面那档竖排两卡是按竖屏的富裕高度设计的；横屏 pad 的矮视口被
+   舆图+史卷整行吃掉半屏，书页（唯一的交互面：叙事/停问卡/选项）
+   只剩一条缝，安卓 pad 实测无法玩。横屏回右侧栏，舆图压成定高，
+   让史卷多分几行；手机档抽屉（≤760）与竖屏平板不受影响。 */
+@media (max-width: 1080px) and (orientation: landscape) {
+  #stage { grid-template-columns: minmax(0, 1fr) clamp(200px, 23vw, 280px); }
+  #wing { flex-direction: column; padding-top: 14px; }
+  .wing-card { min-height: 0; }
+  #chronicle-box { max-height: none; }
+  #map-box .map-svg { height: clamp(110px, 30dvh, 210px); width: auto; max-width: 100%; margin: 0 auto; }
 }
 /* （640 旧断点并入 760：wing 在 760 起即为抽屉，无需重复） */
 
