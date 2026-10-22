@@ -290,6 +290,15 @@ body[data-day='45'][data-phase='night'] #fx, body[data-day='45'][data-phase='nig
 }
 .menu-btn:hover { filter: drop-shadow(1px 2px 0 var(--shadow)) brightness(1.08); }
 .menu-btn .icon { width: 14px; height: 14px; }
+/* 全屏钮：入屏后换深绿指令面，四角外扩旋成内收——一眼能看出现在在哪 */
+#btn-full.on {
+  background:
+    linear-gradient(180deg, var(--jade-hi), var(--jade)) padding-box,
+    linear-gradient(180deg, #4a3418, #241608) border-box;
+  color: #f0e2b2;
+}
+#btn-full .icon { transition: transform .25s ease; }
+#btn-full.on .icon { transform: rotate(180deg); }
 /* 史卷抽屉开关（仅移动端显形；桌面侧栏常驻，用不着它） */
 #btn-wing { display: none; }
 .wing-drawer-head { display: none; }   /* 抽屉头只在窄屏抽屉里显形 */
