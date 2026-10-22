@@ -2042,6 +2042,8 @@ $('overlay-backdrop').addEventListener('click', () => { if (!$('finale').hidden)
 // 档案馆/管理的显式返回（菜单里的「对局」仍在，但入口要一眼看得见）
 $('back-from-archive').addEventListener('click', () => switchView('play'));
 $('back-from-admin').addEventListener('click', () => switchView('play'));
+// 全屏与否（标准 API + webkit 前缀回退）：Esc 的裁决要用
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
 window.addEventListener('keydown', (e) => {
   // 终卷仪式：回车/空格翻幕（输入行里打字不抢）——读史书的翻页键
   if (!$('finale').hidden && (e.key === 'Enter' || e.key === ' ')) {
@@ -2055,6 +2057,7 @@ window.addEventListener('keydown', (e) => {
     if (document.body.classList.contains('wing-open')) closeWing();
     else if (!$('finale').hidden) closeFinaleRite();
     else if (document.body.classList.contains('overlay-open')) closeSheets();
+    else if (fsElement()) { /* 全屏中：Esc 只退全屏（浏览器原生），不顺带弹选单 */ }
     else if (state.view === 'play' && !$('game').hidden) openMenu();
     hideCharPop();
   }
@@ -2063,6 +2066,30 @@ $('btn-menu').addEventListener('click', () => {
   if (document.body.classList.contains('overlay-open') && !$('menu').hidden) closeSheets();
   else openMenu();
 });
+// 全屏：退掉浏览器的地址栏与标签栏，一案书页独占整屏（pad 上的主场交互）。
+// 只在支持元素全屏的环境显形（iPhone Safari 没有，按钮保持 HTML 里的 hidden）；
+// 桌面 Esc / 系统手势退出走原生 fullscreenchange 事件，按钮文案随之回落。
+{
+  const btn = $('btn-full');
+  const root = document.documentElement;
+  const req = root.requestFullscreen || root.webkitRequestFullscreen;
+  const enabled = req && (document.fullscreenEnabled ?? document.webkitFullscreenEnabled ?? true);
+  if (enabled) {
+    btn.hidden = false;
+    const exit = () => (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    btn.addEventListener('click', () => {
+      const p = fsElement() ? exit() : req.call(root);
+      if (p && p.catch) p.catch(() => {});   // 手势判定失败/被拒：静默，按钮状态由 change 事件兜底
+    });
+    const sync = () => {
+      const on = !!fsElement();
+      btn.classList.toggle('on', on);
+      btn.querySelector('.menu-word').textContent = on ? '还原' : '全屏';
+      btn.setAttribute('aria-label', on ? '退出全屏' : '进入全屏');
+    };
+    for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, sync);
+  }
+}
 
 async function openMenu() {
   const sheet = $('menu');
